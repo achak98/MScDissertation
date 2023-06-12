@@ -1,6 +1,5 @@
 import torch
 import numpy as np
-from sklearn.metrics import confusion_matrix
 
 def evaluate(model, dataloader):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -33,14 +32,10 @@ def evaluate(model, dataloader):
 
 
 def quadratic_weighted_kappa(y_true, y_pred):
-    # Convert predictions to integer values
-    y_pred_int = np.round(y_pred).astype(int)
 
-    # Convert targets to integer values if needed
-    y_true_int = np.round(y_true).astype(int)
 
     # Calculate the confusion matrix
-    conf_mat = confusion_matrix(y_true, y_pred_int)
+    conf_mat = calculate_confusion_matrix(y_true, y_pred)
 
     # Create the weight matrix
     num_ratings = conf_mat.shape[0]
@@ -50,7 +45,7 @@ def quadratic_weighted_kappa(y_true, y_pred):
             weight_matrix[i, j] = ((i - j) ** 2) / ((num_ratings - 1) ** 2)
 
     # Calculate observed and expected matrices
-    obs_mat = confusion_matrix(y_true, y_pred_int, normalize='true')
+    obs_mat = calculate_confusion_matrix(y_true, y_pred, normalize='true')
     exp_mat = np.outer(np.sum(obs_mat, axis=1), np.sum(obs_mat, axis=0))
 
     # Normalize observed and expected matrices
@@ -65,3 +60,12 @@ def quadratic_weighted_kappa(y_true, y_pred):
     qwk = 1.0 - (numerator / denominator)
 
     return qwk
+
+def calculate_confusion_matrix(y_true, y_pred):
+    num_classes = max(max(y_true), max(y_pred)) + 1
+    conf_mat = np.zeros((num_classes, num_classes), dtype=np.int64)
+
+    for true, pred in zip(y_true, y_pred):
+        conf_mat[true, pred] += 1
+
+    return conf_mat
