@@ -52,8 +52,8 @@ def get_vocab_and_dataset_length(data_file, prompt):
     df = pd.read_csv(data_file, sep='\t', encoding='ISO-8859-1')
     data = df[df.iloc[:, 1] == prompt]
     concatenated_text = data['essay'].str.cat(sep=' ')
-    concatenated_text+=" <UNK>"
     tokens = tokeniser(concatenated_text)
+    concatenated_text+=" <UNK>"
     vocab = build_vocab_from_iterator([tokens])
     return vocab, len(data)
 

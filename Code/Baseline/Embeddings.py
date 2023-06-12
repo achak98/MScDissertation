@@ -26,7 +26,7 @@ class NAE:
     def get_vecs_by_tokens(self, padded_tokens, lower_case_backup=True): 
         indexed_data = []
         for token in padded_tokens:
-            indexed_sentence = self.vocab["<UNK>"]
+            indexed_sentence = self.vocab[token]
             indexed_data.append(indexed_sentence)
         ret = torch.tensor(indexed_data)
         return ret
