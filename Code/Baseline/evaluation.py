@@ -18,13 +18,13 @@ def evaluate(model, dataloader):
             #_, predicted = torch.max(outputs, dim=0)
 
             # Append predictions and targets to lists
-            print(f"preditions: {outputs}")
-            print(f"labels: {labels}")
             #predictions.append(predicted.item())
             #targets.append(labels.item())
-            predictions.extend(outputs.cpu().numpy())
-            targets.extend(labels.cpu().numpy())
+            predictions.extend((outputs*12).cpu().numpy())
+            targets.extend((labels*12).cpu().numpy())
 
+            print(f"preditions: {predictions}")
+            print(f"targets: {targets}")
     # Calculate Quadratic Weighted Kappa
     qwk = quadratic_weighted_kappa(targets, predictions)
 
@@ -33,6 +33,11 @@ def evaluate(model, dataloader):
 
 def quadratic_weighted_kappa(y_true, y_pred):
 
+    # Convert predictions to integer values
+    y_pred = np.round(y_pred).astype(int)
+
+    # Convert targets to integer values if needed
+    y_true = np.round(y_true).astype(int)
 
     # Calculate the confusion matrix
     conf_mat = calculate_confusion_matrix(y_true, y_pred)
