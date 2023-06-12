@@ -43,5 +43,5 @@ class Word2Vec:
             else: 
                 indexed_sentence = np.array([0] * 300)
             indexed_data.append(indexed_sentence)
-        ret = torch.tensor(np.array(indexed_data))
+        ret = torch.tensor(indexed_data)
         return ret
