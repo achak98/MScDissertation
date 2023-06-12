@@ -29,7 +29,7 @@ class Baseline(nn.Module):
         self.pool3 = nn.MaxPool1d(args.cnn_window_size_large)
         self.gru3 = nn.GRU(args.cnnfilters, args.bgru_hidden_size, batch_first=True, bidirectional=True)
         
-        self.fc = nn.Linear(args.gru_hidden_size*2*3,1)
+        self.fc = nn.Linear(args.bgru_hidden_size*2*3,1)
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):

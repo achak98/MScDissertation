@@ -24,7 +24,9 @@ class MyDataset(Dataset):
         sample = self.data.iloc[idx]
         essay = sample['essay']
         score = sample['domain1_score']
-        if self.prompt == '2':
+        if self.prompt == '1':
+            score /= 12
+        elif self.prompt == '2':
             score += sample['domain2_score']
         tokens = self.tokenizer(essay)
         padded_tokens = self.pad_sequence(tokens)
