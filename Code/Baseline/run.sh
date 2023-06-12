@@ -3,25 +3,25 @@
 export NVIDIA_SMI=$(nvidia-smi)
 
 echo $NVIDIA_SMI
-
+'''
 python skipgram.py \
     --dataDir "/home/achakravarty/Dissertation/Data/ASAP-AES" \
     --skipgram_file_path "/home/achakravarty/Dissertation/Data/Skipgram" \
-    --numOfWorkers 4 \
+    --numOfWorkers 0 \
     --embedding_dim 300 \
-    --batch_size 128 \
+    --batch_size 8 \
     --num_epochs 40 \
     --log_interval 10 \
     --prompt '1'
 
 '''
-python baseline.py \
+python baseline-glove.py \
     --dataDir "/home/achakravarty/Dissertation/Data/ASAP-AES" \
     --skipgram_file_path "" \
     --numOfWorkers 0 \
     --embedding_dim 300 \
     --num_epochs 40 \
-    --batch_size 128 \
+    --batch_size 8 \
     --lr 0.001 \
     --mode train \
     --cnnfilters 100 \
@@ -32,4 +32,4 @@ python baseline.py \
     --dropout 0.4 \
     --log_interval 10 \
     --prompt '1'
-'''
+

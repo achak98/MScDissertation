@@ -9,7 +9,8 @@ import os
 def train(model, train_dataloader, val_dataloader, num_epochs, lr):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
-
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
     loss_fn = nn.MSELoss()
     optimizer = optim.RMSprop(model.parameters(), lr=lr)
 
@@ -65,6 +66,8 @@ def train(model, train_dataloader, val_dataloader, num_epochs, lr):
 def train_skipGram (dataloader, model, vocab_size, args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
     # Define the loss function and optimizer
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters())
