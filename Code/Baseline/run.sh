@@ -31,5 +31,5 @@ python baseline-glove.py \
     --bgru_hidden_size 128 \
     --dropout 0.4 \
     --log_interval 10 \
-    --prompt '1'
+    --prompt "1"
 
