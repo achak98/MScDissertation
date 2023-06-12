@@ -15,7 +15,7 @@ class SkipGram(nn.Module):
 
 class Baseline_Stride_One(nn.Module):
     def __init__(self, args):
-        super(Baseline, self).__init__()
+        super(Baseline_Stride_One, self).__init__()
         #print("in: {} out: {} ks: {}".format(args.embedding_dim, args.cnnfilters, args.cnn_window_size_small))
         self.conv1 = nn.Conv1d(in_channels=args.embedding_dim, out_channels=args.cnnfilters, kernel_size=args.cnn_window_size_small)
         self.pool1 = nn.MaxPool1d(kernel_size=args.cnn_window_size_small, stride=1)
