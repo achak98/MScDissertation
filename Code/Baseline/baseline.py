@@ -12,7 +12,7 @@ def baseline():
     #print("VOCAB_SIZE: ", vocab_size)
     print("!!========================INSTANTIATING MODEL========================!!")
     # Instantiate your model
-    model = models.Baseline(max_length = args.max_length, embedding_dim=args.embedding_dim)
+    model = models.Baseline(args)
 
     # Define your loss function and optimizer
     print("!!========================TRAINING MODEL========================!!")
