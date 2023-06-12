@@ -6,7 +6,7 @@ echo $NVIDIA_SMI
 
 python skipgram.py \
     --dataDir "/home/achakravarty/Dissertation/Data/ASAP-AES" \
-    --skipgram_file_path "/home/achakravarty/Dissertation/Data/Skipgram" \
+    --skipgram_file_path "/home/achakravarty/Dissertation/Data/Skipgram-alt" \
     --numOfWorkers 0 \
     --embedding_dim 300 \
     --batch_size 8 \
@@ -14,7 +14,7 @@ python skipgram.py \
     --log_interval 10 \
     --prompt '1'
 
-python baseline-sg.py \
+python baseline-sg-stride-one.py \
     --dataDir "/home/achakravarty/Dissertation/Data/ASAP-AES" \
     --skipgram_file_path "/home/achakravarty/Dissertation/Data/Skipgram" \
     --numOfWorkers 0 \

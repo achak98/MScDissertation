@@ -2,7 +2,7 @@ import pandas as pd
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader, random_split
-from torchtext.data.utils import get_tokenizer
+from nltk.tokenize import word_tokenize
 from torch.nn.utils.rnn import pad_sequence
 from torchtext.vocab import build_vocab_from_iterator, GloVe
 import Embeddings
@@ -11,7 +11,6 @@ class MyDataset(Dataset):
     def __init__(self, file_path, prompt, max_length, embedding):
         df = pd.read_csv(file_path, sep='\t', encoding='ISO-8859-1')
         self.data = df[df.iloc[:, 1] == prompt]
-        self.tokenizer = get_tokenizer('basic_english')
         self.max_length = max_length
         self.prompt = prompt
         self.embedding = embedding
@@ -28,7 +27,7 @@ class MyDataset(Dataset):
             score = (score-2)/10
         elif self.prompt == 2:
             score += sample['domain2_score']
-        tokens = self.tokenizer(essay)
+        tokens = word_tokenize(essay)
         padded_tokens = self.pad_sequence(tokens)
         ret = self.embedding.get_vecs_by_tokens(padded_tokens, lower_case_backup=True)
         target_tensor = torch.tensor(score)  # Convert target to tensor
@@ -48,11 +47,10 @@ def collate_fn(batch):
     return padded_features, padded_targets
 
 def get_vocab_and_dataset_length(data_file, prompt):
-    tokeniser = get_tokenizer('basic_english')
     df = pd.read_csv(data_file, sep='\t', encoding='ISO-8859-1')
     data = df[df.iloc[:, 1] == prompt]
     concatenated_text = data['essay'].str.cat(sep=' ')
-    tokens = tokeniser(concatenated_text)
+    tokens = word_tokenize(concatenated_text)
     tokens.append("na")
     vocab = build_vocab_from_iterator([tokens])
     return vocab, len(data)

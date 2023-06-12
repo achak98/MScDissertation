@@ -1,5 +1,25 @@
 import argsparser, dataloaders, evaluation, train, models
 
+import random
+import torch
+import numpy as np
+
+# Set the random seed for Python's random module
+random.seed(42)
+
+# Set the random seed for NumPy
+np.random.seed(42)
+
+# Set the random seed for PyTorch
+torch.manual_seed(42)
+
+# Set the random seed for CUDA operations (if using GPUs)
+torch.cuda.manual_seed(42)
+torch.cuda.manual_seed_all(42)
+
+# Set the deterministic behavior for cudNN (if using GPUs)
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
 
 # Parse the arguments
 args = argsparser.parse_args()

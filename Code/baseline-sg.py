@@ -27,7 +27,7 @@ args = argsparser.parse_args()
 def baseline():
     print("!!========================CREATING DATA LOADERS========================!!")
     train_dataloader, val_dataloader, test_dataloader, _ = dataloaders \
-    .create_data_loaders(args, embedding_type = "w2v")
+    .create_data_loaders(args, embedding_type = "skipgram")
     
     #print("VOCAB_SIZE: ", vocab_size)
     print("!!========================INSTANTIATING MODEL========================!!")

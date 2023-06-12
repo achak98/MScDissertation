@@ -1,6 +1,7 @@
 import torch
 import models
 import os
+import numpy as np
 from torch.autograd import Variable
 import gensim.downloader as api
 
@@ -40,7 +41,7 @@ class Word2Vec:
             if token in self.embedding:
                 indexed_sentence = self.embedding[token]
             else: 
-                indexed_sentence = [0] * 300
+                indexed_sentence = np.array([0] * 300)
             indexed_data.append(indexed_sentence)
         ret = torch.tensor(indexed_data)
         return ret

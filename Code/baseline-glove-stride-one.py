@@ -27,12 +27,12 @@ args = argsparser.parse_args()
 def baseline():
     print("!!========================CREATING DATA LOADERS========================!!")
     train_dataloader, val_dataloader, test_dataloader, _ = dataloaders \
-    .create_data_loaders(args, embedding_type = "w2v")
+    .create_data_loaders(args, embedding_type = "glove")
     
     #print("VOCAB_SIZE: ", vocab_size)
     print("!!========================INSTANTIATING MODEL========================!!")
     # Instantiate your model
-    model = models.Baseline(args)
+    model = models.Baseline_Stride_One(args)
 
     # Define your loss function and optimizer
     print("!!========================TRAINING MODEL========================!!")
