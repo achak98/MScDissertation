@@ -53,7 +53,7 @@ def get_vocab_and_dataset_length(data_file, prompt):
     data = df[df.iloc[:, 1] == prompt]
     concatenated_text = data['essay'].str.cat(sep=' ')
     tokens = tokeniser(concatenated_text)
-    concatenated_text+=" <UNK>"
+    tokens.append("<UNK>")
     vocab = build_vocab_from_iterator([tokens])
     return vocab, len(data)
 
