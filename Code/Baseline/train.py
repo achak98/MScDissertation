@@ -44,7 +44,6 @@ def train(model, train_dataloader, val_dataloader, num_epochs, lr):
 
                     train_loss += loss.item()
 
-                    batch_pbar.update(1)
                     batch_pbar.set_postfix({'Loss': loss.item()})
 
             # Calculate average train loss
@@ -56,7 +55,6 @@ def train(model, train_dataloader, val_dataloader, num_epochs, lr):
             # Print epoch statistics
             print(f"Epoch [{epoch+1}/{num_epochs}] - Train Loss: {train_loss:.4f} - Val QWK: {val_qwk:.4f}")
 
-            epoch_pbar.update(1)
 
         print("Training finished!")
         return model

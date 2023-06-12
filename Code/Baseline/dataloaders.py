@@ -67,6 +67,8 @@ def create_data_loaders(args, embedding_type, shuffle=True, num_workers=0):
 
     if (embedding_type == "glove"):
         embedding = GloVe(name='6B', dim=args.embedding_dim)
+    elif (embedding_type == "w2v"):
+        embedding = Embeddings.Word2Vec()
     elif (embedding_type == "NAE"):
         embedding = Embeddings.NAE(args, vocab)
         split_lengths = [dataset_length, 0, 0]
