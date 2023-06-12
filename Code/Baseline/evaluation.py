@@ -50,7 +50,7 @@ def quadratic_weighted_kappa(y_true, y_pred):
             weight_matrix[i, j] = ((i - j) ** 2) / ((num_ratings - 1) ** 2)
 
     # Calculate observed and expected matrices
-    obs_mat = calculate_confusion_matrix(y_true, y_pred, normalize='true')
+    obs_mat = calculate_confusion_matrix(y_true, y_pred)
     exp_mat = np.outer(np.sum(obs_mat, axis=1), np.sum(obs_mat, axis=0))
 
     # Normalize observed and expected matrices
