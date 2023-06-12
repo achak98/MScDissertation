@@ -36,7 +36,7 @@ class MyDataset(Dataset):
 
     def pad_sequence(self, sequence):
         if len(sequence) < self.max_length:
-            sequence = sequence + ['< UNK >'] * (self.max_length - len(sequence))
+            sequence = sequence + ['na'] * (self.max_length - len(sequence))
         else:
             sequence = sequence[:self.max_length]
         return sequence
@@ -53,7 +53,7 @@ def get_vocab_and_dataset_length(data_file, prompt):
     data = df[df.iloc[:, 1] == prompt]
     concatenated_text = data['essay'].str.cat(sep=' ')
     tokens = tokeniser(concatenated_text)
-    tokens.append("< UNK >")
+    tokens.append("na")
     vocab = build_vocab_from_iterator([tokens])
     return vocab, len(data)
 
