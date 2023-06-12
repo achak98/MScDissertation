@@ -2,6 +2,7 @@ import torch
 import models
 import os
 from torch.autograd import Variable
+import gensim.downloader as api
 
 class Skipgram_Util:
     def __init__(self, args, vocab):
@@ -26,6 +27,17 @@ class NAE:
         indexed_data = []
         for token in padded_tokens:
             indexed_sentence = self.vocab[token]
+            indexed_data.append(indexed_sentence)
+        ret = torch.tensor(indexed_data)
+        return ret
+    
+class Word2Vec:
+    def __init__ (self):
+        self.embedding = api.load("word2vec-google-news-300")
+    def get_vecs_by_tokens(self, padded_tokens, lower_case_backup=True): 
+        indexed_data = []
+        for token in padded_tokens:
+            indexed_sentence = self.embedding[token]
             indexed_data.append(indexed_sentence)
         ret = torch.tensor(indexed_data)
         return ret
