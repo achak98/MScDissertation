@@ -20,8 +20,8 @@ def evaluate(model, dataloader):
             # Append predictions and targets to lists
             #predictions.append(predicted.item())
             #targets.append(labels.item())
-            predictions.extend((outputs*12).cpu().numpy())
-            targets.extend((labels*12).cpu().numpy())
+            predictions.extend((outputs*10 + 2).cpu().numpy())
+            targets.extend((labels*10 + 2).cpu().numpy())
 
             #print(f"preditions: {predictions}")
             #print(f"targets: {targets}")

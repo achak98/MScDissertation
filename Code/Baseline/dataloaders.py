@@ -25,7 +25,7 @@ class MyDataset(Dataset):
         essay = sample['essay']
         score = sample['domain1_score']
         if self.prompt == 1:
-            score /= 12
+            score = (score-2)/10
         elif self.prompt == 2:
             score += sample['domain2_score']
         tokens = self.tokenizer(essay)
