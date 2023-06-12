@@ -18,7 +18,7 @@ def parse_args():
     parser.add_argument('--cnn_window_size_large', type= int, default = 4, help = 'largest CNN Window Size')
     parser.add_argument('--bgru_hidden_size', type= int, default = 128, help = 'No. of Bi-GRU hidden units')
     parser.add_argument('--prompt', type= int, default = 1, help = 'Prompt to train and test for')
-    parser.add_argument('--max_length', type= int, default = 2046, help = 'Padding sequence length')
+    parser.add_argument('--max_length', type= int, default = 512, help = 'Padding sequence length')
     parser.add_argument('--dropout', type= float, default = 0.4, help = 'Dropout Rate')
     parser.add_argument('--log_interval', type= int, default = 0.4, help = 'Loggin Interval in Epochs')
     return parser.parse_args()

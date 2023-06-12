@@ -36,7 +36,7 @@ class MyDataset(Dataset):
 
     def pad_sequence(self, sequence):
         if len(sequence) < self.max_length:
-            sequence = sequence + ['n/a'] * (self.max_length - len(sequence))
+            sequence = sequence + ['<UNK>'] * (self.max_length - len(sequence))
         else:
             sequence = sequence[:self.max_length]
         return sequence
