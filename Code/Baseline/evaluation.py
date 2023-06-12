@@ -34,7 +34,10 @@ def evaluate(model, dataloader):
 
 def quadratic_weighted_kappa(y_true, y_pred):
     # Convert predictions to integer values
-    y_pred_int = np.round(y_pred)
+    y_pred_int = np.round(y_pred).astype(int)
+
+    # Convert targets to integer values if needed
+    y_true_int = np.round(y_true).astype(int)
 
     # Calculate the confusion matrix
     conf_mat = confusion_matrix(y_true, y_pred_int)
