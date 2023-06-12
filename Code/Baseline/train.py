@@ -2,6 +2,10 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import evaluation
+from torch.autograd import Variable
+from tqdm import tqdm
+import os
+
 def train(model, train_dataloader, val_dataloader, num_epochs, lr):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
@@ -9,37 +13,92 @@ def train(model, train_dataloader, val_dataloader, num_epochs, lr):
     loss_fn = nn.MSELoss()
     optimizer = optim.RMSprop(model.parameters(), lr=lr)
 
-    for epoch in range(num_epochs):
-        model.train()
-        train_loss = 0.0
+    # Train the model with tqdm progress bars
+    with tqdm(total=num_epochs, desc='Epochs', unit='epoch') as epoch_pbar:
+        for epoch in range(num_epochs):
+            epoch_pbar.set_description(f'Epoch {epoch+1}')
+            epoch_pbar.update()
 
-        for inputs, labels in train_dataloader:
-            inputs = inputs.to(device)
-            labels = labels.to(device)
+            model.train()
+            train_loss = 0.0
 
-            optimizer.zero_grad()
+            with tqdm(total=len(train_dataloader), desc='Batches', unit='batch') as batch_pbar:
+                for batch_num, (inputs, labels) in enumerate(train_dataloader):
+                    batch_pbar.set_description(f'Batch {batch_num+1}')
+                    batch_pbar.update()
+                    inputs = inputs.to(device)
+                    labels = labels.to(device)
 
-            # Forward pass
-            outputs = model(inputs)
+                    optimizer.zero_grad()
 
-            # Calculate loss
-            loss = loss_fn(outputs, labels)
+                    # Forward pass
+                    outputs = model(inputs.float())
 
-            # Backward pass and optimization
-            loss.backward()
-            optimizer.step()
+                    # Calculate loss
+                    loss = loss_fn(outputs, labels.float())
 
-            train_loss += loss.item()
+                    # Backward pass and optimization
+                    loss.backward()
+                    optimizer.step()
 
-        # Calculate average train loss
-        train_loss /= len(train_dataloader)
+                    train_loss += loss.item()
 
-        # Evaluate on validation set
-        val_qwk = evaluation.evaluate(model, val_dataloader)
+                    batch_pbar.update(1)
+                    batch_pbar.set_postfix({'Loss': loss.item()})
 
-        # Print epoch statistics
-        print(f"Epoch [{epoch+1}/{num_epochs}] - Train Loss: {train_loss:.4f} - Val QWK: {val_qwk:.4f}")
+            # Calculate average train loss
+            train_loss /= len(train_dataloader)
 
-    print("Training finished!")
+            # Evaluate on validation set
+            val_qwk = evaluation.evaluate(model, val_dataloader)
+
+            # Print epoch statistics
+            print(f"Epoch [{epoch+1}/{num_epochs}] - Train Loss: {train_loss:.4f} - Val QWK: {val_qwk:.4f}")
+
+            epoch_pbar.update(1)
+
+        print("Training finished!")
+        return model
 
 
+
+def train_skipGram (dataloader, model, vocab_size, args):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model.to(device)
+    # Define the loss function and optimizer
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(model.parameters())
+
+    with tqdm(total=args.num_epochs, desc='Epochs', unit='epoch') as epoch_pbar:
+        for epoch in range(args.num_epochs):
+            epoch_pbar.set_description(f'Epoch {epoch+1}')
+            epoch_pbar.update()
+            with tqdm(total=len(dataloader), desc='Batches', unit='batch') as batch_pbar:
+                for batch_num, data in enumerate(dataloader):
+                    batch_pbar.set_description(f'Batch {batch_num+1}')
+                    batch_pbar.update()
+                    data = data[0]
+                    #print("here 2")
+                    target = data.to(device)
+                    #print("here 3")
+                    output = model(target)
+                    #print("here 4")
+                    # Reshape the output and target tensors for the loss calculation
+                    output = output.view(-1, vocab_size)
+                    #print("here 5")
+                    target = target.view(-1)
+                    #print("here 6")
+                    # Compute the loss and perform backpropagation
+                    loss = criterion(output, target)
+                    #print("here 7")
+                    optimizer.zero_grad()
+                    #print("here 8")
+                    loss.backward()
+                    #print("here 9")
+                    optimizer.step()
+                    #print("here 10")
+                    torch.save(model.state_dict(), \
+            os.path.join(args.skipgram_file_path, \
+                            f"skipgram_weights{args.prompt}_{args.embedding_dim}_{epoch}.pth"))
+    
+    return model
