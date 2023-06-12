@@ -23,8 +23,8 @@ def evaluate(model, dataloader):
             predictions.extend((outputs*12).cpu().numpy())
             targets.extend((labels*12).cpu().numpy())
 
-            print(f"preditions: {predictions}")
-            print(f"targets: {targets}")
+            #print(f"preditions: {predictions}")
+            #print(f"targets: {targets}")
     # Calculate Quadratic Weighted Kappa
     qwk = quadratic_weighted_kappa(targets, predictions)
 
