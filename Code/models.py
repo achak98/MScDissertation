@@ -18,17 +18,17 @@ class Baseline(nn.Module):
         super(Baseline, self).__init__()
         #print("in: {} out: {} ks: {}".format(args.embedding_dim, args.cnnfilters, args.cnn_window_size_small))
         self.conv1 = nn.Conv1d(in_channels=args.embedding_dim, out_channels=args.cnnfilters, kernel_size=args.cnn_window_size_small)
-        self.pool1 = nn.MaxPool1d(kernel_size=args.cnn_window_size_small, stride=args.cnn_window_size_small)
+        self.pool1 = nn.MaxPool1d(kernel_size=args.cnn_window_size_small, stride=1)
         self.gru1 = nn.GRU(args.cnnfilters, args.bgru_hidden_size, batch_first=True, bidirectional=True)
         self.dropout1 = nn.Dropout(p=args.dropout)
 
         self.conv2 = nn.Conv1d(in_channels=args.embedding_dim, out_channels=args.cnnfilters, kernel_size=args.cnn_window_size_medium)
-        self.pool2 = nn.MaxPool1d(kernel_size=args.cnn_window_size_small, stride=args.cnn_window_size_medium)
+        self.pool2 = nn.MaxPool1d(kernel_size=args.cnn_window_size_small, stride=1)
         self.gru2 = nn.GRU(args.cnnfilters, args.bgru_hidden_size, batch_first=True, bidirectional=True)
         self.dropout2 = nn.Dropout(p=args.dropout)
 
         self.conv3 = nn.Conv1d(in_channels=args.embedding_dim, out_channels=args.cnnfilters, kernel_size=args.cnn_window_size_large)
-        self.pool3 = nn.MaxPool1d(kernel_size=args.cnn_window_size_small, stride=args.cnn_window_size_large)
+        self.pool3 = nn.MaxPool1d(kernel_size=args.cnn_window_size_small, stride=1)
         self.gru3 = nn.GRU(args.cnnfilters, args.bgru_hidden_size, batch_first=True, bidirectional=True)
         self.dropout3 = nn.Dropout(p=args.dropout)
 
