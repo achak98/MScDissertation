@@ -4,6 +4,7 @@ export NVIDIA_SMI=$(nvidia-smi)
 
 echo $NVIDIA_SMI
 
+: '
 python skipgram.py \
     --dataDir "/home/achakravarty/Dissertation/Data/ASAP-AES" \
     --skipgram_file_path "/home/achakravarty/Dissertation/Data/Skipgram-alt" \
@@ -13,7 +14,7 @@ python skipgram.py \
     --num_epochs 40 \
     --log_interval 10 \
     --prompt '1'
-
+'
 python baseline-sg-stride-one.py \
     --dataDir "/home/achakravarty/Dissertation/Data/ASAP-AES" \
     --skipgram_file_path "/home/achakravarty/Dissertation/Data/Skipgram" \
