@@ -44,6 +44,8 @@ def main():
     # Loop through the zipped pairs
     for seed, score in zip(seeds, qwk_score):
         data += f"For seed {seed}, score was {score} \n" 
+        print(qwk_score)
+    print(data)
     file.write(data)
 
     # Close the file
