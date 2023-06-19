@@ -43,8 +43,7 @@ def main():
                                     torch.backends.cudnn.benchmark = False
 
                                     # Parse the arguments
-                                    qwk_score.append(69420)
-                                    #qwk_score.append(baseline(args, embedding_type, stride1, stride2, stride3, stride4, stride5, stride6))
+                                    qwk_score.append(baseline(args, embedding_type, stride1, stride2, stride3, stride4, stride5, stride6))
                                     seeds.append(seed)
 
                                 file = open(file_path, "a")
