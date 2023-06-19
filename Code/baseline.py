@@ -8,7 +8,7 @@ def main():
 
     embedding_types = ["glove", "skipgram", "w2v"]
     file_path = "/home/achakravarty/Dissertation/Data/results/qwk.txt"
-
+    args = argsparser.parse_args()
     for embedding_type in embedding_types:
         for stride1 in range(1, args.cnn_window_size_small+1):
             for stride2 in range (1, args.cnn_window_size_small+1):
@@ -43,7 +43,6 @@ def main():
                                     torch.backends.cudnn.benchmark = False
 
                                     # Parse the arguments
-                                    args = argsparser.parse_args()
                                     qwk_score.append(69420)
                                     #qwk_score.append(baseline(args, embedding_type, stride1, stride2, stride3, stride4, stride5, stride6))
                                     seeds.append(seed)
