@@ -54,7 +54,7 @@ class MyDataset(Dataset):
                 tokens.append(self.bert_tokeniser.tokenize(sent))
         
             token_ids = self.bert_tokeniser.convert_tokens_to_ids(tokens)
-
+            print(f"token_ids: {token_ids}")
             padding_id = self.bert_tokeniser.pad_token_id
             attn_mask = [1] * len(token_ids)  # Attention mask to differentiate padded tokens
 
@@ -65,6 +65,7 @@ class MyDataset(Dataset):
             else:
                 token_ids = token_ids[:self.max_length]
                 attn_mask = attn_mask[:self.max_length]
+            print(f"padded token_ids: {token_ids}")
             return token_ids, attn_mask
 
     def pad_sequence(self, sequence):
