@@ -2,18 +2,22 @@ import pandas as pd
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader, random_split
-from nltk.tokenize import word_tokenize
+from nltk.tokenize import word_tokenize, sent_tokenize
 from torch.nn.utils.rnn import pad_sequence
 from torchtext.vocab import build_vocab_from_iterator, GloVe
+from transformers import BertTokenizer
 import Embeddings
 
 class MyDataset(Dataset):
-    def __init__(self, file_path, prompt, max_length, embedding):
+    def __init__(self, file_path, prompt, max_length, embedding, tokeniser):
         df = pd.read_csv(file_path, sep='\t', encoding='ISO-8859-1')
+        model_name = 'bert-base-uncased'
         self.data = df[df.iloc[:, 1] == prompt]
         self.max_length = max_length
         self.prompt = prompt
         self.embedding = embedding
+        self.tokeniser = tokeniser
+        self.bert_tokeniser = BertTokenizer.from_pretrained(model_name)
         #self.vocab = vocab
 
     def __len__(self):
@@ -27,11 +31,42 @@ class MyDataset(Dataset):
             score = (score-2)/10
         elif self.prompt == 2:
             score += sample['domain2_score']
-        tokens = word_tokenize(essay)
-        padded_tokens = self.pad_sequence(tokens)
-        ret = self.embedding.get_vecs_by_tokens(padded_tokens, lower_case_backup=True)
+        padded_tokens, attn_mask = self.tokenize(essay)
+        ret = self.embedding.get_vecs_by_tokens(padded_tokens, attn_mask, lower_case_backup=True)
         target_tensor = torch.tensor(score)  # Convert target to tensor
         return ret, target_tensor
+    
+    def tokenize(self, essay):
+        if self.tokeniser == "nltk":
+            tokens = word_tokenize(essay)
+            padded_tokens = self.pad_sequence(tokens)
+            attn_mask = None
+            return padded_tokens, attn_mask
+        if self.tokeniser == "bert":
+            sents = sent_tokenize(essay)
+            tokens = []
+
+            sents[0] = [self.bert_tokeniser.cls_token] + sents[0] + [self.bert_tokeniser.sep_token]
+            for i in range(1, len(sents)):
+                sents[i] = sents[i] + [self.bert_tokeniser.sep_token]
+            sents[-1] = sents[-1] + [self.bert_tokeniser.cls_token]
+
+            for sent in sents:
+                tokens.append(self.bert_tokeniser.tokenize(sent))
+        
+            token_ids = self.bert_tokeniser.convert_tokens_to_ids(tokens)
+
+            padding_id = self.bert_tokeniser.pad_token_id
+            attn_mask = [1] * len(token_ids)  # Attention mask to differentiate padded tokens
+
+            if len(token_ids) < self.max_length:
+                padding_length = self.max_length - len(token_ids)
+                token_ids = token_ids + [padding_id] * padding_length
+                attn_mask = attn_mask + [0] * padding_length
+            else:
+                token_ids = token_ids[:self.max_length]
+                attn_mask = attn_mask[:self.max_length]
+            return token_ids, attn_mask
 
     def pad_sequence(self, sequence):
         if len(sequence) < self.max_length:
@@ -40,11 +75,6 @@ class MyDataset(Dataset):
             sequence = sequence[:self.max_length]
         return sequence
 
-def collate_fn(batch):
-    features, targets = zip(*batch)
-    padded_features = pad_sequence(features, batch_first=True)
-    padded_targets = torch.stack(targets)  # Stack the target tensors
-    return padded_features, padded_targets
 
 def get_vocab_and_dataset_length(data_file, prompt):
     df = pd.read_csv(data_file, sep='\t', encoding='ISO-8859-1')
@@ -72,6 +102,8 @@ def create_data_loaders(args, embedding_type, shuffle=True, num_workers=0):
         split_lengths = [dataset_length, 0, 0]
     elif (embedding_type == "skipgram"):
         embedding = Embeddings.Skipgram_Util(args, vocab)
+    elif (embedding_type == "bert"):
+        embedding = Embeddings.BERT()
     elif (embedding_type == "droberta"):
         embedding = "hehelolzzzzz(2)"
     
@@ -87,11 +119,4 @@ def create_data_loaders(args, embedding_type, shuffle=True, num_workers=0):
     val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=num_workers)
     test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=num_workers)
     
-    #train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers,
-    #                          collate_fn=collate_fn)
-    #val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers,
-    #                        collate_fn=collate_fn)
-    #test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers,
-    #                         collate_fn=collate_fn)
-
     return train_loader, val_loader, test_loader, len(vocab)
