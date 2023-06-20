@@ -9,13 +9,14 @@ from transformers import BertTokenizer
 import Embeddings
 
 class MyDataset(Dataset):
-    def __init__(self, file_path, prompt, max_length, embedding):
+    def __init__(self, file_path, prompt, max_length, embedding, tokeniser):
         df = pd.read_csv(file_path, sep='\t', encoding='ISO-8859-1')
         model_name = 'bert-base-uncased'
         self.data = df[df.iloc[:, 1] == prompt]
         self.max_length = max_length
         self.prompt = prompt
         self.embedding = embedding
+        self.tokeniser = tokeniser
         self.bert_tokeniser = BertTokenizer.from_pretrained(model_name)
         #self.vocab = vocab
 
@@ -36,12 +37,12 @@ class MyDataset(Dataset):
         return ret, target_tensor
     
     def tokenize(self, essay):
-        if self.embedding != "bert":
+        if self.tokeniser == "nltk":
             tokens = word_tokenize(essay)
             padded_tokens = self.pad_sequence(tokens)
             attn_mask = None
             return padded_tokens, attn_mask
-        else:
+        elif self.tokeniser == "bert":
             sents = sent_tokenize(essay)
             tokens = []
 
@@ -51,7 +52,7 @@ class MyDataset(Dataset):
             sents[-1] = sents[-1] + [self.bert_tokeniser.cls_token]
 
             for sent in sents:
-                tokens.append(self.bert_tokeniser.tokenize(sent))
+                tokens.extend(self.bert_tokeniser.tokenize(sent))
         
             token_ids = self.bert_tokeniser.convert_tokens_to_ids(tokens)
             print(f"token_ids: {token_ids}")
@@ -95,20 +96,26 @@ def create_data_loaders(args, embedding_type, shuffle=True, num_workers=0):
 
     if (embedding_type == "glove"):
         embedding = GloVe(name='6B', dim=args.embedding_dim)
+        tokeniser = "nltk"
     elif (embedding_type == "w2v"):
         embedding = Embeddings.Word2Vec()
+        tokeniser = "nltk"
     elif (embedding_type == "NAE"):
         embedding = Embeddings.NAE(args, vocab)
+        tokeniser = "nltk"
         split_lengths = [dataset_length, 0, 0]
     elif (embedding_type == "skipgram"):
         embedding = Embeddings.Skipgram_Util(args, vocab)
+        tokeniser = "nltk"
     elif (embedding_type == "bert"):
         embedding = Embeddings.BERT()
+        tokeniser = "bert"
     elif (embedding_type == "droberta"):
         embedding = "hehelolzzzzz(2)"
+        tokeniser = "roberta"
     
     
-    dataset = MyDataset(data_file, args.prompt, args.max_length, embedding)
+    dataset = MyDataset(data_file, args.prompt, args.max_length, embedding, tokeniser)
     slices = random_split(dataset, split_lengths)
 
     train_dataset = slices[0]
