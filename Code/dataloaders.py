@@ -9,14 +9,13 @@ from transformers import BertTokenizer
 import Embeddings
 
 class MyDataset(Dataset):
-    def __init__(self, file_path, prompt, max_length, embedding, tokeniser):
+    def __init__(self, file_path, prompt, max_length, embedding):
         df = pd.read_csv(file_path, sep='\t', encoding='ISO-8859-1')
         model_name = 'bert-base-uncased'
         self.data = df[df.iloc[:, 1] == prompt]
         self.max_length = max_length
         self.prompt = prompt
         self.embedding = embedding
-        self.tokeniser = tokeniser
         self.bert_tokeniser = BertTokenizer.from_pretrained(model_name)
         #self.vocab = vocab
 
@@ -37,12 +36,12 @@ class MyDataset(Dataset):
         return ret, target_tensor
     
     def tokenize(self, essay):
-        if self.tokeniser == "nltk":
+        if self.embedding != "bert":
             tokens = word_tokenize(essay)
             padded_tokens = self.pad_sequence(tokens)
             attn_mask = None
             return padded_tokens, attn_mask
-        if self.tokeniser == "bert":
+        else:
             sents = sent_tokenize(essay)
             tokens = []
 
