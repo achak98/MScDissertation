@@ -7,10 +7,10 @@ echo $NVIDIA_SMI
 python baseline.py \
     --dataDir "/home/achakravarty/Dissertation/Data/ASAP-AES" \
     --skipgram_file_path "/home/achakravarty/Dissertation/Data/Skipgram" \
-    --numOfWorkers 4 \
+    --numOfWorkers 0 \
     --embedding_dim 300 \
     --num_epochs 40 \
-    --batch_size 8 \
+    --batch_size 16 \
     --lr 0.001 \
     --mode train \
     --cnnfilters 100 \

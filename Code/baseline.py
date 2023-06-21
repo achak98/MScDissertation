@@ -53,8 +53,8 @@ def main():
 
                                             # Loop through the zipped pairs
                                             for seed, score in zip(seeds, qwk_score):
-                                                data += f"For seed {seed}, score was {score} \n" 
-                                            data += f"Average QWK score: {np.average(qwk_score)} \n"
+                                                data += f"\t\tFor seed {seed}, score was {score} \n" 
+                                            data += f"\tAverage QWK score: {np.average(qwk_score)} \n"
                                             file.write(data)
 
                                             # Close the file
