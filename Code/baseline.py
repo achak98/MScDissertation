@@ -14,10 +14,10 @@ def main():
             for ks1 in range(1, args.cnn_window_size_small+1):
                 for stride2 in range (1, args.cnn_window_size_small+1):
                     for stride3 in range (1, args.cnn_window_size_medium+1):
-                        for ks2 in range (1, args.cnn_window_size_medium+1):
+                        for ks2 in range (ks1, args.cnn_window_size_medium+1):
                             for stride4 in range (1, args.cnn_window_size_medium+1):
                                 for stride5 in range (1, args.cnn_window_size_large+1):
-                                    for ks3 in range (1, args.cnn_window_size_large+1):
+                                    for ks3 in range (ks2, args.cnn_window_size_large+1):
                                         for stride6 in range (1, args.cnn_window_size_large+1):
                                             qwk_score = []
                                             seeds = []
