@@ -32,6 +32,9 @@ class MyDataset(Dataset):
         elif self.prompt == 2:
             score += sample['domain2_score']
         padded_tokens, attn_mask = self.tokenize(essay)
+        if(self.tokeniser == "nltk"):
+            ret = self.embedding.get_vecs_by_tokens(padded_tokens, lower_case_backup=True)
+        elif(self.tokeniser == "bert"):
         ret = self.embedding.get_vecs_by_tokens(padded_tokens, attn_mask, lower_case_backup=True)
         target_tensor = torch.tensor(score)  # Convert target to tensor
         return ret, target_tensor
@@ -45,7 +48,7 @@ class MyDataset(Dataset):
         elif self.tokeniser == "bert":
             sents = sent_tokenize(essay)
             tokens = []
-
+            #NEED TO ADD TOKENS AFTER TOKENISED
             sents[0] = [self.bert_tokeniser.cls_token] + sents[0] + [self.bert_tokeniser.sep_token]
             for i in range(1, len(sents)):
                 sents[i] = sents[i] + [self.bert_tokeniser.sep_token]
@@ -53,7 +56,11 @@ class MyDataset(Dataset):
 
             for sent in sents:
                 tokens.extend(self.bert_tokeniser.tokenize(sent))
-        
+            #ADD THE TOKENS HERE EG: 
+            """text = "This is an example sentence."
+            tokens = tokenizer.tokenize(text)
+            tokens = [tokenizer.cls_token] + tokens + [tokenizer.sep_token]
+            token_ids = tokenizer.convert_tokens_to_ids(tokens)"""
             token_ids = self.bert_tokeniser.convert_tokens_to_ids(tokens)
             print(f"token_ids: {token_ids}")
             padding_id = self.bert_tokeniser.pad_token_id
