@@ -21,11 +21,11 @@ def main():
                                         for stride6 in range (1, args.cnn_window_size_large+1):
                                             qwk_score = []
                                             seeds = []
-                                            random.seed(42)
+                                            random.seed(0)
                                             # Write data to the file
                                             data = f"For embedding type: {embedding_type} stride1: {stride1} ks1: {ks1} stride2:{stride2} stride3: {stride3} ks2: {ks2} stride4: {stride4} stride5: {stride5} ks3: {ks3} stride6: {stride6} \n"
 
-                                            for i in range (10):
+                                            for i in range (3):
                                                 seed = random.randint(1, 1000)
 
                                                 # Set the random seed for Python's random module
