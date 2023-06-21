@@ -35,7 +35,7 @@ class MyDataset(Dataset):
         if(self.tokeniser == "nltk"):
             ret = self.embedding.get_vecs_by_tokens(padded_tokens, lower_case_backup=True)
         elif(self.tokeniser == "bert"):
-        ret = self.embedding.get_vecs_by_tokens(padded_tokens, attn_mask, lower_case_backup=True)
+            ret = self.embedding.get_vecs_by_tokens(padded_tokens, attn_mask, lower_case_backup=True)
         target_tensor = torch.tensor(score)  # Convert target to tensor
         return ret, target_tensor
     
