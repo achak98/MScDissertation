@@ -6,19 +6,19 @@ import numpy as np
 
 def main():
 
-    embedding_types = ["glove", "skipgram", "w2v"]
+    embedding_types = ["w2v"] #["glove", "skipgram", "w2v"]
     file_path = "/home/achakravarty/Dissertation/Data/results/qwk.txt"
     args = argsparser.parse_args()
     for embedding_type in embedding_types:
-        for stride1 in range(1, args.cnn_window_size_small+1):
-            for ks1 in range(1, args.cnn_window_size_small+1):
-                for stride2 in range (1, args.cnn_window_size_small+1):
-                    for stride3 in range (1, args.cnn_window_size_medium+1):
-                        for ks2 in range (ks1, args.cnn_window_size_medium+1):
-                            for stride4 in range (1, args.cnn_window_size_medium+1):
-                                for stride5 in range (1, args.cnn_window_size_large+1):
-                                    for ks3 in range (ks2, args.cnn_window_size_large+1):
-                                        for stride6 in range (1, args.cnn_window_size_large+1):
+        for stride1 in range(args.cnn_window_size_small+1, 1, -1):
+            for ks1 in range(args.cnn_window_size_small+1, 1, -1):
+                for stride2 in range (args.cnn_window_size_small+1, 1, -1):
+                    for stride3 in range (args.cnn_window_size_medium+1, 1, -1):
+                        for ks2 in range (args.cnn_window_size_medium+1, ks1, -1):
+                            for stride4 in range (args.cnn_window_size_medium+1, 1, -1):
+                                for stride5 in range (args.cnn_window_size_large+1, 1, -1):
+                                    for ks3 in range (args.cnn_window_size_large+1, ks2, -1):
+                                        for stride6 in range (args.cnn_window_size_large+1, 1, -1):
                                             qwk_score = []
                                             seeds = []
                                             random.seed(0)
