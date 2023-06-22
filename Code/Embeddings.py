@@ -40,7 +40,7 @@ class Word2Vec:
         indexed_data = np.array([[0] * 300])
         for token in padded_tokens:
             if token in self.embedding:
-                indexed_sentence = self.embedding[token]
+                indexed_sentence = [self.embedding[token]]
             else: 
                 indexed_sentence = np.array([[0] * 300])
             indexed_data = np.append(indexed_data,indexed_sentence, axis = 0)
