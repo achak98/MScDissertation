@@ -37,13 +37,14 @@ class Word2Vec:
     def __init__ (self):
         self.embedding = api.load("word2vec-google-news-300")
     def get_vecs_by_tokens(self, padded_tokens, lower_case_backup=True):
-        indexed_data = np.array([])
+        indexed_data = np.array([[0] * 300])
         for token in padded_tokens:
             if token in self.embedding:
                 indexed_sentence = self.embedding[token]
             else: 
                 indexed_sentence = np.array([0] * 300)
-            indexed_data.append(indexed_sentence, axis = 0)
+            indexed_data = np.append(indexed_data,indexed_sentence, axis = 0)
+        indexed_data = indexed_data[1:]
         ret = torch.tensor(indexed_data)
         return ret
     
