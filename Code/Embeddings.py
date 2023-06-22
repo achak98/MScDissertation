@@ -42,7 +42,7 @@ class Word2Vec:
             if token in self.embedding:
                 indexed_sentence = self.embedding[token]
             else: 
-                indexed_sentence = np.array([0] * 300)
+                indexed_sentence = np.array([[0] * 300])
             indexed_data = np.append(indexed_data,indexed_sentence, axis = 0)
         indexed_data = indexed_data[1:]
         ret = torch.tensor(indexed_data)
