@@ -10,7 +10,7 @@ def main():
     file_path = "/home/achakravarty/Dissertation/Data/results/qwk.txt"
     args = argsparser.parse_args()
     for embedding_type in embedding_types:
-    """
+        """
         for stride1 in range(args.cnn_window_size_small, 1, -1):
             for ks1 in range(args.cnn_window_size_small, 1, -1):
                 for stride2 in range (args.cnn_window_size_small, 1, -1):
