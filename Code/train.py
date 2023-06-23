@@ -50,10 +50,10 @@ def train(model, train_dataloader, val_dataloader, num_epochs, lr):
             train_loss /= len(train_dataloader)
 
             # Evaluate on validation set
-            val_qwk = evaluation.evaluate(model, val_dataloader)
+            val_qwk, val_loss = evaluation.evaluate(model, val_dataloader)
 
             # Print epoch statistics
-            print(f"Epoch [{epoch+1}/{num_epochs}] - Train Loss: {train_loss:.4f} - Val QWK: {val_qwk:.4f}")
+            print(f"Epoch [{epoch+1}/{num_epochs}] - Train Loss: {train_loss:.4f} - Validation Loss: {val_loss:.4f} - Val QWK: {val_qwk:.4f}")
 
 
         print("Training finished!")

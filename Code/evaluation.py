@@ -6,7 +6,8 @@ def evaluate(model, dataloader):
     model.eval()
     predictions = []
     targets = []
-
+    loss_fn = nn.MSELoss()
+    eval_loss = 0.0
     with torch.no_grad():
         for inputs, labels in dataloader:
             inputs = inputs.to(device)
@@ -14,6 +15,8 @@ def evaluate(model, dataloader):
 
             # Forward pass
             outputs = model(inputs)
+            loss = loss_fn(outputs, labels.float())
+            eval_loss += loss.item()
             # Convert logits to predicted labels
             #_, predicted = torch.max(outputs, dim=0)
 
@@ -25,10 +28,12 @@ def evaluate(model, dataloader):
 
             #print(f"preditions: {predictions}")
             #print(f"targets: {targets}")
+    eval_loss /= len(dataloader)
+
     # Calculate Quadratic Weighted Kappa
     qwk = quadratic_weighted_kappa(targets, predictions)
 
-    return qwk
+    return qwk, eval_loss
 
 
 def quadratic_weighted_kappa(y_true, y_pred):
