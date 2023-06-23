@@ -18,7 +18,7 @@ def main():
         k=10
         print("!!========================CREATING DATASET========================!!")
         data_set = dataloaders.create_datset(args, embedding_type)
-        cross_val_loader = yielder.yield_crossval_dls(args, dataset=data_set,k_fold=k)
+        cross_val_loader = yielder.yield_crossval_dls(args=args, dataset=data_set,k_fold=k)
         for fold, dataloaders_list in enumerate(cross_val_loader):
             print(f"for fold: {fold+1}")
             seed = 42

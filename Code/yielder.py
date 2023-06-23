@@ -50,6 +50,6 @@ def yield_crossval_dls(args, dataset=None,k_fold=10):
                                           shuffle=False, num_workers=args.numOfWorkers)
         test_loader = torch.utils.data.DataLoader(test_set, batch_size=args.batch_size,
                                           shuffle=False, num_workers=args.numOfWorkers)
-    
-        yield (train_loader, val_loader, test_loader)
+        dataloaders = [train_loader, val_loader, test_loader]
+        yield dataloaders
 
