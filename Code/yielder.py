@@ -37,7 +37,7 @@ def yield_crossval_dls(args, dataset=None,k_fold=10):
         train_indices = train_left_indices + train_right_indices
         test_indices = list(range(testl,testr))
         val_indices = train_indices[-val_size:]
-        train_indices = train_indices[:val_size]
+        train_indices = train_indices[:-val_size]
         
         train_set = torch.utils.data.dataset.Subset(dataset,train_indices)
         val_set = torch.utils.data.dataset.Subset(dataset,val_indices)
