@@ -24,7 +24,7 @@ def main():
         qwk_score = []
         test_loss = []
         seeds = []
-        random.seed(42)
+        random.seed(0)
         # Write data to the file
         #data = f"For embedding type: {embedding_type} stride1: {stride1} ks1: {ks1} stride2:{stride2} stride3: {stride3} ks2: {ks2} stride4: {stride4} stride5: {stride5} ks3: {ks3} stride6: {stride6} \n"
         stride1 = 2
