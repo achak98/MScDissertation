@@ -1,5 +1,4 @@
 import argsparser, dataloaders, evaluation, train, models
-
 import random
 import torch
 import numpy as np
@@ -20,7 +19,7 @@ def main():
         print("!!========================CREATING DATASET========================!!")
         data_set = dataloaders.create_datset(args, embedding_type)
         cross_val_loader = yielder.yield_crossval_dls(args, dataset=data_set,k_fold=k)
-        for fold, dataloaders in enumerate(cross_val_loader):
+        for fold, dataloaders_list in enumerate(cross_val_loader):
             print(f"for fold: {fold+1}")
             seed = 42
 
@@ -42,7 +41,7 @@ def main():
             torch.backends.cudnn.benchmark = False
 
             # Parse the arguments
-            qwk_score_for_seed, test_loss_for_seed = baseline(args, embedding_type, strides, kernels, dataloaders)
+            qwk_score_for_seed, test_loss_for_seed = baseline(args, embedding_type, strides, kernels, dataloaders_list)
             qwk_score.append(qwk_score_for_seed)
             test_loss.append(test_loss_for_seed)
             data += f"\t\tFor fold {fold+1}, score was {qwk_score_for_seed} and test loss was {test_loss_for_seed}\n"
@@ -56,7 +55,7 @@ def main():
         file.close()
 
 
-def baseline(args, embedding_type, strides, kernels, dataloaders):
+def baseline(args, embedding_type, strides, kernels, dataloaders_list):
     #print("VOCAB_SIZE: ", vocab_size)
    # print("!!========================CREATING DATA LOADERS========================!!")
     #train_dataloader, val_dataloader, test_dataloader, _ = dataloaders \
@@ -67,9 +66,9 @@ def baseline(args, embedding_type, strides, kernels, dataloaders):
 
     # Define your loss function and optimizer
     print("!!========================TRAINING MODEL========================!!")
-    model = train.train(model, dataloaders[0], dataloaders[1], args.num_epochs, args.lr)
+    model = train.train(model, dataloaders_list[0], dataloaders_list[1], args.num_epochs, args.lr)
     print("!!========================EVALUATING MODEL========================!!")
-    qwk_score_for_seed, test_loss_for_seed =  evaluation.evaluate(model, dataloaders[2])
+    qwk_score_for_seed, test_loss_for_seed =  evaluation.evaluate(model, dataloaders_list[2])
     print(f"Quadratic Weighted Kappa (QWK) Score on test set: {qwk_score_for_seed} and test loss is: {test_loss_for_seed}")
     return qwk_score_for_seed, test_loss_for_seed
 
