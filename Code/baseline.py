@@ -55,7 +55,7 @@ def main():
 
             # Set the deterministic behavior for cudNN (if using GPUs)
             torch.backends.cudnn.deterministic = True
-            torch.backends.cudnn.benchmark = True
+            torch.backends.cudnn.benchmark = False
 
             print("!!========================CREATING DATA LOADERS========================!!")
             train_dataloader, val_dataloader, test_dataloader, _ = dataloaders \
