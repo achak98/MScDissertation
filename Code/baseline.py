@@ -11,7 +11,7 @@ def main():
     file_path = "/home/achakravarty/Dissertation/Data/results/qwk.txt"
     args = argsparser.parse_args()
     gen = yielder.yield_hyps(args,embedding_types)
-    seed = 42
+    seed = 0
     # Set the deterministic behavior for cudNN (if using GPUs)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
@@ -23,7 +23,7 @@ def main():
         
         data += f"\nFor embedding type: {embedding_type} stride1: {strides[0]} ks1: {kernels[0]} stride2:{strides[1]} stride3: {strides[2]} ks2: {kernels[1]} stride4: {strides[3]} stride5: {strides[4]} ks3: {kernels[2]} stride6: {strides[5]} \n"
         for i in range(10):
-            seed = random.randint(seed)
+            seed = random.randint(1, 1000)
             # Set the random seed for Python's random module
             random.seed(seed)
 
