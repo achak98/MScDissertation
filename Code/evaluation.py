@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+import torch.nn as nn
 
 def evaluate(model, dataloader):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
