@@ -134,3 +134,33 @@ def create_data_loaders(args, embedding_type, shuffle=True, num_workers=0):
     test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=num_workers)
     
     return train_loader, val_loader, test_loader, len(vocab)
+    
+def create_datset(args, embedding_type):
+    data_file = args.dataDir + '/training_set_rel3.tsv'
+    
+    vocab, _ = get_vocab_and_dataset_length(data_file, args.prompt)
+
+    if (embedding_type == "glove"):
+        embedding = GloVe(name='6B', dim=args.embedding_dim)
+        tokeniser = "nltk"
+    elif (embedding_type == "w2v"):
+        embedding = Embeddings.Word2Vec()
+        tokeniser = "nltk"
+    elif (embedding_type == "NAE"):
+        embedding = Embeddings.NAE(args, vocab)
+        tokeniser = "nltk"
+    elif (embedding_type == "skipgram"):
+        embedding = Embeddings.Skipgram_Util(args, vocab)
+        tokeniser = "nltk"
+    elif (embedding_type == "bert"):
+        embedding = Embeddings.BERT()
+        tokeniser = "bert"
+    elif (embedding_type == "droberta"):
+        embedding = "hehelolzzzzz(2)"
+        tokeniser = "roberta"
+    
+    
+    dataset = MyDataset(data_file, args.prompt, args.max_length, embedding, tokeniser)
+    return dataset
+
+    
