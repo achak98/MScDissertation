@@ -42,7 +42,7 @@ def yield_crossval_dls(args, dataset=None,k_fold=10):
         train_set = torch.utils.data.dataset.Subset(dataset,train_indices)
         val_set = torch.utils.data.dataset.Subset(dataset,val_indices)
         test_set = torch.utils.data.dataset.Subset(dataset,test_indices)
-        
+        print(f"num of workers : {args.numOfWorkers} and type: {type(args.numOfWorkers)}")
         
         train_loader = torch.utils.data.DataLoader(train_set, batch_size=args.batch_size,
                                           shuffle=True, num_workers=args.numOfWorkers)
