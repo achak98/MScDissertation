@@ -54,7 +54,8 @@ def evaluate_roberta(model, dataloader, prompt):
 
             predictions.extend(denormalise_scores(prompt, outputs))
             targets.extend(denormalise_scores(prompt, scores))
-            
+            predictions = np.array(predictions)
+            targets = np.array(targets)
     eval_loss /= len(dataloader)
 
     # Calculate Quadratic Weighted Kappa
