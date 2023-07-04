@@ -144,7 +144,7 @@ def calculate_confusion_matrix(min_rating, max_rating, y_true, y_pred):
                 for j in range(num_classes)]
 
     for true, pred in zip(y_true, y_pred):
-        conf_mat[true - min_rating][ pred - min_rating] += 1
+        conf_mat[int(true - min_rating)][ int(pred - min_rating)] += 1
 
     return conf_mat
 
