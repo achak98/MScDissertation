@@ -10,7 +10,7 @@ python baseline.py \
     --numOfWorkers 0 \
     --embedding_dim 300 \
     --num_epochs 40 \
-    --batch_size 16 \
+    --batch_size 32 \
     --lr 0.001 \
     --mode train \
     --cnnfilters 100 \

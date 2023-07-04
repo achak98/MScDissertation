@@ -80,7 +80,7 @@ def main():
     t_loss_for_seeds = []
     seeds = []
     for prompt in range(1,9):
-        file_path += prompt+".txt"
+        file_path += f"_{prompt}.txt"
         for i in range(10):
             seed = random.randint(1, 1000)
             # Set the random seed for Python's random module

@@ -8,7 +8,7 @@ python robertaencdec.py \
     --dataDir "./../Data/ASAP-AES" \
     --numOfWorkers 0 \
     --num_epochs 40 \
-    --batch_size 16 \
+    --batch_size 2 \
     --lr 3e-4 \
     --mode train \
     --log_interval 10 \
