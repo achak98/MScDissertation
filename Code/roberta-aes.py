@@ -83,8 +83,8 @@ def get_loader(df, id2emb, essay_embeddings, attn_masks, shuffle=True):
 
   # get embeddings from essay_id using id2emb dict
   embeddings = np.array([essay_embeddings[id2emb[id]] for id in df['essay_id']])
-  attention_masks = attention_masks.cpu().numpy()
-  attention_masks = np.array([attn_masks[id2emb[id]] for id in df['essay_id']])
+  attention_masks = attn_masks.cpu().numpy()
+  attention_masks = np.array([attention_masks[id2emb[id]] for id in df['essay_id']])
   # dataset and dataloader
   data = TensorDataset(torch.from_numpy(embeddings).float(), torch.from_numpy(attention_masks), torch.from_numpy(np.array(df['scaled_score'])).float())
   loader = DataLoader(data, batch_size=128, shuffle=shuffle, num_workers=2)
@@ -191,7 +191,7 @@ for n, (train, test) in enumerate(kf.split(dataset)):
   train_df = get_scaled_dataset(train_df)
 
   test_df = scaled_dataset.iloc[test]
-
+    
   # dataloaders
   train_loader = get_loader(train_df, id2emb, essay_embeddings, attn_masks, shuffle=True)
   test_loader = get_loader(test_df, id2emb, essay_embeddings, attn_masks, shuffle=False)
