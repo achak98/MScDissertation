@@ -84,10 +84,10 @@ def denormalise_scores(prompt, data):
 def quadratic_weighted_kappa(y_true, y_pred):
 
     # Convert predictions to integer values
-    y_pred = np.round(y_pred).astype(int)
+    y_pred = np.array(np.round(y_pred).astype(int))
 
     # Convert targets to integer values if needed
-    y_true = np.round(y_true).astype(int)
+    y_true = np.array(np.round(y_true).astype(int))
     #print(f"y_pred: {y_pred}")
     #print(f"y_true: {y_true}")
     # Calculate the confusion matrix
@@ -116,7 +116,7 @@ def quadratic_weighted_kappa(y_true, y_pred):
     denominator = np.sum(weight_matrix * exp_mat)
     print(f"denominator: {denominator}")
     print(f"numerator: {numerator}")"""
-    
+
     hist_rater_a = histogram(y_true, min_rating, max_rating)
     hist_rater_b = histogram(y_pred, min_rating, max_rating)
 
