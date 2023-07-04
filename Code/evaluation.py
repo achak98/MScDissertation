@@ -58,17 +58,17 @@ def evaluate_roberta(model, dataloader, prompt):
             #targets.append(labels.item())
             predictions.extend(denormalise_scores(prompt, outputs))
             targets.extend(denormalise_scores(prompt, scores))
-            #if(batch_num + 1 > len(dataloader)*0.99):
-            #    print(f"\n target scores in prediction: {scores}")
-            #    print(f"inferred scores in prediction: {outputs}")
-            #    print(f"loss in prediction: {loss}")
+            if(batch_num + 1 > len(dataloader)*0.95):
+                print(f"\n target scores in prediction: {scores}")
+                print(f"inferred scores in prediction: {outputs}")
+                print(f"loss in prediction: {loss}")
             #print(f"preditions: {predictions}")
             #print(f"targets: {targets}")
     eval_loss /= len(dataloader)
 
     # Calculate Quadratic Weighted Kappa
     qwk = quadratic_weighted_kappa(targets, predictions)
-    print(f"qwk scores: {qwk}")
+    print(f"eval loss: {eval_loss:5f} qwk scores: {qwk}")
     return qwk, eval_loss
 
 def denormalise_scores(prompt, data):
