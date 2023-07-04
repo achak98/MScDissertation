@@ -45,8 +45,8 @@ def evaluate_roberta(model, dataloader, prompt):
     eval_loss = 0.0
     with torch.no_grad():
         for batch_num, batch in enumerate(dataloader):
-            input_ids = torch.Tensor(batch['input_ids']).to(device)
-            attention_mask = torch.Tensor(batch['attention_mask']).to(device)
+            input_ids = torch.stack(batch['input_ids'], dim=1).to(device)
+            attention_mask = torch.stack(batch['attention_mask'], dim=1).to(device)
             scores = batch['score'].float().to(device)
             outputs = model(input_ids, attention_mask)
             loss = loss_fn(outputs, scores)
