@@ -72,7 +72,7 @@ def mean_encoding(essay_list, model, tokenizer):
     with torch.no_grad():
       model_output = model(**encoded_input)
     tokens_embeddings = np.matrix(model_output[0].squeeze().cpu())
-    embeddings.append(np.squeeze(np.asarray(tokens_embeddings.mean(0),encoded_input['attention_mask'])))
+    embeddings.append(np.array([np.squeeze(np.asarray(tokens_embeddings.mean(0))),encoded_input['attention_mask'].numpy()]))
     #attn_masks.append(encoded_input['attention_mask'])
     #print("HERE!!!!: ",[encoded_input['input_ids'],encoded_input['attention_mask']])
     #embeddings.append([encoded_input['input_ids'],encoded_input['attention_mask']])
