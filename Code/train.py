@@ -193,7 +193,9 @@ def train_roberta(model, train_dataloader, val_dataloader, num_epochs, lr, promp
                     optimizer.zero_grad()
                     loss.backward()
                     optimizer.step()
-                    batch_pbar.set_postfix({'Loss': loss.item()})
+                    train_loss += loss.item()
+                    batch_pbar.set_postfix({'Last Loss': loss.item()})
+                    batch_pbar.set_postfix({'Running Avg Loss': (train_loss/(batch_num+1))})
             # Calculate average train loss
             train_loss /= len(train_dataloader)
             
