@@ -54,12 +54,7 @@ def evaluate_roberta(model, dataloader, prompt):
 
             predictions.extend(denormalise_scores(prompt, outputs))
             targets.extend(denormalise_scores(prompt, scores))
-            if(batch_num + 1 > len(dataloader)*0.99):
-                print(f"\n target scores in prediction: {scores}")
-                print(f"inferred scores in prediction: {outputs}")
-                print(f"loss in prediction: {loss}")
-            #print(f"preditions: {predictions}")
-            #print(f"targets: {targets}")
+            
     eval_loss /= len(dataloader)
 
     # Calculate Quadratic Weighted Kappa
@@ -93,14 +88,17 @@ def quadratic_weighted_kappa(y_true, y_pred):
 
     # Convert targets to integer values if needed
     y_true = np.round(y_true).astype(int)
-    print(f"y_pred: {y_pred}")
-    print(f"y_true: {y_true}")
+    #print(f"y_pred: {y_pred}")
+    #print(f"y_true: {y_true}")
     # Calculate the confusion matrix
-    conf_mat = calculate_confusion_matrix(y_true, y_pred)
+    min_rating = min(min(y_true) + min(y_pred))
+    max_rating = max(max(y_true) + max(y_pred))
+    conf_mat = calculate_confusion_matrix(min_rating, max_rating, y_true, y_pred)
 
     # Create the weight matrix
-    num_ratings = conf_mat.shape[0]
-    weight_matrix = np.zeros((num_ratings, num_ratings))
+    num_ratings = len(conf_mat)
+    num_scored_items = float(len(y_true))
+    """weight_matrix = np.zeros((num_ratings, num_ratings))
     for i in range(num_ratings):
         for j in range(num_ratings):
             weight_matrix[i, j] = ((i - j) ** 2) / ((num_ratings - 1) ** 2)
@@ -117,17 +115,46 @@ def quadratic_weighted_kappa(y_true, y_pred):
     numerator = np.sum(weight_matrix * obs_mat)
     denominator = np.sum(weight_matrix * exp_mat)
     print(f"denominator: {denominator}")
-    print(f"numerator: {numerator}")
+    print(f"numerator: {numerator}")"""
+    
+    hist_rater_a = histogram(y_true, min_rating, max_rating)
+    hist_rater_b = histogram(y_pred, min_rating, max_rating)
+
+    numerator = 0.0
+    denominator = 0.0
+
+    for i in range(num_ratings):
+        for j in range(num_ratings):
+            expected_count = (hist_rater_a[i] * hist_rater_b[j]
+                              / num_scored_items)
+            d = pow(i - j, 2.0) / pow(num_ratings - 1, 2.0)
+            numerator += d * conf_mat[i][j] / num_scored_items
+            denominator += d * expected_count / num_scored_items
     # Calculate QWK
     qwk = 1.0 - (numerator / denominator)
 
     return qwk
 
-def calculate_confusion_matrix(y_true, y_pred):
-    num_classes = max(max(y_true), max(y_pred)) + 1
+def calculate_confusion_matrix(min_rating, max_rating, y_true, y_pred):
+    
+    num_classes = int(max_rating - min_rating + 1)
     conf_mat = np.zeros((num_classes, num_classes), dtype=np.int64)
 
     for true, pred in zip(y_true, y_pred):
-        conf_mat[true, pred] += 1
+        conf_mat[true - min_rating, pred - min_rating] += 1
 
     return conf_mat
+
+def histogram(ratings, min_rating=None, max_rating=None):
+    """
+    Returns the counts of each type of rating that a rater made
+    """
+    if min_rating is None:
+        min_rating = min(ratings)
+    if max_rating is None:
+        max_rating = max(ratings)
+    num_ratings = int(max_rating - min_rating + 1)
+    hist_ratings = [0 for x in range(num_ratings)]
+    for r in ratings:
+        hist_ratings[r - min_rating] += 1
+    return hist_ratings
