@@ -139,7 +139,7 @@ def quadratic_weighted_kappa(y_true, y_pred):
     denominator = 0.0
 
     if num_ratings == 1:
-        if y_pred == y_true:
+        if y_pred[0] == y_true[0]:
             return 1
         else:
             return 0
