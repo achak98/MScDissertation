@@ -321,6 +321,6 @@ data = ""
 for i in range(1,11):
   results_df, data = show_results(i, data)
 
-file = open("./../Data/results/roberta/qwk", "w")
+file = open("./../Data/results/roberta/qwk.txt", "w")
 file.write(data)
 file.close()
