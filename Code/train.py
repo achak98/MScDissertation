@@ -164,7 +164,7 @@ def train_roberta(model, train_dataloader, val_dataloader, num_epochs, lr, promp
     model.to(device)
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
-    loss_fn = nn.MSELoss()
+    loss_fn = evaluation.CustomLoss(prompt)
     optimizer = optim.AdamW(model.parameters(), lr=lr)
 
     # Train the model with tqdm progress bars
