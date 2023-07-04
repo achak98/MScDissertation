@@ -93,8 +93,8 @@ def quadratic_weighted_kappa(y_true, y_pred):
     #print(f"y_pred: {y_pred}")
     #print(f"y_true: {y_true}")
     # Calculate the confusion matrix
-    min_rating = min(min(y_true) + min(y_pred))
-    max_rating = max(max(y_true) + max(y_pred))
+    min_rating = min(min(y_true), min(y_pred))
+    max_rating = max(max(y_true), max(y_pred))
     conf_mat = calculate_confusion_matrix(min_rating, max_rating, y_true, y_pred)
 
     # Create the weight matrix
