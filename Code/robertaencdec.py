@@ -15,8 +15,7 @@ hf_logging.set_verbosity(logging.ERROR)
 
 def normalise_scores(score, prompt):
     if prompt == 1:
-        pass
-        #score = (score-2)/10
+        score = (score-2)/10
     elif prompt == 2:
         score = (score-2)/8
     elif prompt == 3:

@@ -45,20 +45,16 @@ def evaluate_roberta(model, dataloader, prompt):
     eval_loss = 0.0
     with torch.no_grad():
         for batch_num, batch in enumerate(dataloader):
-            input_ids = torch.stack(batch['input_ids'], dim=1).to(device)
-            attention_mask = torch.stack(batch['attention_mask'], dim=1).to(device)
+            input_ids = batch['input_ids'].to(device)
+            attention_mask = batch['attention_mask'].to(device)
             scores = batch['score'].float().to(device)
             outputs = model(input_ids, attention_mask)
             loss = loss_fn(outputs, scores)
             eval_loss += loss.item()
-            # Convert logits to predicted labels
-            #_, predicted = torch.max(outputs, dim=0)
-            # Append predictions and targets to lists
-            #predictions.append(predicted.item())
-            #targets.append(labels.item())
+
             predictions.extend(denormalise_scores(prompt, outputs))
             targets.extend(denormalise_scores(prompt, scores))
-            if(batch_num + 1 > len(dataloader)*0.95):
+            if(batch_num + 1 > len(dataloader)*0.99):
                 print(f"\n target scores in prediction: {scores}")
                 print(f"inferred scores in prediction: {outputs}")
                 print(f"loss in prediction: {loss}")
@@ -73,8 +69,7 @@ def evaluate_roberta(model, dataloader, prompt):
 
 def denormalise_scores(prompt, data):
     if prompt == 1:
-        data = data.cpu().numpy()
-        #data = (data * 10 + 2).cpu().numpy()
+        data = (data * 10 + 2).cpu().numpy()
     elif prompt == 2:
         data = (data * 8 + 2).cpu().numpy()
     elif prompt == 3:
