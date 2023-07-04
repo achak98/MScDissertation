@@ -54,7 +54,6 @@ def get_id2emb(ids):
   id2emb = {}
   for n,id in enumerate(ids.to_list()):
     id2emb[id] = n
-
   print('Essay ids to emebeddings dictionary created.')
   
   return id2emb
@@ -66,14 +65,15 @@ roberta = RobertaModel.from_pretrained("roberta-base").to(device)
 def mean_encoding(essay_list, model, tokenizer):
 
   print('Encoding essay embeddings:')
-
   embeddings = []
   for essay in tqdm(essay_list):
-    encoded_input = tokenizer(essay, padding=True, truncation=True, return_tensors='pt').to(device)
+    encoded_input = tokenizer.encode_plus(essay, padding=True, truncation=True, return_tensors='pt').to(device)
     with torch.no_grad():
       model_output = model(**encoded_input)
     tokens_embeddings = np.matrix(model_output[0].squeeze().cpu())
     embeddings.append(np.squeeze(np.asarray(tokens_embeddings.mean(0))))
+    #print("HERE!!!!: ",[encoded_input['input_ids'],encoded_input['attention_mask']])
+    #embeddings.append([encoded_input['input_ids'],encoded_input['attention_mask']])
 
   return np.matrix(embeddings)
 
@@ -83,9 +83,10 @@ def get_loader(df, id2emb, essay_embeddings, shuffle=True):
 
   # get embeddings from essay_id using id2emb dict
   embeddings = np.array([essay_embeddings[id2emb[id]] for id in df['essay_id']])
-
+  embeddings.squeeze()
+  print("HERE!!!!: ",embeddings)
   # dataset and dataloader
-  data = TensorDataset(torch.from_numpy(embeddings).float(), torch.from_numpy(np.array(df['scaled_score'])).float())
+  data = TensorDataset(torch.from_numpy(embeddings['input_ids']).float(), torch.from_numpy(embeddings['attention_mask']).float(), torch.from_numpy(np.array(df['scaled_score'])).float())
   loader = DataLoader(data, batch_size=128, shuffle=shuffle, num_workers=2)
 
   return loader
@@ -95,6 +96,7 @@ class MLP(torch.nn.Module):
   def __init__(self, input_size):
     super(MLP, self).__init__()
     
+    self.enc = roberta
     self.layers = torch.nn.Sequential(
       torch.nn.Linear(input_size, 256),
       torch.nn.ReLU(),
@@ -105,8 +107,10 @@ class MLP(torch.nn.Module):
       torch.nn.Linear(96, 1)
     ) 
 
-  def forward(self, x):
-    return self.layers(x)
+  def forward(self, x, attn_mask):
+    model_output = self.enc(input_ids=x, attention_mask=attn_mask)
+    tokens_embeddings = np.matrix(model_output[0].squeeze().cpu())
+    return self.layers(np.squeeze(np.asarray(tokens_embeddings.mean(0))))
   
 def training_step(model, cost_function, optimizer, train_loader):
 
@@ -115,12 +119,13 @@ def training_step(model, cost_function, optimizer, train_loader):
 
   model.train() 
 
-  for step, (inputs, targets) in enumerate(train_loader):
+  for step, (inputs, attn_mask, targets) in enumerate(train_loader):
 
     inputs = inputs.squeeze(dim=1).to(device)
+    attn_mask = attn_mask.squeeze(dim=1).to(device)
     targets = targets.reshape(targets.shape[0],1).to(device)
 
-    outputs = model(inputs)
+    outputs = model(inputs, attn_mask)
 
     loss = cost_function(outputs, targets)
 
@@ -145,12 +150,13 @@ def test_step(model, cost_function, optimizer, test_loader):
   model.eval() 
 
   with torch.no_grad():
-    for step, (inputs, targets) in enumerate(test_loader):
+    for step, (inputs, attn_mask, targets) in enumerate(test_loader):
 
       inputs = inputs.squeeze(dim=1).to(device)
+      attn_mask = attn_mask.squeeze(dim=1).to(device)
       targets = targets.reshape(targets.shape[0],1).to(device)
 
-      outputs = model(inputs)
+      outputs = model(inputs,attn_mask)
 
       loss = cost_function(outputs, targets)
 
