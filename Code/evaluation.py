@@ -46,14 +46,14 @@ class CustomLoss(nn.Module):
         predictions = (denormalise_scores(self.prompt, output))
         targets = (denormalise_scores(self.prompt, target))
         qwk = quadratic_weighted_kappa(targets, predictions)
-        return loss + (1-qwk)*100
+        return loss + (1-qwk)*10
     
 def evaluate_roberta(model, dataloader, prompt):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.eval()
     predictions = []
     targets = []
-    loss_fn = nn.CustomLoss(prompt)
+    loss_fn = CustomLoss(prompt)
     eval_loss = 0.0
     with torch.no_grad():
         for batch_num, batch in enumerate(dataloader):
