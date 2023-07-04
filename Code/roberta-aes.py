@@ -15,7 +15,6 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # Original kaggle training set
 kaggle_dataset  = pd.read_csv('./../Data//ASAP-AES/training_set_rel3.tsv', sep='\t', encoding = "ISO-8859-1")
-
 # Smaller training set used for this project
 dataset = pd.DataFrame(
   {
@@ -65,29 +64,28 @@ roberta = RobertaModel.from_pretrained("roberta-base").to(device)
 def mean_encoding(essay_list, model, tokenizer):
 
   print('Encoding essay embeddings:')
+
   embeddings = []
   attn_masks = []
   for essay in tqdm(essay_list):
-    encoded_input = tokenizer.encode_plus(essay, padding=True, truncation=True, return_tensors='pt').to(device)
+    encoded_input = tokenizer(essay, padding=True, truncation=True, return_tensors='pt').to(device)
     with torch.no_grad():
       model_output = model(**encoded_input)
     tokens_embeddings = np.matrix(model_output[0].squeeze().cpu())
-    embeddings.append(np.array([np.squeeze(np.asarray(tokens_embeddings.mean(0))),encoded_input['attention_mask'].cpu().numpy()]))
-    #attn_masks.append(encoded_input['attention_mask'])
-    #print("HERE!!!!: ",[encoded_input['input_ids'],encoded_input['attention_mask']])
-    #embeddings.append([encoded_input['input_ids'],encoded_input['attention_mask']])
+    embeddings.append(np.squeeze(np.asarray(tokens_embeddings.mean(0))))
+    attn_masks.append(encoded_input['attention_mask'])
 
-  return (np.matrix(embeddings))
+  return np.matrix(embeddings), attn_masks
 
-essay_embeddings = mean_encoding(dataset['essay'], roberta, tokenizer)
+essay_embeddings,attn_masks = mean_encoding(dataset['essay'], roberta, tokenizer)
 
-def get_loader(df, id2emb, essay_embeddings, shuffle=True):
+def get_loader(df, id2emb, essay_embeddings, attn_masks, shuffle=True):
 
   # get embeddings from essay_id using id2emb dict
-  embeddings = np.array([essay_embeddings[0][id2emb[id]] for id in df['essay_id']])
-  attn_masks = np.array([essay_embeddings[1][id2emb[id]] for id in df['essay_id']])
+  embeddings = np.array([essay_embeddings[id2emb[id]] for id in df['essay_id']])
+  attention_masks = np.array([attn_masks[id2emb[id]] for id in df['essay_id']])
   # dataset and dataloader
-  data = TensorDataset(torch.from_numpy(embeddings).float(), torch.from_numpy(attn_masks), torch.from_numpy(np.array(df['scaled_score'])).float())
+  data = TensorDataset(torch.from_numpy(embeddings).float(), torch.from_numpy(attention_masks), torch.from_numpy(np.array(df['scaled_score'])).float())
   loader = DataLoader(data, batch_size=128, shuffle=shuffle, num_workers=2)
 
   return loader
@@ -194,8 +192,8 @@ for n, (train, test) in enumerate(kf.split(dataset)):
   test_df = scaled_dataset.iloc[test]
 
   # dataloaders
-  train_loader = get_loader(train_df, id2emb, essay_embeddings, shuffle=True)
-  test_loader = get_loader(test_df, id2emb, essay_embeddings, shuffle=False)
+  train_loader = get_loader(train_df, id2emb, essay_embeddings, attn_masks, shuffle=True)
+  test_loader = get_loader(test_df, id2emb, essay_embeddings, attn_masks, shuffle=False)
 
   # model
   print('------------------------------------------------------------------')
