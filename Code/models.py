@@ -97,6 +97,8 @@ class RobertaEncDec(nn.Module):
         context_vector = torch.sum(weights * decoder_output, dim=1)        
         h = self.regressor(context_vector)
         h = h.squeeze()
+        if(torch.Tensor([1]).squeeze().size() == h.size()):
+            h = h.unsqueeze(dim=0)
         return h
  
     

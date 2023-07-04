@@ -44,7 +44,7 @@ def evaluate_roberta(model, dataloader, prompt):
     loss_fn = nn.MSELoss()
     eval_loss = 0.0
     with torch.no_grad():
-        for batch_idx, batch in enumerate(dataloader):
+        for batch_num, batch in enumerate(dataloader):
             input_ids = torch.stack(batch['input_ids'], dim=1).to(device)
             attention_mask = torch.stack(batch['attention_mask'], dim=1).to(device)
             scores = batch['score'].float().to(device)
@@ -58,10 +58,10 @@ def evaluate_roberta(model, dataloader, prompt):
             #targets.append(labels.item())
             predictions.extend(denormalise_scores(prompt, outputs))
             targets.extend(denormalise_scores(prompt, scores))
-            if(batch_num > len(train_dataloader)*0.99):
-                print(f"\n target scores in prediction: {scores}")
-                print(f"inferred scores in prediction: {outputs}")
-                print(f"loss in prediction: {loss}")
+            #if(batch_num + 1 > len(dataloader)*0.99):
+            #    print(f"\n target scores in prediction: {scores}")
+            #    print(f"inferred scores in prediction: {outputs}")
+            #    print(f"loss in prediction: {loss}")
             #print(f"preditions: {predictions}")
             #print(f"targets: {targets}")
     eval_loss /= len(dataloader)

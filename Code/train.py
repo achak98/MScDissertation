@@ -185,9 +185,9 @@ def train_roberta(model, train_dataloader, val_dataloader, num_epochs, lr, promp
                     scores = batch['score'].float().to(device)
                     
                     outputs = model(input_ids, attention_mask)
-                    if(batch_num > len(train_dataloader)*0.99):
-                        print(f"\n scores: {scores}")
-                        print(f"outputs: {outputs}")
+                    #if(batch_num + 1 > len(train_dataloader)*0.99):
+                    #    print(f"\n scores: {scores}")
+                    #    print(f"outputs: {outputs}")
                     # Calculate loss
                     loss = loss_fn(outputs, scores)
                     optimizer.zero_grad()
