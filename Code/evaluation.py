@@ -140,7 +140,8 @@ def quadratic_weighted_kappa(y_true, y_pred):
 def calculate_confusion_matrix(min_rating, max_rating, y_true, y_pred):
     
     num_classes = int(max_rating - min_rating + 1)
-    conf_mat = np.zeros((num_classes, num_classes), dtype=np.int64)
+    conf_mat = [[0 for i in range(num_classes)]
+                for j in range(num_classes)]
 
     for true, pred in zip(y_true, y_pred):
         conf_mat[true - min_rating, pred - min_rating] += 1
