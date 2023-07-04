@@ -138,6 +138,11 @@ def quadratic_weighted_kappa(y_true, y_pred):
     numerator = 0.0
     denominator = 0.0
 
+    if num_ratings == 1:
+        if y_pred == y_true:
+            return 1
+        else:
+            return 0
     for i in range(num_ratings):
         for j in range(num_ratings):
             expected_count = (hist_rater_a[i] * hist_rater_b[j]
