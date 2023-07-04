@@ -81,8 +81,17 @@ class RobertaEncDec(nn.Module):
         )        
 
         self.regressor = nn.Sequential(                        
-            nn.Linear(768, 1),
-            nn.Sigmoid()                      
+            torch.nn.Sequential(
+            torch.nn.Linear(768, 256),
+            torch.nn.ReLU(),
+            torch.nn.Dropout(0.3),
+            torch.nn.Linear(256, 96),
+            torch.nn.ReLU(),
+            torch.nn.Dropout(0.3),
+            torch.nn.Linear(96, 1),
+            torch.nn.Sigmoid()
+    ) 
+                     
         )
     
     def forward(self, input_ids, attention_mask):
