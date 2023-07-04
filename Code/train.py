@@ -176,7 +176,7 @@ def train_roberta(model, train_dataloader, val_dataloader, num_epochs, lr, promp
             model.train()
             train_loss = 0.0
             
-            with tqdm(total=len(train_dataloader), desc='Batches', unit='batch') as batch_pbar:
+            """with tqdm(total=len(train_dataloader), desc='Batches', unit='batch') as batch_pbar:
                 for batch_num, (batch) in enumerate(train_dataloader):
                     batch_pbar.set_description(f'Batch {batch_num+1}')
                     batch_pbar.update()
@@ -193,7 +193,7 @@ def train_roberta(model, train_dataloader, val_dataloader, num_epochs, lr, promp
                     optimizer.step()
                     train_loss += loss.item()
                     batch_pbar.set_postfix({})
-                    batch_pbar.set_postfix({f'Last Loss: {loss.item():.5f} and Running Avg Loss:' : (train_loss/(batch_num+1))})
+                    batch_pbar.set_postfix({f'Last Loss: {loss.item():.5f} and Running Avg Loss:' : (train_loss/(batch_num+1))})"""
             # Calculate average train loss
             train_loss /= len(train_dataloader)
             
