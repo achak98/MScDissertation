@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from transformers import RobertaConfig, RobertaModel, AutoConfig, RobertaForCausalLM
 
 
 class SkipGram(nn.Module):
@@ -63,3 +64,72 @@ class Baseline(nn.Module):
         h = self.sigmoid(h)
 
         return h.squeeze()
+
+class RobertaEncDec(nn.Module):
+    def __init__(self):
+        super(RobertaEncDec, self).__init__()
+        self.encoder = RobertaModel.from_pretrained('roberta-base')
+        decoder_config = AutoConfig.from_pretrained("roberta-base")
+        decoder_config.is_decoder = True
+        decoder_config.add_cross_attention=True
+        self.decoder = RobertaModel.from_pretrained('roberta-base', config=decoder_config)
+        self.attention = nn.Sequential(            
+            nn.Linear(768, 512),            
+            nn.Tanh(),                       
+            nn.Linear(512, 1),
+            nn.Softmax(dim=1)
+        )        
+
+        self.regressor = nn.Sequential(                        
+            nn.Linear(768, 1),  
+            nn.Sigmoid()                      
+        )
+  
+       # self.decoder = RobertaForCausalLM.from_pretrained("roberta-base", config=decoder_config)
+        
+        
+
+    def forward(self, input_ids, attention_mask):
+        encoder_output = self.encoder(input_ids=input_ids, attention_mask=attention_mask)
+        weights = self.attention(encoder_output.last_hidden_state)
+        context_vector = torch.sum(weights * encoder_output.last_hidden_state, dim=2)        
+        decoder_output = self.decoder(input_ids=context_vector.long(), \
+                attention_mask=attention_mask, \
+                encoder_hidden_states=encoder_output.last_hidden_state).last_hidden_state
+        
+        weights = self.attention(decoder_output)
+        context_vector = torch.sum(weights * decoder_output, dim=1)        
+        h = self.regressor(context_vector)
+        h = h.squeeze()
+        return h
+ 
+    
+class BiRoberta(nn.Module):
+    def __init__(self):
+        super(BiRoberta, self).__init__()
+        self.encoder = RobertaModel.from_pretrained('roberta-base')
+        decoder_config = RobertaConfig.from_pretrained('roberta-base')
+        decoder_config.is_decoder = True
+        decoder_config.add_cross_attention = True
+        self.decoder = RobertaModel.from_pretrained('roberta-base', config=decoder_config)
+        self.output_layer = nn.Linear(self.decoder.config.hidden_size, 1)
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, input_ids, attention_mask, decoder_input_ids, decoder_attention_mask):
+        encoder_output = self.encoder(input_ids=input_ids, attention_mask=attention_mask)[0]
+        decoder_output = self.decoder(input_ids=decoder_input_ids, attention_mask=decoder_attention_mask, encoder_hidden_states=encoder_output)[0]
+        logits = self.output_layer(decoder_output)
+        return logits
+    
+class Roberta(nn.Module):
+    def __init__(self):
+        super(Roberta, self).__init__()
+        self.encoder = RobertaModel.from_pretrained('roberta-base')
+        self.output_layer = nn.Linear(self.encoder.config.hidden_size, 1)
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, input_ids, attention_mask):
+        encoder_output = self.encoder(input_ids=input_ids, attention_mask=attention_mask)[0]
+        logits = self.output_layer(encoder_output)
+        score = self.sigmoid(logits)
+        return score

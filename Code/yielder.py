@@ -51,3 +51,40 @@ def yield_crossval_dls(args, dataset=None,k_fold=10):
                                           shuffle=False, num_workers=args.numOfWorkers)
         dataloaders = [train_loader, val_loader, test_loader]
         yield dataloaders
+
+def yield_crossval_dls_roberta(args, dataset=None, k_fold=10):
+    total_size = len(dataset)
+    fraction = 1 / k_fold
+    seg = int(total_size * fraction)
+    test_size = int(0.2 * total_size)
+    val_size = int(0.1 * total_size)
+
+    for i in range(k_fold):
+        trll = 0
+        trlr = i * seg
+        testl = trlr
+        testr = trlr + test_size
+        trrl = testr
+        trrr = total_size
+
+        train_left_indices = list(range(trll, trlr))
+        train_right_indices = list(range(trrl, trrr))
+
+        train_indices = train_left_indices + train_right_indices
+        test_indices = list(range(testl, testr))
+        val_indices = train_indices[-val_size:]
+        train_indices = train_indices[:-val_size]
+
+        train_set = torch.utils.data.dataset.Subset(dataset, train_indices)
+        val_set = torch.utils.data.dataset.Subset(dataset, val_indices)
+        test_set = torch.utils.data.dataset.Subset(dataset, test_indices)
+
+        train_loader = torch.utils.data.DataLoader(train_set, batch_size=args.batch_size,
+                                                   shuffle=True, num_workers=args.numOfWorkers)
+        val_loader = torch.utils.data.DataLoader(val_set, batch_size=args.batch_size,
+                                                 shuffle=False, num_workers=args.numOfWorkers,)
+        test_loader = torch.utils.data.DataLoader(test_set, batch_size=args.batch_size,
+                                                  shuffle=False, num_workers=args.numOfWorkers,)
+        dataloaders = [train_loader, val_loader, test_loader]
+        yield dataloaders
+

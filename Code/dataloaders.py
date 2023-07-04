@@ -36,6 +36,7 @@ class MyDataset(Dataset):
             ret = self.embedding.get_vecs_by_tokens(padded_tokens, lower_case_backup=True)
         elif(self.tokeniser == "bert"):
             ret = self.embedding.get_vecs_by_tokens(padded_tokens, attn_mask, lower_case_backup=True)
+
         target_tensor = torch.tensor(score)  # Convert target to tensor
         return ret, target_tensor
     
@@ -117,7 +118,7 @@ def create_data_loaders(args, embedding_type, shuffle=True, num_workers=0):
     elif (embedding_type == "bert"):
         embedding = Embeddings.BERT()
         tokeniser = "bert"
-    elif (embedding_type == "droberta"):
+    elif (embedding_type == "roberta"):
         embedding = "hehelolzzzzz(2)"
         tokeniser = "roberta"
     

@@ -36,6 +36,57 @@ def evaluate(model, dataloader):
 
     return qwk, eval_loss
 
+def evaluate_roberta(model, dataloader, prompt):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model.eval()
+    predictions = []
+    targets = []
+    loss_fn = nn.MSELoss()
+    eval_loss = 0.0
+    with torch.no_grad():
+        for batch in dataloader:
+            input_ids = torch.stack(batch['input_ids'], dim=1).to(device)
+            attention_mask = torch.stack(batch['attention_mask'], dim=1).to(device)
+            scores = torch.tensor(batch['score']).float().to(device)
+            outputs = model(input_ids, attention_mask)
+            loss = loss_fn(outputs, scores.float())
+            eval_loss += loss.item()
+            # Convert logits to predicted labels
+            #_, predicted = torch.max(outputs, dim=0)
+
+            # Append predictions and targets to lists
+            #predictions.append(predicted.item())
+            #targets.append(labels.item())
+            predictions.extend(denormalise_scores(prompt, outputs))
+            targets.extend(denormalise_scores(prompt, scores))
+
+            #print(f"preditions: {predictions}")
+            #print(f"targets: {targets}")
+    eval_loss /= len(dataloader)
+
+    # Calculate Quadratic Weighted Kappa
+    qwk = quadratic_weighted_kappa(targets, predictions)
+
+    return qwk, eval_loss
+
+def denormalise_scores(prompt, data):
+    if prompt == 1:
+        data = (data * 10 + 2).cpu().numpy()
+    elif prompt == 2:
+        data = (data * 8 + 2).cpu().numpy()
+    elif prompt == 3:
+        data = (data * 3).cpu().numpy()
+    elif prompt == 4:
+        data = (data * 3).cpu().numpy()
+    elif prompt == 5:
+        data = (data * 4).cpu().numpy()
+    elif prompt == 6:
+        data = (data * 4).cpu().numpy()
+    elif prompt == 7:
+        data = (data * 30).cpu().numpy()
+    elif prompt == 8:
+        data = (data * 60).cpu().numpy()
+    return data
 
 def quadratic_weighted_kappa(y_true, y_pred):
 
