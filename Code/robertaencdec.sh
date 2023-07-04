@@ -9,7 +9,7 @@ python robertaencdec.py \
     --numOfWorkers 0 \
     --num_epochs 40 \
     --batch_size 2 \
-    --lr 3e-4 \
+    --lr 0.05 \
     --mode train \
     --log_interval 10 \
     --prompt "1"
