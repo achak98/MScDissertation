@@ -196,6 +196,7 @@ def train_roberta(model, train_dataloader, val_dataloader, num_epochs, lr, promp
 
                     predictions.extend(evaluation.denormalise_scores(prompt, outputs))
                     targets.extend(evaluation.denormalise_scores(prompt, scores))
+            
                     qwk = evaluation.quadratic_weighted_kappa(targets, predictions)
                     batch_pbar.set_postfix({})
                     batch_pbar.set_postfix({f'Last Loss: {loss.item():.5f}, QWK score: {qwk} and Running Avg Loss:' : (train_loss/(batch_num+1))})
