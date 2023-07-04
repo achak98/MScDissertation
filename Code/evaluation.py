@@ -47,26 +47,28 @@ def evaluate_roberta(model, dataloader, prompt):
         for batch in dataloader:
             input_ids = torch.stack(batch['input_ids'], dim=1).to(device)
             attention_mask = torch.stack(batch['attention_mask'], dim=1).to(device)
-            scores = torch.tensor(batch['score']).float().to(device)
+            scores = batch['score'].float().to(device)
             outputs = model(input_ids, attention_mask)
-            loss = loss_fn(outputs, scores.float())
+            loss = loss_fn(outputs, scores)
             eval_loss += loss.item()
             # Convert logits to predicted labels
             #_, predicted = torch.max(outputs, dim=0)
-
             # Append predictions and targets to lists
             #predictions.append(predicted.item())
             #targets.append(labels.item())
             predictions.extend(denormalise_scores(prompt, outputs))
             targets.extend(denormalise_scores(prompt, scores))
-
+            if batch == dataloader[-1]:
+                print(f"target scores in prediction: {scores}")
+                print(f"inferred scores in prediction: {outputs}")
+                print(f"loss in prediction: {loss}")
             #print(f"preditions: {predictions}")
             #print(f"targets: {targets}")
     eval_loss /= len(dataloader)
 
     # Calculate Quadratic Weighted Kappa
     qwk = quadratic_weighted_kappa(targets, predictions)
-
+    print(f"qwk scores: {qwk}")
     return qwk, eval_loss
 
 def denormalise_scores(prompt, data):

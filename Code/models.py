@@ -96,9 +96,7 @@ class RobertaEncDec(nn.Module):
         weights = self.attention(decoder_output)
         context_vector = torch.sum(weights * decoder_output, dim=1)        
         h = self.regressor(context_vector)
-        print(f"h in forward: {h}")
         h = h.squeeze()
-        print(f"h in forward after being squeezed: {h}")
         return h
  
     

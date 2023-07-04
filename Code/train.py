@@ -175,7 +175,7 @@ def train_roberta(model, train_dataloader, val_dataloader, num_epochs, lr, promp
 
             model.train()
             train_loss = 0.0
-
+            
             with tqdm(total=len(train_dataloader), desc='Batches', unit='batch') as batch_pbar:
                 for batch_num, (batch) in enumerate(train_dataloader):
                     batch_pbar.set_description(f'Batch {batch_num+1}')
@@ -183,9 +183,11 @@ def train_roberta(model, train_dataloader, val_dataloader, num_epochs, lr, promp
                     input_ids = torch.stack(batch['input_ids'], dim=1).to(device)
                     attention_mask = torch.stack(batch['attention_mask'], dim=1).to(device)
                     scores = batch['score'].float().to(device)
-                    print(f"scores: {scores}")
+                    
                     outputs = model(input_ids, attention_mask)
-                    print(f"outputs: {outputs}")
+                    if(batch_num > len(train_dataloader)*0.99):
+                        print(f"scores: {scores}")
+                        print(f"outputs: {outputs}")
                     # Calculate loss
                     loss = loss_fn(outputs, scores)
                     optimizer.zero_grad()
@@ -194,7 +196,7 @@ def train_roberta(model, train_dataloader, val_dataloader, num_epochs, lr, promp
                     batch_pbar.set_postfix({'Loss': loss.item()})
             # Calculate average train loss
             train_loss /= len(train_dataloader)
-
+            
             # Evaluate on validation set
             val_qwk, val_loss = evaluation.evaluate_roberta(model, val_dataloader, prompt)
 
