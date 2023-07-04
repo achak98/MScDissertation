@@ -180,8 +180,8 @@ def train_roberta(model, train_dataloader, val_dataloader, num_epochs, lr, promp
                 for batch_num, (batch) in enumerate(train_dataloader):
                     batch_pbar.set_description(f'Batch {batch_num+1}')
                     batch_pbar.update()
-                    input_ids = torch.stack(batch['input_ids'], dim=1).to(device)
-                    attention_mask = torch.stack(batch['attention_mask'], dim=1).to(device)
+                    input_ids = torch.Tensor(batch['input_ids']).to(device)
+                    attention_mask = torch.Tensor(batch['attention_mask']).to(device)
                     scores = batch['score'].float().to(device)
                     
                     outputs = model(input_ids, attention_mask)
