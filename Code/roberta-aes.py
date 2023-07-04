@@ -83,10 +83,9 @@ def get_loader(df, id2emb, essay_embeddings, shuffle=True):
 
   # get embeddings from essay_id using id2emb dict
   embeddings = np.array([essay_embeddings[id2emb[id]] for id in df['essay_id']])
-  embeddings.squeeze()
-  print("HERE!!!!: ",embeddings)
+
   # dataset and dataloader
-  data = TensorDataset(torch.from_numpy(embeddings['input_ids']).float(), torch.from_numpy(embeddings['attention_mask']).float(), torch.from_numpy(np.array(df['scaled_score'])).float())
+  data = TensorDataset(torch.from_numpy(embeddings).float(), torch.from_numpy(np.array(df['scaled_score'])).float())
   loader = DataLoader(data, batch_size=128, shuffle=shuffle, num_workers=2)
 
   return loader
