@@ -16,7 +16,7 @@ hf_logging.set_verbosity(logging.ERROR)
 def normalise_scores(score, prompt):
     if prompt == 1:
         pass
-        score = (score-2)/10
+        #score = (score-2)/10
     elif prompt == 2:
         score = (score-2)/8
     elif prompt == 3:
@@ -81,6 +81,7 @@ def main():
     t_loss_for_seeds = []
     seeds = []
     for prompt in range(1,9):
+        print(f"Prompt: {prompt}")
         file_path += f"_{prompt}.txt"
         for i in range(10):
             seed = random.randint(1, 1000)
