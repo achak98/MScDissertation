@@ -83,6 +83,7 @@ def get_loader(df, id2emb, essay_embeddings, attn_masks, shuffle=True):
 
   # get embeddings from essay_id using id2emb dict
   embeddings = np.array([essay_embeddings[id2emb[id]] for id in df['essay_id']])
+  attention_masks = attention_masks.cpu().numpy()
   attention_masks = np.array([attn_masks[id2emb[id]] for id in df['essay_id']])
   # dataset and dataloader
   data = TensorDataset(torch.from_numpy(embeddings).float(), torch.from_numpy(attention_masks), torch.from_numpy(np.array(df['scaled_score'])).float())
