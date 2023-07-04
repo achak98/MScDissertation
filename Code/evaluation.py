@@ -98,7 +98,8 @@ def quadratic_weighted_kappa(y_true, y_pred):
 
     # Convert targets to integer values if needed
     y_true = np.round(y_true).astype(int)
-
+    print(f"y_pred: {y_pred}")
+    print(f"y_true: {y_true}")
     # Calculate the confusion matrix
     conf_mat = calculate_confusion_matrix(y_true, y_pred)
 
@@ -120,7 +121,8 @@ def quadratic_weighted_kappa(y_true, y_pred):
     # Calculate the numerator and denominator of QWK
     numerator = np.sum(weight_matrix * obs_mat)
     denominator = np.sum(weight_matrix * exp_mat)
-
+    print(f"denominator: {denominator}")
+    print(f"numerator: {numerator}")
     # Calculate QWK
     qwk = 1.0 - (numerator / denominator)
 
