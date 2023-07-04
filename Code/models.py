@@ -88,13 +88,13 @@ class RobertaEncDec(nn.Module):
     def forward(self, input_ids, attention_mask):
         encoder_output = self.encoder(input_ids=input_ids, attention_mask=attention_mask)
         weights = self.attention(encoder_output.last_hidden_state)
-        context_vector = torch.sum(weights * encoder_output.last_hidden_state, dim=2)        
-        decoder_output = self.decoder(input_ids=context_vector.long(), \
-                attention_mask=attention_mask, \
-                encoder_hidden_states=encoder_output.last_hidden_state).last_hidden_state
+        context_vector = torch.sum(weights * encoder_output.last_hidden_state, dim=1)        
+        #decoder_output = self.decoder(input_ids=context_vector.long(), \
+        #        attention_mask=attention_mask, \
+        #        encoder_hidden_states=encoder_output.last_hidden_state).last_hidden_state
         
-        weights = self.attention(decoder_output)
-        context_vector = torch.sum(weights * decoder_output, dim=1)        
+        #weights = self.attention(decoder_output)
+        #context_vector = torch.sum(weights * decoder_output, dim=1)        
         h = self.regressor(context_vector)
         h = h.squeeze()
         if(torch.Tensor([1]).squeeze().size() == h.size()):
