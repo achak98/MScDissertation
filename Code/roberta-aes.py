@@ -72,20 +72,20 @@ def mean_encoding(essay_list, model, tokenizer):
     with torch.no_grad():
       model_output = model(**encoded_input)
     tokens_embeddings = np.matrix(model_output[0].squeeze().cpu())
-    embeddings.append(np.squeeze(np.asarray(tokens_embeddings.mean(0))))
-    attn_masks.append(encoded_input['attention_mask'])
+    embeddings.append(np.squeeze(np.asarray(tokens_embeddings.mean(0),encoded_input['attention_mask'])))
+    #attn_masks.append(encoded_input['attention_mask'])
     #print("HERE!!!!: ",[encoded_input['input_ids'],encoded_input['attention_mask']])
     #embeddings.append([encoded_input['input_ids'],encoded_input['attention_mask']])
 
-  return (np.matrix(embeddings),np.array(attn_masks))
+  return (np.matrix(embeddings))
 
-essay_embeddings, attn_masks = mean_encoding(dataset['essay'], roberta, tokenizer)
+essay_embeddings = mean_encoding(dataset['essay'], roberta, tokenizer)
 
-def get_loader(df, id2emb, essay_embeddings, attn_masks, shuffle=True):
+def get_loader(df, id2emb, essay_embeddings, shuffle=True):
 
   # get embeddings from essay_id using id2emb dict
-  embeddings = np.array([essay_embeddings[id2emb[id]] for id in df['essay_id']])
-
+  embeddings = np.array([essay_embeddings[0][id2emb[id]] for id in df['essay_id']])
+  attn_masks = np.array([essay_embeddings[1][id2emb[id]] for id in df['essay_id']])
   # dataset and dataloader
   data = TensorDataset(torch.from_numpy(embeddings).float(), torch.from_numpy(attn_masks), torch.from_numpy(np.array(df['scaled_score'])).float())
   loader = DataLoader(data, batch_size=128, shuffle=shuffle, num_workers=2)
