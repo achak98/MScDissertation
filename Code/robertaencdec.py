@@ -133,7 +133,7 @@ def robertaencdec(args, dataloaders_list, prompt):
     print("!!========================TRAINING MODEL========================!!")
     model = train.train_roberta(model, dataloaders_list[0], dataloaders_list[1], args.num_epochs, args.lr, prompt)
     print("!!========================EVALUATING MODEL========================!!")
-    qwk_score_for_seed, test_loss_for_seed =  evaluation.evaluate(model, dataloaders_list[2], prompt)
+    qwk_score_for_seed, test_loss_for_seed =  evaluation.evaluate_roberta(model, dataloaders_list[2], prompt)
     print(f"Quadratic Weighted Kappa (QWK) Score on test set: {qwk_score_for_seed} and test loss is: {test_loss_for_seed}")
     return qwk_score_for_seed, test_loss_for_seed
     
