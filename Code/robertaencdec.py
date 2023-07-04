@@ -108,18 +108,18 @@ def main():
                 qwk_score_over_folds.append(qwk_score_for_fold)
                 test_loss_over_folds.append(test_loss_for_fold)
                 data += f"\t\tFor fold {fold+1}, score was {qwk_score_for_fold} and test loss was {test_loss_for_fold}\n"
-                file = open(file_path, "r")
+                file = open(file_path, "w")
                 file.write(data)
                 file.close()
             seeds.append(seed)
             data += f"\tOver folds, Average QWK score: {np.average(qwk_score_over_folds)} and Average Test Loss: {np.average(test_loss_over_folds)} \n"
-            file = open(file_path, "r")
+            file = open(file_path, "w")
             file.write(data)
             file.close()
             qwk_for_seeds.append[np.average(qwk_score_over_folds)]
             t_loss_for_seeds.append[np.average(test_loss_over_folds)]
         data += f"\tOver all seeds and folds, Average QWK score: {np.average(qwk_for_seeds)} and Average Test Loss: {np.average(t_loss_for_seeds)} \n"
-        file = open(file_path, "r")
+        file = open(file_path, "w")
         file.write(data)
         file.close()
 
