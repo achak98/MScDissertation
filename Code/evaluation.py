@@ -73,6 +73,7 @@ def evaluate_roberta(model, dataloader, prompt):
 
 def denormalise_scores(prompt, data):
     if prompt == 1:
+        data.cpu().numpy()
         pass
         #data = (data * 10 + 2).cpu().numpy()
     elif prompt == 2:
