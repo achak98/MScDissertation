@@ -278,7 +278,7 @@ print('----------------------------------------------')
 print('mean QWK for two human raters:\t\t{:.4f}'.format(mqwk_raters))
 print('----------------------------------------------')
 
-def show_results(id):
+def show_results(id, data):
   
   model_id = f"model_{id}"
   results_df = get_results_df(train_df_dict[model_id], test_df_dict[model_id], preds_dict[model_id])
@@ -291,11 +291,16 @@ def show_results(id):
   print('--------------------------------------')
   print(f"\tResults for model: {id}")
   print('--------------------------------------')
+  data+="\n--------------------------------------"
+  data+=f"\n\tResults for model: {id}"
+  data+="\n--------------------------------------"
   for essay_set in range(8):
+    data+= '\nKappa for essay set {:}:\t\t{:.4f}'.format(essay_set+1, kappas_by_set[essay_set])
     print('Kappa for essay set {:}:\t\t{:.4f}'.format(essay_set+1, kappas_by_set[essay_set]))
+  data+='\nmean QWK:\t\t\t{:.4f}'.format(np.mean(kappas_by_set))
   print('mean QWK:\t\t\t{:.4f}'.format(np.mean(kappas_by_set)))
   
-  return results_df
+  return results_df,data
 
 def plot_results(results_df, id):
   set_number = 0
@@ -312,6 +317,10 @@ def plot_results(results_df, id):
   plt.suptitle(f'Histograms of scores for Model {id}')
   plt.tight_layout(rect=[0, 0.03, 1, 0.95])
   plt.show()
-
+data = ""
 for i in range(1,11):
-  results_df = show_results(i)
+  results_df, data = show_results(i, data)
+
+file = open("./../Data/results/roberta/qwk", "w")
+file.write(data)
+file.close()
