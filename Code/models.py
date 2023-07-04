@@ -69,10 +69,12 @@ class RobertaEncDec(nn.Module):
     def __init__(self):
         super(RobertaEncDec, self).__init__()
         self.encoder = RobertaModel.from_pretrained('roberta-base')
+
         decoder_config = AutoConfig.from_pretrained("roberta-base")
         decoder_config.is_decoder = True
         decoder_config.add_cross_attention=True
         self.decoder = RobertaModel.from_pretrained('roberta-base', config=decoder_config)
+        
         self.attention = nn.Sequential(            
             nn.Linear(768, 512),            
             nn.Tanh(),                       
@@ -80,9 +82,19 @@ class RobertaEncDec(nn.Module):
             nn.Softmax(dim=1)
         )        
 
-        self.regressor = nn.Sequential(                        
-            torch.nn.Sequential(
-            torch.nn.Linear(768, 256),
+        self.regressor1 = nn.Sequential(                        
+            torch.nn.Linear(768, 512),
+            torch.nn.ReLU(),
+            torch.nn.Dropout(0.3),
+            torch.nn.Linear(512, 96),
+            torch.nn.ReLU(),
+            torch.nn.Dropout(0.3),
+            torch.nn.Linear(96, 1),
+            torch.nn.Sigmoid()
+        )
+
+        self.regressor2 = nn.Sequential(                        
+            torch.nn.Linear(512, 256),
             torch.nn.ReLU(),
             torch.nn.Dropout(0.3),
             torch.nn.Linear(256, 96),
@@ -90,13 +102,12 @@ class RobertaEncDec(nn.Module):
             torch.nn.Dropout(0.3),
             torch.nn.Linear(96, 1),
             torch.nn.Sigmoid()
-    ) 
-                     
         )
+                     
     
     def forward(self, input_ids, attention_mask):
         encoder_output = self.encoder(input_ids=input_ids, attention_mask=attention_mask)
-        weights = self.attention(encoder_output.last_hidden_state)
+        """weights = self.attention(encoder_output.last_hidden_state)
         context_vector = torch.sum(weights * encoder_output.last_hidden_state, dim=1)        
         #decoder_output = self.decoder(input_ids=context_vector.long(), \
         #        attention_mask=attention_mask, \
@@ -104,7 +115,11 @@ class RobertaEncDec(nn.Module):
         
         #weights = self.attention(decoder_output)
         #context_vector = torch.sum(weights * decoder_output, dim=1)        
-        h = self.regressor(context_vector)
+        h = self.regressor(context_vector)"""
+
+        h=self.regressor1(encoder_output.last_hidden_state)
+        h = h.squeeze()
+        h=self.regressor2(h)
         h = h.squeeze()
         if(torch.Tensor([1]).squeeze().size() == h.size()):
             h = h.unsqueeze(dim=0)
