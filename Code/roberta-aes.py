@@ -127,7 +127,7 @@ class MLP(torch.nn.Module):
         )
 
     def forward(self, x, attn_mask):
-        model_output = self.enc(input_ids=x, attention_mask=attn_mask)
+        model_output = self.enc(input_ids=x.long(), attention_mask=attn_mask)
         tokens_embeddings = np.matrix(model_output[0].squeeze().cpu())
         return self.layers(np.squeeze(np.asarray(tokens_embeddings.mean(0))))
 
@@ -139,8 +139,8 @@ def training_step(model, cost_function, optimizer, train_loader):
     model.train()
 
     for step, (inputs, attn_mask, targets) in enumerate(train_loader):
-        inputs = inputs.squeeze(dim=1)
-        attn_mask = attn_mask.squeeze(dim=1)
+        inputs = inputs.squeeze(dim=1).to(device)
+        attn_mask = attn_mask.squeeze(dim=1).to(device)
         targets = targets.reshape(targets.shape[0], 1).to(device)
 
         outputs = model(inputs, attn_mask)
@@ -168,8 +168,8 @@ def test_step(model, cost_function, optimizer, test_loader):
 
     with torch.no_grad():
         for step, (inputs, attn_mask, targets) in enumerate(test_loader):
-            inputs = inputs.squeeze(dim=1)
-            attn_mask = attn_mask.squeeze(dim=1)
+            inputs = inputs.squeeze(dim=1).to(device)
+            attn_mask = attn_mask.squeeze(dim=1).to(device)
             targets = targets.reshape(targets.shape[0], 1).to(device)
 
             outputs = model(inputs, attn_mask)
