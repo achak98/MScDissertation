@@ -128,12 +128,12 @@ class MLP(torch.nn.Module):
 
     def forward(self, x, attn_mask):
         model_output = self.enc(input_ids=x.long(), attention_mask=attn_mask)
-        print(model_output.shape)
-        print(model_output[0].shape)
-        print(model_output[0].squeeze().shape)
+        print(model_output.size())
+        print(model_output[0].size())
+        print(model_output[0].squeeze().size())
         tokens_embeddings = np.array(model_output[0].squeeze().cpu())
         print(tokens_embeddings.mean(0).shape)
-        print(torch.Tensor(np.squeeze(np.asarray(tokens_embeddings.mean(0)))).shape)
+        print(torch.Tensor(np.squeeze(np.asarray(tokens_embeddings.mean(0)))).size())
         return self.layers(torch.Tensor(np.squeeze(np.asarray(tokens_embeddings.mean(0)))).to(device))
 
 
