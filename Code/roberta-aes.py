@@ -143,7 +143,7 @@ class MLP(torch.nn.Module):
         h=self.regressor1(encoder_output.last_hidden_state)
         h = h.squeeze()
         h=self.regressor2(h)
-        h = h.squeeze().squeeze()
+        h = h.squeeze()
         if(torch.Tensor([1]).squeeze().size() == h.size()):
             h = h.unsqueeze(dim=0)
         return h
@@ -157,7 +157,7 @@ def training_step(model, cost_function, optimizer, train_loader):
     for step, (inputs, attn_mask, targets) in enumerate(train_loader):
         inputs = inputs.squeeze(dim=1).to(device)
         attn_mask = attn_mask.squeeze(dim=1).to(device)
-        targets = targets.reshape(targets.shape[0], 1).to(device)
+        targets = targets.reshape(targets.shape[0]).to(device)
 
         outputs = model(inputs, attn_mask)
         print(f"!!!!!!!!!outputs: {outputs} !!!!!!!!!!")
