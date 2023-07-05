@@ -116,25 +116,37 @@ class MLP(torch.nn.Module):
         super(MLP, self).__init__()
 
         self.enc = RobertaModel.from_pretrained("roberta-base").to(device)
-        self.layers = torch.nn.Sequential(
-            torch.nn.Linear(input_size, 256),
+        self.regressor1 = torch.nn.Sequential(                        
+            torch.nn.Linear(768, 512),
+            torch.nn.ReLU(),
+            torch.nn.Dropout(0.3),
+            torch.nn.Linear(512, 96),
+            torch.nn.ReLU(),
+            torch.nn.Dropout(0.3),
+            torch.nn.Linear(96, 1),
+            torch.nn.Sigmoid()
+        )
+
+        self.regressor2 = torch.nn.Sequential(                        
+            torch.nn.Linear(512, 256),
             torch.nn.ReLU(),
             torch.nn.Dropout(0.3),
             torch.nn.Linear(256, 96),
             torch.nn.ReLU(),
             torch.nn.Dropout(0.3),
             torch.nn.Linear(96, 1),
+            torch.nn.Sigmoid()
         )
 
     def forward(self, x, attn_mask):
-        model_output = self.enc(input_ids=x.long(), attention_mask=attn_mask)
-        print(model_output[0].size())
-        print(model_output[0].squeeze().size())
-        tokens_embeddings = np.array(model_output[0].squeeze().cpu())
-        print(tokens_embeddings.mean(1).shape)
-        print(torch.Tensor(np.squeeze(np.asarray(tokens_embeddings.mean(1)))).size())
-        return self.layers(torch.Tensor(np.squeeze(np.asarray(tokens_embeddings.mean(1)))).to(device))
-
+        encoder_output = self.enc(input_ids=x.long(), attention_mask=attn_mask)
+        h=self.regressor1(encoder_output.last_hidden_state)
+        h = h.squeeze()
+        h=self.regressor2(h)
+        h = h.squeeze()
+        if(torch.Tensor([1]).squeeze().size() == h.size()):
+            h = h.unsqueeze(dim=0)
+        return h
 
 def training_step(model, cost_function, optimizer, train_loader):
     samples = 0.0
