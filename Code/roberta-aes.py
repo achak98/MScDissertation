@@ -144,7 +144,8 @@ def training_step(model, cost_function, optimizer, train_loader):
         targets = targets.reshape(targets.shape[0], 1).to(device)
 
         outputs = model(inputs, attn_mask)
-
+        print(f"!!!!!!!!!outputs: {outputs} !!!!!!!!!!")
+        print(f"!!!!!!!!!targets: {targets} !!!!!!!!!!")
         loss = cost_function(outputs, targets)
 
         loss.backward()
