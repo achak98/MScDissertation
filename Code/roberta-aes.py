@@ -128,7 +128,7 @@ class MLP(torch.nn.Module):
 
     def forward(self, x, attn_mask):
         model_output = self.enc(input_ids=x.long(), attention_mask=attn_mask)
-        tokens_embeddings = np.matrix(model_output[0].squeeze().cpu())
+        tokens_embeddings = (model_output[0].squeeze().cpu()).numpy()
         return self.layers(np.squeeze(np.asarray(tokens_embeddings.mean(0))))
 
 
