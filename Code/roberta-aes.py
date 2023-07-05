@@ -158,9 +158,9 @@ def training_step(model, cost_function, optimizer, train_loader):
         inputs = inputs.squeeze(dim=1).to(device)
         attn_mask = attn_mask.squeeze(dim=1).to(device)
         targets = targets.reshape(targets.shape[0]).to(device)
-        targets = targets.squeeze()
-        if(torch.Tensor([1]).squeeze().size() == targets.size()):
-            targets = targets.unsqueeze(dim=0)
+        #targets = targets.squeeze()
+        #if(torch.Tensor([1]).squeeze().size() == targets.size()):
+        #    targets = targets.unsqueeze(dim=0)
         outputs = model(inputs, attn_mask)
         print(f"!!!!!!!!!outputs: {outputs} !!!!!!!!!!")
         print(f"!!!!!!!!!targets: {targets} !!!!!!!!!!")
@@ -189,7 +189,7 @@ def test_step(model, cost_function, optimizer, test_loader):
         for step, (inputs, attn_mask, targets) in enumerate(test_loader):
             inputs = inputs.squeeze(dim=1).to(device)
             attn_mask = attn_mask.squeeze(dim=1).to(device)
-            targets = targets.reshape(targets.shape[0], 1).to(device)
+            targets = targets.reshape(targets.shape[0]).to(device)
 
             outputs = model(inputs, attn_mask)
 
