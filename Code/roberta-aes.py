@@ -139,8 +139,8 @@ def training_step(model, cost_function, optimizer, train_loader):
     model.train()
 
     for step, (inputs, attn_mask, targets) in enumerate(train_loader):
-        inputs = inputs.squeeze(dim=1).to(device)
-        attn_mask = attn_mask.squeeze(dim=1).to(device)
+        inputs = inputs.squeeze(dim=1)
+        attn_mask = attn_mask.squeeze(dim=1)
         targets = targets.reshape(targets.shape[0], 1).to(device)
 
         outputs = model(inputs, attn_mask)
@@ -168,8 +168,8 @@ def test_step(model, cost_function, optimizer, test_loader):
 
     with torch.no_grad():
         for step, (inputs, attn_mask, targets) in enumerate(test_loader):
-            inputs = inputs.squeeze(dim=1).to(device)
-            attn_mask = attn_mask.squeeze(dim=1).to(device)
+            inputs = inputs.squeeze(dim=1)
+            attn_mask = attn_mask.squeeze(dim=1)
             targets = targets.reshape(targets.shape[0], 1).to(device)
 
             outputs = model(inputs, attn_mask)
