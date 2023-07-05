@@ -131,9 +131,9 @@ class MLP(torch.nn.Module):
         print(model_output[0].size())
         print(model_output[0].squeeze().size())
         tokens_embeddings = np.array(model_output[0].squeeze().cpu())
-        print(tokens_embeddings.mean(0).shape)
-        print(torch.Tensor(np.squeeze(np.asarray(tokens_embeddings.mean(0)))).size())
-        return self.layers(torch.Tensor(np.squeeze(np.asarray(tokens_embeddings.mean(0)))).to(device))
+        print(tokens_embeddings.mean(2).shape)
+        print(torch.Tensor(np.squeeze(np.asarray(tokens_embeddings.mean(2)))).size())
+        return self.layers(torch.Tensor(np.squeeze(np.asarray(tokens_embeddings.mean(2)))).to(device))
 
 
 def training_step(model, cost_function, optimizer, train_loader):
