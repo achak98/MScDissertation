@@ -128,8 +128,8 @@ class MLP(torch.nn.Module):
 
     def forward(self, x, attn_mask):
         model_output = self.enc(input_ids=x.long(), attention_mask=attn_mask)
-        tokens_embeddings = (model_output[0].squeeze().cpu()).numpy()
-        return self.layers(np.squeeze(np.asarray(tokens_embeddings.mean(0))))
+        tokens_embeddings = (model_output[0].squeeze())
+        return self.layers(tokens_embeddings.mean(0).squeeze())
 
 
 def training_step(model, cost_function, optimizer, train_loader):
