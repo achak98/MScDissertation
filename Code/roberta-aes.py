@@ -128,7 +128,6 @@ class MLP(torch.nn.Module):
 
     def forward(self, x, attn_mask):
         model_output = self.enc(input_ids=x.long(), attention_mask=attn_mask)
-        print(model_output.size())
         print(model_output[0].size())
         print(model_output[0].squeeze().size())
         tokens_embeddings = np.array(model_output[0].squeeze().cpu())
