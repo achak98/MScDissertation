@@ -162,8 +162,6 @@ def training_step(model, cost_function, optimizer, train_loader):
         #if(torch.Tensor([1]).squeeze().size() == targets.size()):
         #    targets = targets.unsqueeze(dim=0)
         outputs = model(inputs, attn_mask)
-        print(f"!!!!!!!!!outputs: {outputs} !!!!!!!!!!")
-        print(f"!!!!!!!!!targets: {targets} !!!!!!!!!!")
         loss = cost_function(outputs, targets)
 
         loss.backward()
