@@ -143,7 +143,7 @@ class MLP(torch.nn.Module):
         h=self.regressor1(encoder_output.last_hidden_state)
         h = h.squeeze()
         h=self.regressor2(h)
-        h = h.squeeze()
+        h = h.squeeze().squeeze()
         if(torch.Tensor([1]).squeeze().size() == h.size()):
             h = h.unsqueeze(dim=0)
         return h
