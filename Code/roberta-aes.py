@@ -65,11 +65,12 @@ def get_id2emb(ids):
 
 id2emb = get_id2emb(dataset["essay_id"])
 
-
-def mean_encoding(essay_list, tokenizer):
+roberta = RobertaModel.from_pretrained("roberta-base").to(device)
+#def mean_encoding(essay_list, tokenizer):
+def mean_encoding(essay_list, model, tokenizer):
     print("Encoding essay embeddings:")
 
-    embeddings = []
+    """    embeddings = []
     attn_masks = []
     #essay_list = essay_list[:2]
     for essay in tqdm(essay_list):
@@ -90,13 +91,22 @@ def mean_encoding(essay_list, tokenizer):
     attn_masks = np.vstack(np.array(attn_masks))
     #print("HERE!!!!!!: ", embeddings)
     #print("HERE!!!!!!: ", attn_masks)
-    return embeddings, attn_masks
+    return embeddings, attn_masks"""
+    embeddings = []
+    for essay in tqdm(essay_list):
+      encoded_input = tokenizer(essay, padding=True, truncation=True, return_tensors='pt').to(device)
+      with torch.no_grad():
+        model_output = model(**encoded_input)
+      tokens_embeddings = np.matrix(model_output[0].squeeze().cpu())
+      embeddings.append(np.squeeze(np.asarray(tokens_embeddings)))
+    return np.matrix(embeddings)
 
 
-essay_embeddings, attn_masks = mean_encoding(dataset["essay"], tokenizer)
+#essay_embeddings, attn_masks = mean_encoding(dataset["essay"], tokenizer)
+essay_embeddings = mean_encoding(dataset['essay'], roberta, tokenizer)
 
 
-def get_loader(df, id2emb, essay_embeddings, attn_masks, shuffle=True):
+"""def get_loader(df, id2emb, essay_embeddings, attn_masks, shuffle=True):
     # get embeddings from essay_id using id2emb dict
     embeddings = np.array([essay_embeddings[id2emb[id]] for id in df["essay_id"]])
     attention_masks = np.array([attn_masks[id2emb[id]] for id in df["essay_id"]])
@@ -108,14 +118,24 @@ def get_loader(df, id2emb, essay_embeddings, attn_masks, shuffle=True):
     )
     loader = DataLoader(data, batch_size=4, shuffle=shuffle, num_workers=0)
 
-    return loader
+    return loader"""
+def get_loader(df, id2emb, essay_embeddings, shuffle=True):
+
+  # get embeddings from essay_id using id2emb dict
+  embeddings = np.array([essay_embeddings[id2emb[id]] for id in df['essay_id']])
+
+  # dataset and dataloader
+  data = TensorDataset(torch.from_numpy(embeddings).float(), torch.from_numpy(np.array(df['scaled_score'])).float())
+  loader = DataLoader(data, batch_size=4, shuffle=shuffle, num_workers=0)
+
+  return loader
 
 
 class MLP(torch.nn.Module):
     def __init__(self, input_size):
         super(MLP, self).__init__()
 
-        self.enc = RobertaModel.from_pretrained("roberta-base").to(device)
+        #self.enc = RobertaModel.from_pretrained("roberta-base").to(device)
         self.regressor1 = torch.nn.Sequential(                        
             torch.nn.Linear(768, 512),
             torch.nn.ReLU(),
@@ -139,8 +159,9 @@ class MLP(torch.nn.Module):
         )
 
     def forward(self, x, attn_mask):
-        encoder_output = self.enc(input_ids=x.long(), attention_mask=attn_mask)
-        h=self.regressor1(encoder_output.last_hidden_state)
+        #encoder_output = self.enc(input_ids=x.long(), attention_mask=attn_mask)
+        #h=self.regressor1(encoder_output.last_hidden_state)
+        h = self.regressor1(x)
         h = h.squeeze()
         h=self.regressor2(h)
         h = h.squeeze()
