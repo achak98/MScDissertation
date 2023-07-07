@@ -95,6 +95,7 @@ def mean_encoding(essay_list, model, tokenizer):
     #print("HERE!!!!!!: ", attn_masks)
     return embeddings, attn_masks"""
     embeddings = []
+    #essay_list=essay_list[:10]
     for essay in tqdm(essay_list):
         encoded_input = tokenizer(
             essay, padding=True, truncation=True, return_tensors="pt"
@@ -103,7 +104,10 @@ def mean_encoding(essay_list, model, tokenizer):
             model_output = model(**encoded_input)
         tokens_embeddings = np.matrix(model_output[0].squeeze().cpu())
         embeddings.append(np.squeeze(np.asarray(tokens_embeddings)))
-    return np.vstack(embeddings)
+    print("returning v stack")
+    blob = np.vstack(embeddings)
+    print("vstack done")
+    return blob
 
 
 # essay_embeddings, attn_masks = mean_encoding(dataset["essay"], tokenizer)
