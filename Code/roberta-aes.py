@@ -66,7 +66,9 @@ def get_id2emb(ids):
 id2emb = get_id2emb(dataset["essay_id"])
 
 roberta = RobertaModel.from_pretrained("roberta-base").to(device)
-#def mean_encoding(essay_list, tokenizer):
+
+
+# def mean_encoding(essay_list, tokenizer):
 def mean_encoding(essay_list, model, tokenizer):
     print("Encoding essay embeddings:")
 
@@ -94,16 +96,18 @@ def mean_encoding(essay_list, model, tokenizer):
     return embeddings, attn_masks"""
     embeddings = []
     for essay in tqdm(essay_list):
-      encoded_input = tokenizer(essay, padding=True, truncation=True, return_tensors='pt').to(device)
-      with torch.no_grad():
-        model_output = model(**encoded_input)
-      tokens_embeddings = np.matrix(model_output[0].squeeze().cpu())
-      embeddings.append(np.squeeze(np.asarray(tokens_embeddings)))
-    return np.matrix(embeddings)
+        encoded_input = tokenizer(
+            essay, padding=True, truncation=True, return_tensors="pt"
+        ).to(device)
+        with torch.no_grad():
+            model_output = model(**encoded_input)
+        tokens_embeddings = np.matrix(model_output[0].squeeze().cpu())
+        embeddings.append(np.squeeze(np.asarray(tokens_embeddings)))
+    return np.vstack(embeddings)
 
 
-#essay_embeddings, attn_masks = mean_encoding(dataset["essay"], tokenizer)
-essay_embeddings = mean_encoding(dataset['essay'], roberta, tokenizer)
+# essay_embeddings, attn_masks = mean_encoding(dataset["essay"], tokenizer)
+essay_embeddings = mean_encoding(dataset["essay"], roberta, tokenizer)
 
 
 """def get_loader(df, id2emb, essay_embeddings, attn_masks, shuffle=True):
@@ -119,24 +123,28 @@ essay_embeddings = mean_encoding(dataset['essay'], roberta, tokenizer)
     loader = DataLoader(data, batch_size=4, shuffle=shuffle, num_workers=0)
 
     return loader"""
+
+
 def get_loader(df, id2emb, essay_embeddings, shuffle=True):
+    # get embeddings from essay_id using id2emb dict
+    embeddings = np.array([essay_embeddings[id2emb[id]] for id in df["essay_id"]])
 
-  # get embeddings from essay_id using id2emb dict
-  embeddings = np.array([essay_embeddings[id2emb[id]] for id in df['essay_id']])
+    # dataset and dataloader
+    data = TensorDataset(
+        torch.from_numpy(embeddings).float(),
+        torch.from_numpy(np.array(df["scaled_score"])).float(),
+    )
+    loader = DataLoader(data, batch_size=4, shuffle=shuffle, num_workers=0)
 
-  # dataset and dataloader
-  data = TensorDataset(torch.from_numpy(embeddings).float(), torch.from_numpy(np.array(df['scaled_score'])).float())
-  loader = DataLoader(data, batch_size=4, shuffle=shuffle, num_workers=0)
-
-  return loader
+    return loader
 
 
 class MLP(torch.nn.Module):
     def __init__(self, input_size):
         super(MLP, self).__init__()
 
-        #self.enc = RobertaModel.from_pretrained("roberta-base").to(device)
-        self.regressor1 = torch.nn.Sequential(                        
+        # self.enc = RobertaModel.from_pretrained("roberta-base").to(device)
+        self.regressor1 = torch.nn.Sequential(
             torch.nn.Linear(768, 512),
             torch.nn.ReLU(),
             torch.nn.Dropout(0.3),
@@ -144,10 +152,10 @@ class MLP(torch.nn.Module):
             torch.nn.ReLU(),
             torch.nn.Dropout(0.3),
             torch.nn.Linear(96, 1),
-            torch.nn.Sigmoid()
+            torch.nn.Sigmoid(),
         )
 
-        self.regressor2 = torch.nn.Sequential(                        
+        self.regressor2 = torch.nn.Sequential(
             torch.nn.Linear(512, 256),
             torch.nn.ReLU(),
             torch.nn.Dropout(0.3),
@@ -155,19 +163,21 @@ class MLP(torch.nn.Module):
             torch.nn.ReLU(),
             torch.nn.Dropout(0.3),
             torch.nn.Linear(96, 1),
-            torch.nn.Sigmoid()
+            torch.nn.Sigmoid(),
         )
 
-    def forward(self, x, attn_mask):
-        #encoder_output = self.enc(input_ids=x.long(), attention_mask=attn_mask)
-        #h=self.regressor1(encoder_output.last_hidden_state)
+    #def forward(self, x, attn_mask):
+    def forward(self, x):
+        # encoder_output = self.enc(input_ids=x.long(), attention_mask=attn_mask)
+        # h=self.regressor1(encoder_output.last_hidden_state)
         h = self.regressor1(x)
         h = h.squeeze()
-        h=self.regressor2(h)
+        h = self.regressor2(h)
         h = h.squeeze()
-        if(torch.Tensor([1]).squeeze().size() == h.size()):
+        if torch.Tensor([1]).squeeze().size() == h.size():
             h = h.unsqueeze(dim=0)
         return h
+
 
 def training_step(model, cost_function, optimizer, train_loader):
     samples = 0.0
@@ -175,14 +185,20 @@ def training_step(model, cost_function, optimizer, train_loader):
 
     model.train()
 
-    for step, (inputs, attn_mask, targets) in enumerate(train_loader):
+    """for step, (inputs, attn_mask, targets) in enumerate(train_loader):
         inputs = inputs.squeeze(dim=1).to(device)
         attn_mask = attn_mask.squeeze(dim=1).to(device)
         targets = targets.reshape(targets.shape[0]).to(device)
-        #targets = targets.squeeze()
-        #if(torch.Tensor([1]).squeeze().size() == targets.size()):
+        # targets = targets.squeeze()
+        # if(torch.Tensor([1]).squeeze().size() == targets.size()):
         #    targets = targets.unsqueeze(dim=0)
-        outputs = model(inputs, attn_mask)
+        outputs = model(inputs, attn_mask)"""
+    for step, (inputs, targets) in enumerate(train_loader):
+
+        inputs = inputs.squeeze(dim=1).to(device)
+        targets = targets.reshape(targets.shape[0],1).to(device)
+
+        outputs = model(inputs)
         loss = cost_function(outputs, targets)
 
         loss.backward()
@@ -205,12 +221,18 @@ def test_step(model, cost_function, optimizer, test_loader):
     model.eval()
 
     with torch.no_grad():
-        for step, (inputs, attn_mask, targets) in enumerate(test_loader):
+          """for step, (inputs, attn_mask, targets) in enumerate(test_loader):
             inputs = inputs.squeeze(dim=1).to(device)
             attn_mask = attn_mask.squeeze(dim=1).to(device)
             targets = targets.reshape(targets.shape[0]).to(device)
 
-            outputs = model(inputs, attn_mask)
+            outputs = model(inputs, attn_mask)"""
+          for step, (inputs, targets) in enumerate(test_loader):
+
+            inputs = inputs.squeeze(dim=1).to(device)
+            targets = targets.reshape(targets.shape[0],1).to(device)
+
+            outputs = model(inputs)
 
             loss = cost_function(outputs, targets)
 
@@ -247,12 +269,14 @@ for n, (train, test) in enumerate(kf.split(dataset)):
     test_df = scaled_dataset.iloc[test]
 
     # dataloaders
-    train_loader = get_loader(
+    """train_loader = get_loader(
         train_df, id2emb, essay_embeddings, attn_masks, shuffle=True
     )
     test_loader = get_loader(
         test_df, id2emb, essay_embeddings, attn_masks, shuffle=False
-    )
+    )"""
+    train_loader = get_loader(train_df, id2emb, essay_embeddings, shuffle=True)
+    test_loader = get_loader(test_df, id2emb, essay_embeddings, shuffle=False)
 
     # model
     print("------------------------------------------------------------------")
