@@ -127,13 +127,16 @@ essay_embeddings = mean_encoding(dataset["essay"], roberta, tokenizer)
 
 def get_loader(df, id2emb, essay_embeddings, shuffle=True):
     # get embeddings from essay_id using id2emb dict
+    print("getting embeddings from essay_id using id2emb dict")
     embeddings = np.array([essay_embeddings[id2emb[id]] for id in df["essay_id"]])
 
     # dataset and dataloader
+    print("getting dataset")
     data = TensorDataset(
         torch.from_numpy(embeddings).float(),
         torch.from_numpy(np.array(df["scaled_score"])).float(),
     )
+    print("getting dataloader")
     loader = DataLoader(data, batch_size=4, shuffle=shuffle, num_workers=0)
 
     return loader
@@ -258,6 +261,7 @@ test_df_dict = {}
 preds_dict = {}
 
 # copy of dataset with scaled scores computed using the whole dataset
+print("getting scaled dataset")
 scaled_dataset = get_scaled_dataset(dataset)
 
 for n, (train, test) in enumerate(kf.split(dataset)):
@@ -268,6 +272,7 @@ for n, (train, test) in enumerate(kf.split(dataset)):
 
     test_df = scaled_dataset.iloc[test]
 
+    print("getting train loader")
     # dataloaders
     """train_loader = get_loader(
         train_df, id2emb, essay_embeddings, attn_masks, shuffle=True
@@ -276,6 +281,7 @@ for n, (train, test) in enumerate(kf.split(dataset)):
         test_df, id2emb, essay_embeddings, attn_masks, shuffle=False
     )"""
     train_loader = get_loader(train_df, id2emb, essay_embeddings, shuffle=True)
+    print("getting test loader")
     test_loader = get_loader(test_df, id2emb, essay_embeddings, shuffle=False)
 
     # model
