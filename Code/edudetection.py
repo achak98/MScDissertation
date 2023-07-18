@@ -1,5 +1,5 @@
 import os
-import ast
+import ast, re
 import pandas as pd
 import argparse
 import seaborn as sns
@@ -50,6 +50,9 @@ def parse_args():
     path_settings.add_argument('--log_path', help='the file to output log')
     return parser.parse_args()
 
+def remove_all(lst, value):
+    return [x for x in lst if x != value]
+
 def preprocess_RST_Discourse_dataset(path_data, tag2idx):
     """
     This function preprocesses the RST Discourse dataset.
@@ -62,26 +65,36 @@ def preprocess_RST_Discourse_dataset(path_data, tag2idx):
         with open(os.path.join(path_data, txt_file), 'r') as txtf, open(os.path.join(path_data, edu_file), 'r') as eduf:
             text = txtf.read()
             edus = eduf.read().split('\n')
-
-            # Assume that EDUs are separated by two spaces in the original text
             words = text.split(' ')
-            BIOE_tags = []
-            edu_idx = 0
-            for word in words:
-                print(f"!!!!!!!!!word: {word}")
-                print(f"!!!!!!!!!!edus[edu_idx]: {edus[edu_idx]}")
-                if word == '':
+            words = remove_all(words, '')
+
+            BIOE_tags = [tag2idx["O"]] * len(words)
+            
+            spans = []
+            current_index = 0
+            for seq in edus:
+                seq_words = seq.split()
+                found = False
+                for i in range(current_index, len(words) - len(seq_words) + 1):
+                    if words[i:i+len(seq_words)] == seq_words:
+                        start = i
+                        end = i + len(seq_words) - 1
+                        spans.append((start, end))
+                        current_index = end + 1
+                        found = True
+                        break
+                if not found:
+                    spans.append((-1, -1))
+
+            for span in spans:
+                if(span[0] == -1 or span[1] == -1):
                     continue
-                if word in edus[edu_idx]:
-                    if edus[edu_idx].startswith(word):
-                        BIOE_tags.append(tag2idx['B'])
-                    elif edus[edu_idx] == word:
-                        BIOE_tags.append(tag2idx['I'])
-                    elif edus[edu_idx].endswith(word):
-                        BIOE_tags.append(tag2idx['E'])
-                    edu_idx = min(edu_idx + 1, len(edus) - 1)
                 else:
-                    BIOE_tags.append(tag2idx['O'])
+                    BIOE_tags[span[0]] = tag2idx['B']
+                    BIOE_tags[span[1]] = tag2idx['E']
+                    for i in range(span[0]+1, span[1]):
+                        BIOE_tags[i] = tag2idx['I']
+            
 
             data.append((words, BIOE_tags))
 
