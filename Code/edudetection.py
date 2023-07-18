@@ -164,11 +164,11 @@ def main():
     if args.train:
          # Convert data to PyTorch tensors and move to the device
         train_data = pd.read_csv(os.path.join(args.rst_dir, 'preprocessed_data_train.csv'))
-        tokenised_inputs = model.tokeniser(train_data['Text'], return_attention_mask=True)
+        tokenised_inputs = model.tokeniser(train_data['Text'].tolist(), return_attention_mask=True)
         train_inputs = tokenised_inputs["input_ids"]
         attention_masks = tokenised_inputs["attention_mask"]
         train_tuples = zip(train_inputs, attention_masks)
-        train_labels = torch.tensor(train_data['BIOE'], dtype=torch.long).to(device)
+        train_labels = torch.tensor(train_data['BIOE'].tolist(), dtype=torch.long).to(device)
 
         # Create DataLoader for training data
         train_dataset = torch.utils.data.TensorDataset(train_tuples, train_labels)
