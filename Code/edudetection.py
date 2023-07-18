@@ -95,7 +95,8 @@ def preprocess_RST_Discourse_dataset(path_data, tag2idx):
                     for i in range(span[0]+1, span[1]):
                         BIOE_tags[i] = tag2idx['I']
             
-
+            for word, tag in zip(words, BIOE_tags):
+                print(f"for word: {word} tag is {tag}") 
             data.append((words, BIOE_tags))
 
     df = pd.DataFrame(data, columns=['Text', 'BIOE'])
@@ -186,8 +187,8 @@ def main():
         train_tuples = zip(train_inputs, attention_masks)
         train_labels = train_data['BIOE'].tolist()
         train_labels = [ast.literal_eval(label_list) for label_list in train_labels]
-        print(f"!!!!!!!!!!!!!train_data['BIOE']: {train_data['BIOE']}")
-        print(f"!!!!!!!!!!!!!train_data['BIOE'].tolist(): {train_data['BIOE'].tolist()}")
+        #print(f"!!!!!!!!!!!!!train_data['BIOE']: {train_data['BIOE']}")
+        #print(f"!!!!!!!!!!!!!train_data['BIOE'].tolist(): {train_data['BIOE'].tolist()}")
         train_labels = torch.tensor(train_data['BIOE'], dtype=torch.long).to(device)
 
         # Create DataLoader for training data
