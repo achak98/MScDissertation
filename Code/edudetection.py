@@ -204,7 +204,7 @@ def main():
         train_labels = [ast.literal_eval(label_list) for label_list in train_labels]
         #print(f"!!!!!!!!!!!!!train_data['BIOE']: {train_data['BIOE']}")
         #print(f"!!!!!!!!!!!!!train_data['BIOE'].tolist(): {train_data['BIOE'].tolist()}")
-        train_labels = torch.tensor(train_data['BIOE'], dtype=torch.long).to(device)
+        train_labels = torch.tensor(train_labels, dtype=torch.long).to(device)
 
         # Create DataLoader for training data
         train_dataset = torch.utils.data.TensorDataset(train_tuples, train_labels)
