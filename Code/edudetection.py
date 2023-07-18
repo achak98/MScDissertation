@@ -63,15 +63,15 @@ def find_sequence_spans(text, target_sequences):
             start_index = i
             target_index += 1
             potential_end = i + target_length -1
-            if text[potential_end] != target_stuff[-1]:
-              print(f"potential_end: {potential_end} and target_index: {target_index} and text[potential_end-1]: {text[potential_end-1]} aand text[potential_end]: {text[potential_end]} and target_stuff[-1]: {target_stuff[-1]}")
+            #if text[potential_end] != target_stuff[-1]:
+            #  print(f"potential_end: {potential_end} and target_index: {target_index} and text[potential_end-1]: {text[potential_end-1]} aand text[potential_end]: {text[potential_end]} and target_stuff[-1]: {target_stuff[-1]}")
             if text[potential_end] == target_stuff[-1]:
                 end_index = potential_end
                 i = end_index
                 sequence_spans.append((start_index, end_index))
             start_index = None
-        else:
-          print(f"i: {i}, text[i]: {text[i]}, target_stuff[0]:{target_stuff[0]}")
+        #else:
+        #  print(f"i: {i}, text[i]: {text[i]}, target_stuff[0]:{target_stuff[0]}")
         i+=1
         if(i>=len(text)):
           loop = False
@@ -85,6 +85,7 @@ def preprocess_RST_Discourse_dataset(path_data, tag2idx):
     edus_files = sorted([f for f in os.listdir(path_data) if f.endswith('.edus')])
 
     data = []
+    messed_up_ones = []
     for txt_file, edu_file in zip(text_files, edus_files):
         with open(os.path.join(path_data, txt_file), 'r') as txtf, open(os.path.join(path_data, edu_file), 'r') as eduf:
             text = txtf.read()
@@ -108,9 +109,12 @@ def preprocess_RST_Discourse_dataset(path_data, tag2idx):
             
             print("num_found: ",len(sequence_spans))
             print("total_to_be_found: ",len(edus))
+            if(len(sequence_spans) != len(edus) - 1):
+                messed_up_ones.append(txt_file)
             data.append((words, BIOE_tags))
 
     df = pd.DataFrame(data, columns=['Text', 'BIOE'])
+    print(messed_up_ones)
     return df
 
 class SelfAttention(nn.Module):
