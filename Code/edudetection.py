@@ -101,14 +101,15 @@ class SelfAttention(nn.Module):
         return outputs, weights
 
 class EDUPredictor(nn.Module):
-    def __init__(self, tagset_size=4, hidden_dim=512):
+    def __init__(self, tagset_size=4, hidden_dim=2046):
         super(EDUPredictor, self).__init__()
 
         self.hidden_dim = hidden_dim
         self.transformer_architecture = 'microsoft/deberta-v3-base'
         self.config = AutoConfig.from_pretrained(self.transformer_architecture, output_hidden_states=True)
-        self.config.max_position_embeddings = 2046
+        self.config.max_position_embeddings = hidden_dim
         self.encoder = AutoModel.from_pretrained(self.transformer_architecture, config=self.config)
+        self.tokeniser = AutoTokenizer.from_pretrained(self.transformer_architecture, max_length=self.config.max_position_embeddings, padding="max_length")
         # Define BiLSTM 1
         self.lstm1 = nn.LSTM(self.encoder.config.hidden_size, hidden_dim // 2, bidirectional=True)
 
