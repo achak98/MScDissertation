@@ -1,4 +1,5 @@
 import os
+import ast
 import pandas as pd
 import argparse
 import seaborn as sns
@@ -67,6 +68,8 @@ def preprocess_RST_Discourse_dataset(path_data, tag2idx):
             BIOE_tags = []
             edu_idx = 0
             for word in words:
+                print(f"!!!!!!!!!word: {word}")
+                print(f"!!!!!!!!!!edus[edu_idx]: {edus[edu_idx]}")
                 if word == '':
                     continue
                 if word in edus[edu_idx]:
@@ -75,10 +78,10 @@ def preprocess_RST_Discourse_dataset(path_data, tag2idx):
                     elif edus[edu_idx] == word:
                         BIOE_tags.append(tag2idx['I'])
                     elif edus[edu_idx].endswith(word):
-                        BIOE_tags.append(tag2idx['O'])
+                        BIOE_tags.append(tag2idx['E'])
                     edu_idx = min(edu_idx + 1, len(edus) - 1)
                 else:
-                    BIOE_tags.append(tag2idx['E'])
+                    BIOE_tags.append(tag2idx['O'])
 
             data.append((words, BIOE_tags))
 
@@ -168,9 +171,11 @@ def main():
         train_inputs = tokenised_inputs["input_ids"]
         attention_masks = tokenised_inputs["attention_mask"]
         train_tuples = zip(train_inputs, attention_masks)
+        train_labels = train_data['BIOE'].tolist()
+        train_labels = [ast.literal_eval(label_list) for label_list in train_labels]
         print(f"!!!!!!!!!!!!!train_data['BIOE']: {train_data['BIOE']}")
         print(f"!!!!!!!!!!!!!train_data['BIOE'].tolist(): {train_data['BIOE'].tolist()}")
-        train_labels = torch.tensor(train_data['BIOE'].tolist(), dtype=torch.long).to(device)
+        train_labels = torch.tensor(train_data['BIOE'], dtype=torch.long).to(device)
 
         # Create DataLoader for training data
         train_dataset = torch.utils.data.TensorDataset(train_tuples, train_labels)
