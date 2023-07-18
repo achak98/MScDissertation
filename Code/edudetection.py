@@ -79,6 +79,7 @@ def preprocess_RST_Discourse_dataset(path_data, tag2idx):
                     edu_idx = min(edu_idx + 1, len(edus) - 1)
                 else:
                     BIOE_tags.append(tag2idx['O'])
+            print("!!!!!!!!! BIOE_tags: ", BIOE_tags)
             BIOE_tags = [int(num) for num in BIOE_tags.split()]
             data.append((words, BIOE_tags))
 
