@@ -50,8 +50,6 @@ def parse_args():
     path_settings.add_argument('--log_path', help='the file to output log')
     return parser.parse_args()
 
-def remove_all(lst, value):
-    return [x for x in lst if x != value]
 
 def preprocess_RST_Discourse_dataset(path_data, tag2idx):
     """
@@ -65,8 +63,8 @@ def preprocess_RST_Discourse_dataset(path_data, tag2idx):
         with open(os.path.join(path_data, txt_file), 'r') as txtf, open(os.path.join(path_data, edu_file), 'r') as eduf:
             text = txtf.read()
             edus = eduf.read().split('\n')
-            words = text.split(' ')
-            words = remove_all(words, '')
+
+            words = re.findall(r'\w+|\S(?!\n)', text)
 
             BIOE_tags = [tag2idx["O"]] * len(words)
             
