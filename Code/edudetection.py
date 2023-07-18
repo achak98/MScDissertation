@@ -93,9 +93,9 @@ def preprocess_RST_Discourse_dataset(path_data, tag2idx):
                     for i in range(span[0]+1, span[1]):
                         BIOE_tags[i] = tag2idx['I']
             
-            for word, tag in zip(words, BIOE_tags):
-                print(f"for word: {word} tag is {tag}")
-            print(f"\n word len: {len(words)} and tags len: {len(BIOE_tags)} all words: {words} and all tags: {BIOE_tags}") 
+            #for word, tag in zip(words, BIOE_tags):
+                #print(f"for word: {word} tag is {tag}")
+            print(f"\n txt_file: {txt_file} word len: {len(words)} and tags len: {len(BIOE_tags)} all words: {words} and all tags: {BIOE_tags}") 
             data.append((words, BIOE_tags))
 
     df = pd.DataFrame(data, columns=['Text', 'BIOE'])
