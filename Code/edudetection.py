@@ -75,10 +75,10 @@ def preprocess_RST_Discourse_dataset(path_data, tag2idx):
                     elif edus[edu_idx] == word:
                         BIOE_tags.append(tag2idx['I'])
                     elif edus[edu_idx].endswith(word):
-                        BIOE_tags.append(tag2idx['E'])
+                        BIOE_tags.append(tag2idx['O'])
                     edu_idx = min(edu_idx + 1, len(edus) - 1)
                 else:
-                    BIOE_tags.append(tag2idx['O'])
+                    BIOE_tags.append(tag2idx['E'])
 
             data.append((words, BIOE_tags))
 
