@@ -109,7 +109,7 @@ class EDUPredictor(nn.Module):
         self.config = AutoConfig.from_pretrained(self.transformer_architecture, output_hidden_states=True)
         self.config.max_position_embeddings = hidden_dim
         self.encoder = AutoModel.from_pretrained(self.transformer_architecture, config=self.config)
-        self.tokeniser = AutoTokenizer.from_pretrained(self.transformer_architecture, max_length=self.config.max_position_embeddings, padding="max_length")
+        self.tokeniser = AutoTokenizer.from_pretrained(self.transformer_architecture, max_length=self.config.max_position_embeddings, padding="max_length", return_attention_mask=True)
         # Define BiLSTM 1
         self.lstm1 = nn.LSTM(self.encoder.config.hidden_size, hidden_dim // 2, bidirectional=True)
 
@@ -125,8 +125,8 @@ class EDUPredictor(nn.Module):
         # Define CRF
         self.crf = CRF(tagset_size)
 
-    def forward(self, sentences):
-        encoded_layers = self.encoder(sentences)
+    def forward(self, sentences, attn_masks):
+        encoded_layers = self.encoder(sentences, attention_mask=attn_masks)
         hidden_states = encoded_layers.last_hidden_state
         lstm_out, _ = self.lstm1(hidden_states)
         attn_out, attention_weights = self.self_attention(lstm_out)
@@ -164,17 +164,20 @@ def main():
     if args.train:
          # Convert data to PyTorch tensors and move to the device
         train_data = pd.read_csv(os.path.join(args.rst_dir, 'preprocessed_data_train.csv'))
-        train_inputs = torch.tensor(train_data['Text'], dtype=torch.long).to(device)
+        tokenised_inputs = model.tokeniser(train_data['Text'], return_attention_mask=True)
+        train_inputs = tokenised_inputs["input_ids"]
+        attention_masks = tokenised_inputs["attention_mask"]
+        train_tuples = zip(train_inputs, attention_masks)
         train_labels = torch.tensor(train_data['BIOE'], dtype=torch.long).to(device)
 
         # Create DataLoader for training data
-        train_dataset = torch.utils.data.TensorDataset(train_inputs, train_labels)
+        train_dataset = torch.utils.data.TensorDataset(train_tuples, train_labels)
         train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
         # Training loop
         for epoch in range(args.epochs):
             epoch_loss = 0.0
             model.train()  # Set model to training mode
-            for inputs, labels in train_loader:
+            for (inputs, attention_masks), labels in train_loader:
                 inputs = inputs.to(device)
                 labels = [[tag for tag in row] for row in labels]
                 labels = torch.tensor(labels, dtype=torch.long).to(device)
@@ -182,7 +185,7 @@ def main():
                 optimizer.zero_grad()  # Zero the gradients
 
                 # Forward propagation
-                tag_scores, _ = model(inputs)
+                tag_scores, _ = model(inputs, attention_masks)
 
                 # Compute the loss
                 loss = -model.crf(tag_scores, labels)
