@@ -50,6 +50,32 @@ def parse_args():
     path_settings.add_argument('--log_path', help='the file to output log')
     return parser.parse_args()
 
+def find_sequence_spans(text, target_sequences):
+    sequence_spans = []
+    target_index = 0
+    start_index = None
+    loop = True
+    i = 0
+    while (loop):
+        target_stuff = re.findall(r'\b\w+\b|[.,:\n&!]', target_sequences[target_index])
+        target_length = len(target_stuff)
+        if text[i] == target_stuff[0]:
+            start_index = i
+            target_index += 1
+            potential_end = i + target_length -1
+            if text[potential_end] != target_stuff[-1]:
+              print(f"potential_end: {potential_end} and target_index: {target_index} and text[potential_end-1]: {text[potential_end-1]} aand text[potential_end]: {text[potential_end]} and target_stuff[-1]: {target_stuff[-1]}")
+            if text[potential_end] == target_stuff[-1]:
+                end_index = potential_end
+                i = end_index
+                sequence_spans.append((start_index, end_index))
+            start_index = None
+        else:
+          print(f"i: {i}, text[i]: {text[i]}, target_stuff[0]:{target_stuff[0]}")
+        i+=1
+        if(i>=len(text)):
+          loop = False
+    return sequence_spans
 
 def preprocess_RST_Discourse_dataset(path_data, tag2idx):
     """
@@ -63,28 +89,15 @@ def preprocess_RST_Discourse_dataset(path_data, tag2idx):
         with open(os.path.join(path_data, txt_file), 'r') as txtf, open(os.path.join(path_data, edu_file), 'r') as eduf:
             text = txtf.read()
             edus = eduf.read().split('\n')
+            text = text.split('\n')
 
-            words = re.findall(r'\w+|\S(?!\n)', text)
+            words = re.findall(r'\b\w+\b|[.,:\n&!]', ' '.join(text))
 
             BIOE_tags = [tag2idx["O"]] * len(words)
             
-            spans = []
-            current_index = 0
-            for seq in edus:
-                seq_words = seq.split()
-                found = False
-                for i in range(current_index, len(words) - len(seq_words) + 1):
-                    if words[i:i+len(seq_words)] == seq_words:
-                        start = i
-                        end = i + len(seq_words) - 1
-                        spans.append((start, end))
-                        current_index = end + 1
-                        found = True
-                        break
-                if not found:
-                    spans.append((-1, -1))
+            sequence_spans = find_sequence_spans(words, edus)
 
-            for span in spans:
+            for span in sequence_spans:
                 if(span[0] == -1 or span[1] == -1):
                     continue
                 else:
@@ -93,9 +106,8 @@ def preprocess_RST_Discourse_dataset(path_data, tag2idx):
                     for i in range(span[0]+1, span[1]):
                         BIOE_tags[i] = tag2idx['I']
             
-            #for word, tag in zip(words, BIOE_tags):
-                #print(f"for word: {word} tag is {tag}")
-            print(f"\n txt_file: {txt_file} word len: {len(words)} and tags len: {len(BIOE_tags)} all words: {words} and all tags: {BIOE_tags}") 
+            print("num_found: ",len(sequence_spans))
+            print("total_to_be_found: ",len(edus))
             data.append((words, BIOE_tags))
 
     df = pd.DataFrame(data, columns=['Text', 'BIOE'])
