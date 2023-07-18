@@ -144,10 +144,10 @@ def main():
 
     if args.prepare:
         # Use the function
-        train_df = preprocess_RST_Discourse_dataset(os.path.join(args.rst_dir, "/train"), tag2idx)
+        train_df = preprocess_RST_Discourse_dataset(os.path.join(args.rst_dir, "train"), tag2idx)
         # Save the dataframe to a csv file for further use
         train_df.to_csv(os.path.join(args.rst_dir, 'preprocessed_data_train.csv'), index=False)
-        test_df = preprocess_RST_Discourse_dataset(os.path.join(args.rst_dir, "/test"), tag2idx)
+        test_df = preprocess_RST_Discourse_dataset(os.path.join(args.rst_dir, "test"), tag2idx)
         # Save the dataframe to a csv file for further use
         test_df.to_csv(os.path.join(args.rst_dir, 'preprocessed_data_test.csv'), index=False)
 
