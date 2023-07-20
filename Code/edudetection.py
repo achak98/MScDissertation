@@ -198,8 +198,8 @@ class EDUPredictor(nn.Module):
         # Define CRF
         self.crf = CRF(tagset_size)
 
-    def forward(self, sentences, attn_masks):
-        encoded_layers = self.encoder(sentences, attention_mask=attn_masks)
+    def forward(self, tokens, attn_masks):
+        encoded_layers = self.encoder(tokens, attention_mask=attn_masks)
         print("hidden states shape: ",encoded_layers.last_hidden_state.size())
         hidden_states = encoded_layers.last_hidden_state
         print("hidden states shape after meaning: ",hidden_states.size())
@@ -209,7 +209,7 @@ class EDUPredictor(nn.Module):
         #print("attn out shape: ",attn_out.size())
         lstm_out, _ = self.lstm2(lstm_out, final_memory_state)
         print("lstm2 out shape: ",lstm_out.size())
-        tag_space = self.hidden2tag(lstm_out.view(len(sentences), -1))
+        tag_space = self.hidden2tag(lstm_out)
         print("h2t out: ",tag_space.size())
         tag_scores = self.crf.decode(tag_space)
 
