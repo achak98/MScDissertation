@@ -38,7 +38,7 @@ def parse_args():
                                 default=42, help='the random seed')
     parser.add_argument('--tagset_size', type=int,
                                 default=4, help='number of tags in the tagset')
-    parser.add_argument('--hidden_size', type=int,
+    parser.add_argument('--hidden_dim', type=int,
                                 default=256, help='hidden size')
     parser.add_argument('--max_grad_norm', type=float,
                                 default=1.0, help='gradient norm')
@@ -174,18 +174,18 @@ class SelfAttention(nn.Module):
         return outputs, weights
 
 class EDUPredictor(nn.Module):
-    def __init__(self, tagset_size=4, hidden_dim=18432):
+    def __init__(self, tagset_size=4, hidden_dim=768, max_length = 18432):
         super(EDUPredictor, self).__init__()
 
         self.hidden_dim = hidden_dim
         self.transformer_architecture = 'microsoft/deberta-v3-base'
         self.config = AutoConfig.from_pretrained(self.transformer_architecture, output_hidden_states=True)
-        self.config.max_position_embeddings = hidden_dim
+        self.config.max_position_embeddings = max_length
         self.encoder = AutoModel.from_pretrained(self.transformer_architecture, config=self.config)
         self.tokeniser = AutoTokenizer.from_pretrained(self.transformer_architecture, max_length=self.config.max_position_embeddings, 
                                                        pad_token = '[PAD]', padding="max_length", return_attention_mask=True)
         # Define BiLSTM 1
-        self.lstm1 = nn.LSTM(self.encoder.config.hidden_size, hidden_dim // 2, bidirectional=True)
+        self.lstm1 = nn.LSTM(hidden_dim, hidden_dim // 2, bidirectional=True)
 
         # Define self-attention
         #self.self_attention = SelfAttention(hidden_dim)
@@ -227,7 +227,7 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
     # Initialize the model
-    model = EDUPredictor(tagset_size=len(idx2tag.keys()), hidden_dim=args.max_length).to(device)
+    model = EDUPredictor(tagset_size=len(idx2tag.keys()), hidden_dim=args.hidden_dim, max_length = args.max_length).to(device)
 
     if args.prepare:
         # Use the function
@@ -289,7 +289,7 @@ def main():
                 loss.backward()
 
                 # Gradient clipping
-                nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
+                #nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
 
                 # Optimization step
                 optimizer.step()
