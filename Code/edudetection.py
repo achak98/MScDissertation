@@ -202,6 +202,8 @@ def main():
         train_data = pd.read_csv(os.path.join(args.rst_dir, 'preprocessed_data_train.csv'))
         tokenised_inputs = model.tokeniser(train_data['Text'].tolist(), return_attention_mask=True)
         train_inputs = tokenised_inputs["input_ids"]
+        for list in train_inputs:
+            print(f"list size in train inputs: {len(train_inputs)}")
         attention_masks = tokenised_inputs["attention_mask"]
         train_tuples = list(zip(train_inputs, attention_masks))
         train_tuples = torch.tensor(train_tuples, dtype=torch.long).to(device)
