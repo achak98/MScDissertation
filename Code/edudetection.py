@@ -203,12 +203,10 @@ def main():
         tokenised_inputs = model.tokeniser(train_data['Text'].tolist(), return_attention_mask=True)
         train_inputs = tokenised_inputs["input_ids"]
         attention_masks = tokenised_inputs["attention_mask"]
-        train_tuples = zip(train_inputs, attention_masks)
+        train_tuples = list(zip(train_inputs, attention_masks))
         train_labels = train_data['BIOE'].tolist()
         train_labels = [ast.literal_eval(label_list) for label_list in train_labels]
         train_labels = pad_list_of_lists(train_labels)
-        #print(f"!!!!!!!!!!!!!train_data['BIOE']: {train_data['BIOE']}")
-        #print(f"!!!!!!!!!!!!!train_data['BIOE'].tolist(): {train_data['BIOE'].tolist()}")
         train_labels = torch.tensor(train_labels, dtype=torch.long).to(device)
 
         # Create DataLoader for training data
