@@ -213,7 +213,7 @@ class EDUPredictor(nn.Module):
         print("h2t out: ",tag_space.size())
         tag_scores = self.crf.decode(tag_space)
 
-        return tag_scores
+        return torch.tensor(tag_scores)
 
 def main():
     args = parse_args()
