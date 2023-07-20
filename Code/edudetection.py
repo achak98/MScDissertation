@@ -107,8 +107,6 @@ def preprocess_RST_Discourse_dataset(path_data, tag2idx):
                     for i in range(span[0]+1, span[1]):
                         BIOE_tags[i] = tag2idx['I']
             
-            print("num_found: ",len(sequence_spans))
-            print("total_to_be_found: ",len(edus))
             if(len(sequence_spans) != len(edus) - 1):
                 messed_up_ones.append(txt_file)
             data.append((words, BIOE_tags))
@@ -133,7 +131,7 @@ class SelfAttention(nn.Module):
         return outputs, weights
 
 def pad_list_of_lists(list_of_lists, max_length = 2046):
-    padded_list = [lst.append([-1] * (max_length - len(lst))) for lst in list_of_lists]
+    padded_list = [lst + [-1] * (max_length - len(lst)) for lst in list_of_lists]
     return padded_list
 
 class EDUPredictor(nn.Module):
