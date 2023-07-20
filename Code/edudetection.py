@@ -13,7 +13,7 @@ import torch.optim as optim
 from sklearn.metrics import classification_report, multilabel_confusion_matrix
 from seqeval.metrics import precision_score, recall_score, f1_score, accuracy_score
 from transformers import AutoTokenizer, AutoModel, AutoConfig
-
+from tqdm import tqdm
 
 
 def parse_args():
@@ -212,17 +212,17 @@ class EDUPredictor(nn.Module):
 
     def forward(self, tokens, attn_masks):
         encoded_layers = self.encoder(tokens, attention_mask=attn_masks)
-        print("hidden states shape: ",encoded_layers.last_hidden_state.size())
+        #print("hidden states shape: ",encoded_layers.last_hidden_state.size())
         hidden_states = encoded_layers.last_hidden_state
-        print("hidden states shape after meaning: ",hidden_states.size())
+        #print("hidden states shape after meaning: ",hidden_states.size())
         lstm_out, final_memory_state = self.lstm1(hidden_states)
-        print("lstm1 out shape: ",lstm_out.size())
+        #print("lstm1 out shape: ",lstm_out.size())
         #attn_out, attention_weights = self.self_attention(lstm_out)
         #print("attn out shape: ",attn_out.size())
         #lstm_out, _ = self.lstm2(lstm_out, final_memory_state)
         #print("lstm2 out shape: ",lstm_out.size())
         tag_space = self.hidden2tag(lstm_out)
-        print("h2t out: ",tag_space.size())
+        #print("h2t out: ",tag_space.size())
         tag_scores = self.crf.decode(tag_space)
 
         return torch.tensor(tag_scores), tag_space
@@ -281,10 +281,13 @@ def main():
         train_dataset = torch.utils.data.TensorDataset(train_inputs, train_labels)
         train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
         # Training loop
-        for epoch in range(args.epochs):
+        for epoch in tqdm(range(args.epochs), desc='Epochs'):
             epoch_loss = 0.0
             model.train()  # Set model to training mode
-            for (inputs, labels), attention_mask in zip(train_loader,attention_masks):
+
+            # Create a tqdm progress bar for the inner loop (train_loader)
+            train_loader_tqdm = tqdm(enumerate(zip(train_loader, attention_masks)), total=len(train_loader), desc='Batches')
+            for step, ((inputs, labels), attention_mask) in train_loader_tqdm:
                 inputs = inputs.to(device)
                 labels = labels.to(device)
                 attention_mask = attention_mask.to(device)
@@ -300,15 +303,18 @@ def main():
                 loss.backward()
 
                 # Gradient clipping
-                #nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
+                # nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
 
                 # Optimization step
                 optimizer.step()
 
                 epoch_loss += loss.item()
 
-            # Print epoch statistics
-            print(f'Epoch {epoch+1} Loss: {epoch_loss:.3f}')
+                # Update the tqdm progress bar with the current loss value
+                train_loader_tqdm.set_postfix({'Loss': epoch_loss / (step + 1)})
+
+            # Update the outer tqdm progress bar with the current epoch loss value
+            tqdm.write(f'Epoch [{epoch+1}/{args.epochs}], Loss: {epoch_loss / len(train_loader):.4f}')
 
         # Save the trained model
         model_path = os.path.join(args.model_dir, 'edu_segmentation_model.pt')
