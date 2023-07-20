@@ -40,7 +40,8 @@ def parse_args():
                                 default=4, help='number of tags in the tagset')
     parser.add_argument('--hidden_size', type=int,
                                 default=256, help='hidden size')
-
+    parser.add_argument('--max_grad_norm', type=float,
+                                default=1.0, help='gradient norm')
     parser.add_argument('--rst_dir', default='../Data/rst/',
                                help='the path of the rst data directory')
     parser.add_argument('--seg_data_path',
