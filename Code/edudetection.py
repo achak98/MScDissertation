@@ -14,6 +14,8 @@ from sklearn.metrics import classification_report, multilabel_confusion_matrix
 from seqeval.metrics import precision_score, recall_score, f1_score, accuracy_score
 from transformers import AutoTokenizer, AutoModel, AutoConfig
 
+
+
 def parse_args():
     parser = argparse.ArgumentParser('EDU segmentation toolkit 1.0')
     parser.add_argument('--prepare', action='store_true',
@@ -22,49 +24,76 @@ def parse_args():
     parser.add_argument('--evaluate', action='store_true', help='evaluate the model')
     parser.add_argument('--segment', action='store_true', help='segment new files or input text')
 
-    train_settings = parser.add_argument_group('train settings')
-    train_settings.add_argument('--learning_rate', type=float,
+    parser.add_argument('--regex_pattern', default= r'\b\w+\b|[.,:\n&!]')
+    parser.add_argument('--max_length', type=int, default= 18432)
+    parser.add_argument('--learning_rate', type=float,
                                 default=0.001, help='learning rate')
-    train_settings.add_argument('--weight_decay', type=float,
+    parser.add_argument('--weight_decay', type=float,
                                 default=1e-4, help='weight decay')
-    train_settings.add_argument('--batch_size', type=int,
+    parser.add_argument('--batch_size', type=int,
                                 default=2, help='batch size')
-    train_settings.add_argument('--epochs', type=int,
+    parser.add_argument('--epochs', type=int,
                                 default=50, help='train epochs')
-    train_settings.add_argument('--seed', type=int,
+    parser.add_argument('--seed', type=int,
                                 default=42, help='the random seed')
-    train_settings.add_argument('--tagset_size', type=int,
+    parser.add_argument('--tagset_size', type=int,
                                 default=4, help='number of tags in the tagset')
-    train_settings.add_argument('--hidden_size', type=int,
+    parser.add_argument('--hidden_size', type=int,
                                 default=256, help='hidden size')
 
-    path_settings = parser.add_argument_group('path settings')
-    path_settings.add_argument('--rst_dir', default='../Data/rst/',
+    parser.add_argument('--rst_dir', default='../Data/rst/',
                                help='the path of the rst data directory')
-    path_settings.add_argument('--seg_data_path',
+    parser.add_argument('--seg_data_path',
                                help='the path of the data to segment')
-    path_settings.add_argument('--model_dir', default='../Data/models/',
+    parser.add_argument('--model_dir', default='../Data/models/',
                                help='the dir to save the model')
-    path_settings.add_argument('--result_dir', default='../Data/results',
+    parser.add_argument('--result_dir', default='../Data/results',
                                help='the directory to save edu segmentation results')
-    path_settings.add_argument('--log_path', help='the file to output log')
+    parser.add_argument('--log_path', help='the file to output log')
     return parser.parse_args()
 
-def find_sequence_spans(text, target_sequences):
+
+def manual_batching(tensor, batch_size):
+    num_samples = tensor.size(0)
+    num_batches = (num_samples + batch_size - 1) // batch_size
+
+    # Create a list to store the batches
+    batches = []
+
+    for i in range(num_batches):
+        # Calculate the start and end indices for the current batch
+        start_idx = i * batch_size
+        end_idx = min((i + 1) * batch_size, num_samples)
+
+        # Extract the current batch from the tensor
+        batch = tensor[start_idx:end_idx]
+
+        # Append the batch to the list
+        batches.append(batch)
+
+    return batches
+
+def find_sequence_spans(text, target_sequences, model, args):
     sequence_spans = []
-    target_index = 0
+    idx_edu = 0
     start_index = None
     loop = True
     i = 0
     while (loop):
-        target_stuff = re.findall(r'\b\w+\b|[.,:\n&!]', target_sequences[target_index])
+        #target_stuff = re.findall(regex_pattern, target_sequences[idx_edu])
+        #print(f"target_sequences[idx_edu]: {target_sequences[idx_edu]}")
+        target_stuff = model.tokeniser(target_sequences[idx_edu])["input_ids"]
+        target_stuff = target_stuff[1:-1]
         target_length = len(target_stuff)
+        if len(target_stuff) == 0 :
+            break
         if text[i] == target_stuff[0]:
             start_index = i
-            target_index += 1
+            idx_edu += 1
             potential_end = i + target_length -1
             #if text[potential_end] != target_stuff[-1]:
-            #  print(f"potential_end: {potential_end} and target_index: {target_index} and text[potential_end-1]: {text[potential_end-1]} aand text[potential_end]: {text[potential_end]} and target_stuff[-1]: {target_stuff[-1]}")
+            #print(f"potential_end: {potential_end} and idx_edu: {idx_edu} and text[potential_end-1]: {text[potential_end-1]} aand text[potential_end]: {text[potential_end]} and target_stuff[-1]: {target_stuff[-1]}")
+            #print(f"len(text): {len(text)} and potential_end: {potential_end} and target_length: {target_length} and target_stuff: {target_stuff} and idx_edu: {idx_edu} and len(target_sequences): {len(target_sequences)}")
             if text[potential_end] == target_stuff[-1]:
                 end_index = potential_end
                 i = end_index
@@ -73,11 +102,11 @@ def find_sequence_spans(text, target_sequences):
         #else:
         #  print(f"i: {i}, text[i]: {text[i]}, target_stuff[0]:{target_stuff[0]}")
         i+=1
-        if(i>=len(text)):
+        if(i>=len(text) or idx_edu >= len(target_sequences)):
           loop = False
     return sequence_spans
 
-def preprocess_RST_Discourse_dataset(path_data, tag2idx):
+def preprocess_RST_Discourse_dataset(path_data, tag2idx, args, model):
     """
     This function preprocesses the RST Discourse dataset.
     """
@@ -91,12 +120,18 @@ def preprocess_RST_Discourse_dataset(path_data, tag2idx):
             text = txtf.read()
             edus = eduf.read().split('\n')
             text = text.split('\n')
+            text = ' '.join(text)
+            text = text.replace("'", " '\' ").replace("\"", " \" ").replace("-", " - ").replace(",", " , ").replace(".", " . ")
+            edus = [edu.replace("'", " '\' ").replace("\"", " \" ").replace("-", " - ").replace(",", " , ").replace(".", " . ") for edu in edus]
+            edus = [seq.strip() for seq in edus]
 
-            words = re.findall(r'\b\w+\b|[.,:\n&!]', ' '.join(text))
-
-            BIOE_tags = [tag2idx["O"]] * len(words)
-            
-            sequence_spans = find_sequence_spans(words, edus)
+            #words = re.findall(args.regex_pattern, ' '.join(text))
+            words = model.tokeniser(text, padding="max_length", truncation = True, return_attention_mask=True, max_length = args.max_length)
+            input_ids = words["input_ids"]
+            attn_mask = words["attention_mask"]
+            BIOE_tags = [tag2idx["O"]] * len(input_ids)
+            #print(f"txt_file: {txt_file}")
+            sequence_spans = find_sequence_spans(input_ids, edus, model, args)
 
             for span in sequence_spans:
                 if(span[0] == -1 or span[1] == -1):
@@ -106,12 +141,14 @@ def preprocess_RST_Discourse_dataset(path_data, tag2idx):
                     BIOE_tags[span[1]] = tag2idx['E']
                     for i in range(span[0]+1, span[1]):
                         BIOE_tags[i] = tag2idx['I']
-            
             if(len(sequence_spans) != len(edus) - 1):
+                print(f"messed up file: {txt_file}, detected: {len(sequence_spans)}, total: {len(edus)}, length: {len(words['input_ids'])}")
                 messed_up_ones.append(txt_file)
-            data.append((words, BIOE_tags))
+            #words = words + ['[PAD]'] * (args.max_length - len(words))    #pads to 18432
+            #BIOE_tags = BIOE_tags + [2] * (args.max_length - len(BIOE_tags))    #pads to 18432
+            data.append((input_ids, attn_mask, BIOE_tags))
 
-    df = pd.DataFrame(data, columns=['Text', 'BIOE'])
+    df = pd.DataFrame(data, columns=['Text', 'Attention Mask', 'BIOE'])
     print(messed_up_ones)
     return df
 
@@ -130,14 +167,8 @@ class SelfAttention(nn.Module):
         outputs = (encoder_outputs * weights.unsqueeze(-1)).sum(dim=1)
         return outputs, weights
 
-def pad_list_of_lists(list_of_lists, max_length = 3072):
-    padded_list = [lst + [-1] * (max_length - len(lst)) for lst in list_of_lists]
-    #for list in padded_list:
-    #    print(f"length of list: {len(list)}")
-    return padded_list
-
 class EDUPredictor(nn.Module):
-    def __init__(self, tagset_size=4, hidden_dim=3072):
+    def __init__(self, tagset_size=4, hidden_dim=18432):
         super(EDUPredictor, self).__init__()
 
         self.hidden_dim = hidden_dim
@@ -145,7 +176,8 @@ class EDUPredictor(nn.Module):
         self.config = AutoConfig.from_pretrained(self.transformer_architecture, output_hidden_states=True)
         self.config.max_position_embeddings = hidden_dim
         self.encoder = AutoModel.from_pretrained(self.transformer_architecture, config=self.config)
-        self.tokeniser = AutoTokenizer.from_pretrained(self.transformer_architecture, max_length=self.config.max_position_embeddings, padding="max_length", return_attention_mask=True)
+        self.tokeniser = AutoTokenizer.from_pretrained(self.transformer_architecture, max_length=self.config.max_position_embeddings, 
+                                                       pad_token = '[PAD]', padding="max_length", return_attention_mask=True)
         # Define BiLSTM 1
         self.lstm1 = nn.LSTM(self.encoder.config.hidden_size, hidden_dim // 2, bidirectional=True)
 
@@ -179,20 +211,20 @@ def main():
     idx2tag = {0: 'B', 1: 'I', 2: 'O', 3: 'E'}
     tag2idx = {tag: idx for idx, tag in idx2tag.items()}
 
-    if args.prepare:
-        # Use the function
-        train_df = preprocess_RST_Discourse_dataset(os.path.join(args.rst_dir, "train"), tag2idx)
-        # Save the dataframe to a csv file for further use
-        train_df.to_csv(os.path.join(args.rst_dir, 'preprocessed_data_train.csv'), index=False)
-        test_df = preprocess_RST_Discourse_dataset(os.path.join(args.rst_dir, "test"), tag2idx)
-        # Save the dataframe to a csv file for further use
-        test_df.to_csv(os.path.join(args.rst_dir, 'preprocessed_data_test.csv'), index=False)
-
     # Detect device (CPU or CUDA)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
     # Initialize the model
-    model = EDUPredictor(tagset_size=len(idx2tag.keys()), hidden_dim=args.hidden_size).to(device)
+    model = EDUPredictor(tagset_size=len(idx2tag.keys()), hidden_dim=args.max_length).to(device)
+
+    if args.prepare:
+        # Use the function
+        train_df = preprocess_RST_Discourse_dataset(os.path.join(args.rst_dir, "train"), tag2idx, args, model)
+        # Save the dataframe to a csv file for further use
+        train_df.to_csv(os.path.join(args.rst_dir, 'preprocessed_data_train.csv'), index=False)
+        test_df = preprocess_RST_Discourse_dataset(os.path.join(args.rst_dir, "test"), tag2idx, args, model)
+        # Save the dataframe to a csv file for further use
+        test_df.to_csv(os.path.join(args.rst_dir, 'preprocessed_data_test.csv'), index=False)
 
     # Define the optimizer
     optimizer = optim.AdamW(model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
@@ -200,34 +232,46 @@ def main():
     if args.train:
          # Convert data to PyTorch tensors and move to the device
         train_data = pd.read_csv(os.path.join(args.rst_dir, 'preprocessed_data_train.csv'))
-        tokenised_inputs = model.tokeniser(train_data['Text'].tolist(), return_attention_mask=True)
-        train_inputs = tokenised_inputs["input_ids"]
-        for list in train_inputs:
-            print(f"list size in train inputs: {len(train_inputs)}")
-        attention_masks = tokenised_inputs["attention_mask"]
-        train_tuples = list(zip(train_inputs, attention_masks))
-        train_tuples = torch.tensor(train_tuples, dtype=torch.long).to(device)
+        
+        train_data['Text'] = train_data['Text'].tolist()
+        for i in range(len(train_data['Text'])):
+            #print(train_data['Text'].iloc[i])
+            train_data['Text'].iloc[i] =  np.array(ast.literal_eval(train_data['Text'].iloc[i]))
+            train_data['Text'].iloc[i] = [int(item) for item in train_data['Text'].iloc[i]]
+        train_inputs = torch.tensor(np.array(train_data['Text'].tolist()))
+ 
+        attention_masks = train_data['Attention Mask' ].tolist()
+        for i in range(len(train_data['Attention Mask'])):
+            train_data['Attention Mask'].iloc[i] =  np.array(ast.literal_eval(train_data['Attention Mask'].iloc[i]))
+            train_data['Attention Mask'].iloc[i] = [int(item) for item in train_data['Attention Mask'].iloc[i]]
+        attention_masks = torch.tensor(np.array(train_data['Attention Mask' ].tolist()))
+        attention_masks =  manual_batching(attention_masks, args.batch_size)
+        #train_tuples = list(zip(train_inputs, attention_masks))
+        #train_tuples = torch.stack((train_inputs, attention_masks), dim=0).to(device) #[2, 342, 18432]
+        #train_tuples = train_inputs
+        #torch.tensor(train_tuples, dtype=torch.long).to(device)
         train_labels = train_data['BIOE'].tolist()
         train_labels = [ast.literal_eval(label_list) for label_list in train_labels]
-        train_labels = pad_list_of_lists(train_labels)
         train_labels = torch.tensor(train_labels, dtype=torch.long).to(device)
 
         # Create DataLoader for training data
-        train_dataset = torch.utils.data.TensorDataset(train_tuples, train_labels)
+        train_dataset = torch.utils.data.TensorDataset(train_inputs, train_labels)
         train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
         # Training loop
         for epoch in range(args.epochs):
             epoch_loss = 0.0
             model.train()  # Set model to training mode
-            for (inputs, attention_masks), labels in train_loader:
+            for (inputs, labels), attention_mask in zip(train_loader,attention_masks):
                 inputs = inputs.to(device)
-                labels = [[tag for tag in row] for row in labels]
-                labels = torch.tensor(labels, dtype=torch.long).to(device)
-
+                #labels = [[tag for tag in row] for row in labels]
+                #labels = torch.tensor(labels, dtype=torch.long).to(device)
+                print(f"size inputs: {inputs.size()}")
+                print(f"size labels: {labels.size()}")
+                print(f"size attention_mask: {attention_mask.size()}")
                 optimizer.zero_grad()  # Zero the gradients
 
                 # Forward propagation
-                tag_scores, _ = model(inputs, attention_masks)
+                tag_scores, _ = model(inputs, attention_mask)
 
                 # Compute the loss
                 loss = -model.crf(tag_scores, labels)
