@@ -133,7 +133,7 @@ class SelfAttention(nn.Module):
         return outputs, weights
 
 def pad_list_of_lists(list_of_lists, max_length = 2046):
-    padded_list = [lst + [-1] * (max_length - len(lst)) for lst in list_of_lists]
+    padded_list = [lst.append([-1] * (max_length - len(lst))) for lst in list_of_lists]
     return padded_list
 
 class EDUPredictor(nn.Module):
