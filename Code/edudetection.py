@@ -187,7 +187,7 @@ class EDUPredictor(nn.Module):
         self.lstm1 = nn.LSTM(self.encoder.config.hidden_size, hidden_dim // 2, bidirectional=True)
 
         # Define self-attention
-       #self.self_attention = SelfAttention(hidden_dim)
+        #self.self_attention = SelfAttention(hidden_dim)
 
         # Define BiLSTM 2
         self.lstm2 = nn.LSTM(hidden_dim, hidden_dim // 2, bidirectional=True)
@@ -203,17 +203,17 @@ class EDUPredictor(nn.Module):
         print("hidden states shape: ",encoded_layers.last_hidden_state.size())
         hidden_states = encoded_layers.last_hidden_state
         print("hidden states shape after meaning: ",hidden_states.size())
-        lstm_out, _ = self.lstm1(hidden_states)
+        lstm_out, final_memory_state = self.lstm1(hidden_states)
         print("lstm1 out shape: ",lstm_out.size())
-        attn_out, attention_weights = self.self_attention(lstm_out)
-        print("attn out shape: ",attn_out.size())
-        lstm_out, _ = self.lstm2(attn_out.unsqueeze(1))
+        #attn_out, attention_weights = self.self_attention(lstm_out)
+        #print("attn out shape: ",attn_out.size())
+        lstm_out, _ = self.lstm2(lstm_out, final_memory_state)
         print("lstm2 out shape: ",lstm_out.size())
         tag_space = self.hidden2tag(lstm_out.view(len(sentences), -1))
         print("h2t out: ",tag_space.size())
         tag_scores = self.crf.decode(tag_space)
 
-        return tag_scores, attention_weights
+        return tag_scores
 
 def main():
     args = parse_args()
@@ -279,7 +279,7 @@ def main():
                 optimizer.zero_grad()  # Zero the gradients
 
                 # Forward propagation
-                tag_scores, _ = model(inputs, attention_mask)
+                tag_scores = model(inputs, attention_mask)
 
                 # Compute the loss
                 loss = -model.crf(tag_scores, labels)
@@ -316,7 +316,7 @@ def main():
         model.eval()  # Set model to evaluation mode
         with torch.no_grad():
             # Predict output for test set
-            test_tag_scores, _ = model(test_inputs)
+            test_tag_scores = model(test_inputs)
             test_pred = model.crf.decode(test_tag_scores)
 
             # Flatten both labels and predictions
