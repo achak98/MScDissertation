@@ -201,7 +201,7 @@ class EDUPredictor(nn.Module):
     def forward(self, sentences, attn_masks):
         encoded_layers = self.encoder(sentences, attention_mask=attn_masks)
         print("hidden states shape: ",encoded_layers.last_hidden_state.size())
-        hidden_states = encoded_layers.last_hidden_state.mean(0)
+        hidden_states = encoded_layers.last_hidden_state
         print("hidden states shape after meaning: ",hidden_states.size())
         lstm_out, _ = self.lstm1(hidden_states)
         print("lstm1 out shape: ",lstm_out.size())
