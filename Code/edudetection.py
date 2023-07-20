@@ -187,7 +187,7 @@ class EDUPredictor(nn.Module):
         self.lstm1 = nn.LSTM(self.encoder.config.hidden_size, hidden_dim // 2, bidirectional=True)
 
         # Define self-attention
-        self.self_attention = SelfAttention(hidden_dim)
+       #self.self_attention = SelfAttention(hidden_dim)
 
         # Define BiLSTM 2
         self.lstm2 = nn.LSTM(hidden_dim, hidden_dim // 2, bidirectional=True)
