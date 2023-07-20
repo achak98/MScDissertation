@@ -200,11 +200,17 @@ class EDUPredictor(nn.Module):
 
     def forward(self, sentences, attn_masks):
         encoded_layers = self.encoder(sentences, attention_mask=attn_masks)
-        hidden_states = encoded_layers.last_hidden_state
+        print("hidden states shape: ",hidden_states.size())
+        hidden_states = encoded_layers.last_hidden_state.mean(0)
+        print("hidden states shape after meaning: ",hidden_states.size())
         lstm_out, _ = self.lstm1(hidden_states)
+        print("lstm1 out shape: ",lstm_out.size())
         attn_out, attention_weights = self.self_attention(lstm_out)
+        print("attn out shape: ",attn_out.size())
         lstm_out, _ = self.lstm2(attn_out.unsqueeze(1))
+        print("lstm2 out shape: ",lstm_out.size())
         tag_space = self.hidden2tag(lstm_out.view(len(sentences), -1))
+        print("h2t out: ",tag_space.size())
         tag_scores = self.crf.decode(tag_space)
 
         return tag_scores, attention_weights
