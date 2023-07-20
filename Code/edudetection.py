@@ -8,7 +8,7 @@ import torch
 import numpy as np
 import torch.nn as nn
 from torch.utils.data import DataLoader
-from TorchCRF import CRF 
+from torchcrf import CRF 
 import torch.optim as optim
 from sklearn.metrics import classification_report, multilabel_confusion_matrix
 from seqeval.metrics import precision_score, recall_score, f1_score, accuracy_score
