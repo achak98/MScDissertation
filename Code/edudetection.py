@@ -130,12 +130,14 @@ class SelfAttention(nn.Module):
         outputs = (encoder_outputs * weights.unsqueeze(-1)).sum(dim=1)
         return outputs, weights
 
-def pad_list_of_lists(list_of_lists, max_length = 2046):
+def pad_list_of_lists(list_of_lists, max_length = 2048):
     padded_list = [lst + [-1] * (max_length - len(lst)) for lst in list_of_lists]
+    for list in padded_list:
+        print(f"length of list: {len(list)}")
     return padded_list
 
 class EDUPredictor(nn.Module):
-    def __init__(self, tagset_size=4, hidden_dim=2046):
+    def __init__(self, tagset_size=4, hidden_dim=2048):
         super(EDUPredictor, self).__init__()
 
         self.hidden_dim = hidden_dim
