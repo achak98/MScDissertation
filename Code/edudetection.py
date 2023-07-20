@@ -132,6 +132,10 @@ class SelfAttention(nn.Module):
         outputs = (encoder_outputs * weights.unsqueeze(-1)).sum(dim=1)
         return outputs, weights
 
+def pad_list_of_lists(list_of_lists, max_length = 2046):
+    padded_list = [lst + [-1] * (max_length - len(lst)) for lst in list_of_lists]
+    return padded_list
+
 class EDUPredictor(nn.Module):
     def __init__(self, tagset_size=4, hidden_dim=2046):
         super(EDUPredictor, self).__init__()
@@ -202,6 +206,7 @@ def main():
         train_tuples = zip(train_inputs, attention_masks)
         train_labels = train_data['BIOE'].tolist()
         train_labels = [ast.literal_eval(label_list) for label_list in train_labels]
+        train_labels = pad_list_of_lists(train_labels)
         #print(f"!!!!!!!!!!!!!train_data['BIOE']: {train_data['BIOE']}")
         #print(f"!!!!!!!!!!!!!train_data['BIOE'].tolist(): {train_data['BIOE'].tolist()}")
         train_labels = torch.tensor(train_labels, dtype=torch.long).to(device)
