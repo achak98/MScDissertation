@@ -94,6 +94,11 @@ def find_sequence_spans(text, target_sequences, model, args):
             #if text[potential_end] != target_stuff[-1]:
             #print(f"potential_end: {potential_end} and idx_edu: {idx_edu} and text[potential_end-1]: {text[potential_end-1]} aand text[potential_end]: {text[potential_end]} and target_stuff[-1]: {target_stuff[-1]}")
             #print(f"len(text): {len(text)} and potential_end: {potential_end} and target_length: {target_length} and target_stuff: {target_stuff} and idx_edu: {idx_edu} and len(target_sequences): {len(target_sequences)}")
+            if potential_end > len(text)-1 :
+                if target_stuff[len(text)-1 - i] == text[-1]:
+                    potential_end = len(text)-1 - i
+                else:
+                    break
             if text[potential_end] == target_stuff[-1]:
                 end_index = potential_end
                 i = end_index
