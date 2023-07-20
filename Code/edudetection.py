@@ -268,8 +268,8 @@ def main():
             model.train()  # Set model to training mode
             for (inputs, labels), attention_mask in zip(train_loader,attention_masks):
                 inputs = inputs.to(device)
-                labels.to(device)
-                attention_mask.to(device)
+                labels = labels.to(device)
+                attention_mask = attention_mask.to(device)
                 optimizer.zero_grad()  # Zero the gradients
 
                 # Forward propagation
