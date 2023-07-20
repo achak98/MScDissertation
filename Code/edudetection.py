@@ -185,13 +185,13 @@ class EDUPredictor(nn.Module):
         self.tokeniser = AutoTokenizer.from_pretrained(self.transformer_architecture, max_length=self.config.max_position_embeddings, 
                                                        pad_token = '[PAD]', padding="max_length", return_attention_mask=True)
         # Define BiLSTM 1
-        self.lstm1 = nn.LSTM(hidden_dim, hidden_dim // 2, bidirectional=True)
+        self.lstm1 = nn.LSTM(hidden_dim, hidden_dim // 4, bidirectional=True)
 
         # Define self-attention
         #self.self_attention = SelfAttention(hidden_dim)
 
         # Define BiLSTM 2
-        self.lstm2 = nn.LSTM(hidden_dim, hidden_dim // 2, bidirectional=True)
+        self.lstm2 = nn.LSTM(hidden_dim//4, hidden_dim // 16, bidirectional=True)
 
         # Define MLP
         self.hidden2tag = nn.Linear(hidden_dim, tagset_size)
