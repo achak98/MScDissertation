@@ -204,6 +204,7 @@ def main():
         train_inputs = tokenised_inputs["input_ids"]
         attention_masks = tokenised_inputs["attention_mask"]
         train_tuples = list(zip(train_inputs, attention_masks))
+        train_tuples = torch.tensor(train_tuples, dtype=torch.long).to(device)
         train_labels = train_data['BIOE'].tolist()
         train_labels = [ast.literal_eval(label_list) for label_list in train_labels]
         train_labels = pad_list_of_lists(train_labels)
