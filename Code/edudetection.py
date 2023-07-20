@@ -213,7 +213,7 @@ class EDUPredictor(nn.Module):
         print("h2t out: ",tag_space.size())
         tag_scores = self.crf.decode(tag_space)
 
-        return torch.tensor(tag_scores)
+        return torch.tensor(tag_scores), tag_space
 
 def main():
     args = parse_args()
@@ -279,10 +279,10 @@ def main():
                 optimizer.zero_grad()  # Zero the gradients
 
                 # Forward propagation
-                tag_scores = model(inputs, attention_mask)
+                tag_scores, emissions = model(inputs, attention_mask)
 
                 # Compute the loss
-                loss = -model.crf(tag_scores, labels)
+                loss = -model.crf(emissions, labels)
 
                 # Backward propagation
                 loss.backward()
