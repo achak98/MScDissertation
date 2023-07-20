@@ -185,16 +185,27 @@ class EDUPredictor(nn.Module):
         self.tokeniser = AutoTokenizer.from_pretrained(self.transformer_architecture, max_length=self.config.max_position_embeddings, 
                                                        pad_token = '[PAD]', padding="max_length", return_attention_mask=True)
         # Define BiLSTM 1
-        self.lstm1 = nn.LSTM(hidden_dim, hidden_dim // 8, bidirectional=True)
+        self.lstm1 = nn.LSTM(max_length, hidden_dim, num_layers=2, bidirectional=True)
 
         # Define self-attention
         #self.self_attention = SelfAttention(hidden_dim)
 
         # Define BiLSTM 2
-        self.lstm2 = nn.LSTM(hidden_dim//4, hidden_dim // 32, bidirectional=True)
+        #self.lstm2 = nn.LSTM(hidden_dim//4, hidden_dim // 2, bidirectional=True)
 
         # Define MLP
-        self.hidden2tag = nn.Linear( hidden_dim // 16, tagset_size)
+        self.hidden2tag = self.regressor1 = torch.nn.Sequential(
+            torch.nn.Linear(hidden_dim*2, hidden_dim),
+            torch.nn.ReLU(),
+            torch.nn.Dropout(0.3),
+            torch.nn.Linear(hidden_dim, hidden_dim//16),
+            torch.nn.ReLU(),
+            torch.nn.Dropout(0.3),
+            torch.nn.Linear(hidden_dim//16, hidden_dim//64),
+            torch.nn.ReLU(),
+            torch.nn.Dropout(0.3),
+            torch.nn.Linear(hidden_dim//64, tagset_size)
+        )
 
         # Define CRF
         self.crf = CRF(tagset_size)
