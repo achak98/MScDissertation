@@ -178,12 +178,12 @@ class EDUPredictor(nn.Module):
         super(EDUPredictor, self).__init__()
 
         self.hidden_dim = hidden_dim
-        self.transformer_architecture = 'microsoft/deberta-v3-base'
+        self.transformer_architecture = 'microsoft/deberta-v3-small'
         self.config = AutoConfig.from_pretrained(self.transformer_architecture, output_hidden_states=True)
         self.config.max_position_embeddings = max_length
         self.encoder = AutoModel.from_pretrained(self.transformer_architecture, config=self.config)
         self.tokeniser = AutoTokenizer.from_pretrained(self.transformer_architecture, max_length=self.config.max_position_embeddings, 
-                                                       pad_token = '[PAD]', padding="max_length", return_attention_mask=True)
+                                                       padding="max_length", return_attention_mask=True)
         # Define BiLSTM 1
         self.lstm1 = nn.LSTM(hidden_dim, hidden_dim, num_layers=2, bidirectional=True)
 
