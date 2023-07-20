@@ -268,11 +268,8 @@ def main():
             model.train()  # Set model to training mode
             for (inputs, labels), attention_mask in zip(train_loader,attention_masks):
                 inputs = inputs.to(device)
-                #labels = [[tag for tag in row] for row in labels]
-                #labels = torch.tensor(labels, dtype=torch.long).to(device)
-                print(f"size inputs: {inputs.size()}")
-                print(f"size labels: {labels.size()}")
-                print(f"size attention_mask: {attention_mask.size()}")
+                labels.to(device)
+                attention_mask.to(device)
                 optimizer.zero_grad()  # Zero the gradients
 
                 # Forward propagation
