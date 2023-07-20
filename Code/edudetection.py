@@ -205,7 +205,7 @@ class EDUPredictor(nn.Module):
         attn_out, attention_weights = self.self_attention(lstm_out)
         lstm_out, _ = self.lstm2(attn_out.unsqueeze(1))
         tag_space = self.hidden2tag(lstm_out.view(len(sentences), -1))
-        tag_scores = self.crf.viterbi_decode(tag_space)
+        tag_scores = self.crf.decode(tag_space)
 
         return tag_scores, attention_weights
 
