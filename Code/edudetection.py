@@ -220,18 +220,18 @@ class EDUPredictor(nn.Module):
         self.lstm1 = nn.LSTM(hidden_dim, hidden_dim, num_layers=2, bidirectional=True)
 
         # Define self-attention
-        self.mod_self_attention = ModifiedSelfAttention(hidden_dim)
+        #self.mod_self_attention = ModifiedSelfAttention(hidden_dim)
 
         # Define BiLSTM 2
-        self.lstm2 = nn.LSTM(hidden_dim, hidden_dim, bidirectional=True)
+        self.lstm2 = nn.LSTM(hidden_dim*2, hidden_dim, bidirectional=True)
 
-        self.regressor = nn.Sequential(
-            nn.Linear(max_length, max_length//2),
+        """self.regressor = nn.Sequential(
+            nn.Linear(hidden_dim*2, hidden_dim//2),
             nn.GELU(),
             nn.Dropout(0.3),
-            nn.Linear( max_length//2,  hidden_dim),
+            nn.Linear( hidden_dim//2,  hidden_dim),
             nn.GELU()
-        )
+        )"""
         # Define MLP
         self.hidden2tag = nn.Sequential(
             nn.Linear(hidden_dim*2, hidden_dim//2),
@@ -255,14 +255,14 @@ class EDUPredictor(nn.Module):
         hidden_states = encoded_layers.last_hidden_state
         #print(hidden_states.size())
         lstm_out, _ = self.lstm1(hidden_states)
-        #print(lstm_out.size())
-        attn_out, attention_weights = self.mod_self_attention(lstm_out)
+        print(lstm_out.size())
+        #attn_out, attention_weights = self.mod_self_attention(lstm_out)
         #print(attn_out.size())
-        regressed_attn_out = self.regressor(attn_out)
+        #regressed_attn_out = self.regressor(attn_out)
         #print(regressed_attn_out.size())
-        residual_regress_attn_out = regressed_attn_out + hidden_states
-        lstm_out, _ = self.lstm2(residual_regress_attn_out)
-        #print(lstm_out.size())
+        #residual_regress_attn_out = regressed_attn_out + hidden_states
+        lstm_out, _ = self.lstm2(lstm_out)
+        print(lstm_out.size())
         tag_space = self.hidden2tag(lstm_out)
         #print(tag_space.size())
         tag_scores = self.crf.decode(tag_space)
