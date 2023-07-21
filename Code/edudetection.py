@@ -334,13 +334,14 @@ def main():
                 outputs = model(input_id, attention_mask)
                 embeddings[i] = torch.tensor(outputs.last_hidden_state).squeeze()
             print("embeddings.size(): ",embeddings.size())
+        embeddings = torch.tensor(embeddings)
         # Create DataLoader for training data
         train_dataset = torch.utils.data.TensorDataset(embeddings, train_labels)
         train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
         # Training loop
         for epoch in tqdm(range(args.epochs), desc='Epochs'):
             epoch_loss = 0.0
-            epoch_f1 = [0.0] *4
+            epoch_f1 = [0.0] * 4
             model.train()  # Set model to training mode
 
             # Create a tqdm progress bar for the inner loop (train_loader)

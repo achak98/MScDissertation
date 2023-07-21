@@ -326,7 +326,7 @@ def main():
         # Training loop
         for epoch in tqdm(range(args.epochs), desc='Epochs'):
             epoch_loss = 0.0
-            epoch_f1 = [0.0] *4
+            epoch_f1 = [0.0] * 4
             model.train()  # Set model to training mode
 
             # Create a tqdm progress bar for the inner loop (train_loader)
