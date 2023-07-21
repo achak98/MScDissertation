@@ -331,12 +331,12 @@ def main():
 
                 # Optimization step
                 optimizer.step()
-                print(scores)
+                #print(scores)
                 epoch_loss += loss.item()
                 for i in range (len(epoch_f1)):
                     epoch_f1[i] += scores[i]['F1 Score']
                 # Update the tqdm progress bar with the current loss value
-                train_loader_tqdm.set_postfix({'Loss': epoch_loss / (step + 1)})
+                train_loader_tqdm.set_postfix({f"f1 scores for tag B: {scores[0]['F1 Score']}, tag I: {scores[1]['F1 Score']}, tag O: {scores[2]['F1 Score']}, tag E: {scores[3]['F1 Score']} and Loss": epoch_loss / (step + 1)})
 
             # Update the outer tqdm progress bar with the current epoch loss value
             tqdm.write(f'Epoch [{epoch+1}/{args.epochs}], Loss: {epoch_loss / len(train_loader):.4f}, F1: {[epoch_f1/len(train_loader) for item in epoch_f1]:.4f}')
