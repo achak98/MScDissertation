@@ -187,9 +187,9 @@ def preprocess_RST_Discourse_dataset(path_data, tag2idx, args, model):
     print(messed_up_ones)
     return df
 
-class SelfAttention(nn.Module):
+class ModifiedSelfAttention(nn.Module):
     def __init__(self, hidden_dim):
-        super(SelfAttention, self).__init__()
+        super(ModifiedSelfAttention, self).__init__()
         self.projection = nn.Sequential(
             nn.Linear(hidden_dim*2, hidden_dim),  # Project to hidden_dim
             nn.ReLU(True),
@@ -198,9 +198,9 @@ class SelfAttention(nn.Module):
 
     def forward(self, encoder_outputs):
         energy = self.projection(encoder_outputs)
-        print("energy.shape(): ",energy.size())
+        #print("energy.shape(): ",energy.size())
         weights = nn.functional.softmax(energy, dim=1)  # Apply softmax along the token dimension
-        print("weights.shape(): ",weights.size())
+        #print("weights.shape(): ",weights.size())
         outputs = torch.bmm(energy,weights.permute(0, 2, 1))  # Weighted sum of encoder outputs
         return outputs, weights
 
@@ -219,7 +219,7 @@ class EDUPredictor(nn.Module):
         self.lstm1 = nn.LSTM(hidden_dim, hidden_dim, num_layers=2, bidirectional=True)
 
         # Define self-attention
-        self.self_attention = SelfAttention(hidden_dim)
+        self.mod_self_attention = ModifiedSelfAttention(hidden_dim)
 
         # Define BiLSTM 2
         self.lstm2 = nn.LSTM(hidden_dim, hidden_dim, bidirectional=True)
@@ -255,7 +255,7 @@ class EDUPredictor(nn.Module):
         #print(hidden_states.size())
         lstm_out, _ = self.lstm1(hidden_states)
         #print(lstm_out.size())
-        attn_out, attention_weights = self.self_attention(lstm_out)
+        attn_out, attention_weights = self.mod_self_attention(lstm_out)
         #print(attn_out.size())
         regressed_attn_out = self.regressor(attn_out)
         #print(regressed_attn_out.size())
