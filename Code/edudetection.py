@@ -156,8 +156,8 @@ def preprocess_RST_Discourse_dataset(path_data, tag2idx, args, model):
             edus = eduf.read().split('\n')
             text = text.split('\n')
             text = "[CLS]" + ' '.join(text).replace(". ", ".[SEP] ")
-            text = text.replace("'", "[SINGLEQUOTATION]").replace("\"", "[DOUBLEQUOTATION]").replace("-", "[DASH]").replace(",", "[COMMA]").replace(".", "[PERIOD]")
-            edus = [edu.replace("'", "[SINGLEQUOTATION]").replace("\"", "[DOUBLEQUOTATION]").replace("-", "[DASH]").replace(",", "[COMMA]").replace(".", "[PERIOD]") for edu in edus]
+            text = text.replace("'", " [SINGLEQUOTATION] ").replace("\"", " [DOUBLEQUOTATION] ").replace("-", " [DASH] ").replace(",", " [COMMA] ").replace(".", " [PERIOD] ")
+            edus = [edu.replace("'", " [SINGLEQUOTATION] ").replace("\"", " [DOUBLEQUOTATION] ").replace("-", " [DASH] ").replace(",", " [COMMA] ").replace(".", " [PERIOD] ") for edu in edus]
             edus = [seq.strip() for seq in edus]
 
             #words = re.findall(args.regex_pattern, ' '.join(text))
