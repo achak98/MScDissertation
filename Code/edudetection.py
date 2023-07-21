@@ -193,13 +193,13 @@ class SelfAttention(nn.Module):
         self.projection = nn.Sequential(
             nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(True),
-            nn.Linear(hidden_dim, hidden_dim)
+            nn.Linear(hidden_dim, 1)  # Output a scalar for each token
         )
 
     def forward(self, encoder_outputs):
         energy = self.projection(encoder_outputs)
-        weights = nn.functional.softmax(energy, dim=-1)  # Do not use squeeze(-1)
-        outputs = torch.sum(encoder_outputs * weights.unsqueeze(-1), dim=1)  # Keep the original dimensionality
+        weights = nn.functional.softmax(energy, dim=1)  # Softmax along the token dimension
+        outputs = (encoder_outputs * weights).sum(dim=1)  # Weighted sum of encoder outputs
         return outputs, weights
 
 class EDUPredictor(nn.Module):
