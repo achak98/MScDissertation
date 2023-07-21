@@ -209,7 +209,7 @@ class EDUPredictor(nn.Module):
         super(EDUPredictor, self).__init__()
 
         self.hidden_dim = hidden_dim
-        self.transformer_architecture = 'microsoft/deberta-v2-xlarge' #'microsoft/deberta-v3-small' mlcorelib/debertav2-base-uncased
+        self.transformer_architecture = 'mlcorelib/debertav2-base-uncased' #'microsoft/deberta-v3-small' mlcorelib/debertav2-base-uncased microsoft/deberta-v2-xlarge
         self.config = AutoConfig.from_pretrained(self.transformer_architecture, output_hidden_states=True)
         self.config.max_position_embeddings = max_length
         self.tokeniser = AutoTokenizer.from_pretrained(self.transformer_architecture, max_length=self.config.max_position_embeddings, padding="max_length", return_attention_mask=True)
