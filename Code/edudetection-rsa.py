@@ -273,7 +273,7 @@ class EDUPredictor(nn.Module):
             attention_weights = torch.nn.functional.softmax(similarity_scores, dim=-1)
             print("attention_weights: ",attention_weights.size())
             # Compute the attention vector as a weighted sum of nearby words
-            attention_vector = torch.sum(attention_weights * lstm_out[start_pos:end_pos], dim=0)
+            attention_vector = torch.sum(attention_weights * lstm_out[:, start_pos:end_pos], dim=0)
             print("attention_vector: ",attention_vector.size())
             # Store the attention vector for the current word
             attention_vectors[i] = attention_vector
@@ -344,22 +344,26 @@ def main():
         train_labels = [ast.literal_eval(label_list) for label_list in train_labels]
         train_labels = torch.tensor(train_labels, dtype=torch.long).to(device)
         print("getting empty embeddings tensor")
-        embeddings = torch.empty((len(train_inputs),args.max_length,args.hidden_dim), dtype=torch.float64).to(device)
-        print("init model")
-        with torch.no_grad():
-            input_ids = train_inputs.to(device)
-            print("input_ids shape: ",input_ids.size())
-            attention_masks = attention_masks.to(device) 
-            encoder = AutoModel.from_pretrained(model.transformer_architecture, config=model.config)
-            encoder = encoder.to(device)
-            print("starting tqdm")
-            for i in tqdm(range(len(input_ids))):
-                input_id = input_ids[i].unsqueeze(0)
-                attention_mask = attention_masks[i].unsqueeze(0)
-                # Obtain deberta embeddings for the current item
-                outputs = encoder(input_id, attention_mask)
-                embeddings[i] = torch.tensor(outputs.last_hidden_state).squeeze()
-            print("embeddings.size(): ",embeddings.size())
+        if os.path.exists(os.path.join(args.rst_dir,'embeddings_train.pt')):
+            embeddings = torch.load('my_tensor.pt')
+        else:
+            embeddings = torch.empty((len(train_inputs),args.max_length,args.hidden_dim), dtype=torch.float64).to(device)
+            print("init model")
+            with torch.no_grad():
+                input_ids = train_inputs.to(device)
+                print("input_ids shape: ",input_ids.size())
+                attention_masks = attention_masks.to(device) 
+                encoder = AutoModel.from_pretrained(model.transformer_architecture, config=model.config)
+                encoder = encoder.to(device)
+                print("starting tqdm")
+                for i in tqdm(range(len(input_ids))):
+                    input_id = input_ids[i].unsqueeze(0)
+                    attention_mask = attention_masks[i].unsqueeze(0)
+                    # Obtain deberta embeddings for the current item
+                    outputs = encoder(input_id, attention_mask)
+                    embeddings[i] = torch.tensor(outputs.last_hidden_state).squeeze()
+                print("embeddings.size(): ",embeddings.size())
+            torch.save(embeddings, os.path.join(args.rst_dir,'embeddings_train.pt'))
         torch.cuda.empty_cache()
         device_idx = 1
         if torch.cuda.is_available() and torch.cuda.device_count() >= device_idx + 1:
