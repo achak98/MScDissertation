@@ -326,6 +326,7 @@ def main():
             print("input_ids shape: ",input_ids.size())
             attention_masks = attention_masks.to(device) 
             model = AutoModel.from_pretrained(model.transformer_architecture, config=model.config)
+            model = model.to(device)
             # Obtain BERT embeddings for the current item
             outputs = model(input_ids, attention_masks)[0]
             embeddings = outputs.last_hidden_state
