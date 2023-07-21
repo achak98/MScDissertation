@@ -337,11 +337,11 @@ def main():
             # Create a tqdm progress bar for the inner loop (train_loader)
             train_loader_tqdm = tqdm(enumerate(train_loader), total=len(train_loader), desc='Batches')
             for step, (embeddings,labels) in train_loader_tqdm:
-                inputs = embeddings.to(torch.float64) #.to(device)
+                inputs = embeddings.to(torch.float) #.to(device)
                 labels = labels.to(device)
-                labels = labels.to(torch.float64)
+                labels = labels.to(torch.float)
                 print(f"type of inputs tensor: {inputs.dtype}, and type of labels tensor: {labels.dtype}") 
-                
+
                 optimizer.zero_grad()  # Zero the gradients
 
                 # Forward propagation
