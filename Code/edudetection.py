@@ -327,9 +327,12 @@ def main():
             attention_masks = attention_masks.to(device) 
             model = AutoModel.from_pretrained(model.transformer_architecture, config=model.config)
             model = model.to(device)
-            # Obtain BERT embeddings for the current item
-            outputs = model(input_ids, attention_masks)[0]
-            embeddings = outputs.last_hidden_state
+            for i in range(len(input_ids)):
+                input_id = torch.tensor([input_ids[i]]).to(device)
+                attention_mask = torch.tensor([attention_masks[i]]).to(device)
+                # Obtain BERT embeddings for the current item
+                outputs = model(input_ids, attention_masks)
+                embeddings[i] = outputs.last_hidden_state.squeeze()
 
         # Create DataLoader for training data
         train_dataset = torch.utils.data.TensorDataset(embeddings, train_labels)
