@@ -225,13 +225,13 @@ class EDUPredictor(nn.Module):
         # Define MLP
         self.hidden2tag = self.regressor1 = torch.nn.Sequential(
             torch.nn.Linear(hidden_dim*2, hidden_dim),
-            torch.nn.GeLU(),
+            torch.nn.GELU(),
             torch.nn.Dropout(0.3),
             torch.nn.Linear(hidden_dim, hidden_dim//16),
-            torch.nn.GeLU(),
+            torch.nn.GELU(),
             torch.nn.Dropout(0.3),
             torch.nn.Linear(hidden_dim//16, hidden_dim//64),
-            torch.nn.GeLU(),
+            torch.nn.GELU(),
             torch.nn.Dropout(0.3),
             torch.nn.Linear(hidden_dim//64, tagset_size)
         )
