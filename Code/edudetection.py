@@ -327,7 +327,7 @@ def main():
             attention_masks = attention_masks.to(device) 
             model = AutoModel.from_pretrained(model.transformer_architecture, config=model.config)
             model = model.to(device)
-            for i in range(len(input_ids)):
+            for i in tqdm(range(len(input_ids))):
                 input_id = input_ids[i].unsqueeze(0)
                 attention_mask = attention_masks[i].unsqueeze(0)
                 # Obtain deberta embeddings for the current item
