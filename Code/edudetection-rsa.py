@@ -12,7 +12,7 @@ from torchcrf import CRF
 import torch.optim as optim
 from sklearn.metrics import classification_report, multilabel_confusion_matrix
 from seqeval.metrics import precision_score, recall_score, f1_score, accuracy_score
-from transformers import AutoTokenizer, AutoModel, AutoConfig
+from transformers import AutoTokenizer, AutoModel, AutoConfig, DebertaV2ForMaskedLM
 from tqdm import tqdm
 from sklearn.metrics import precision_recall_fscore_support
 from sklearn.exceptions import UndefinedMetricWarning
@@ -53,7 +53,7 @@ def parse_args():
     parser.add_argument('--evaluate', action='store_true', help='evaluate the model')
     parser.add_argument('--segment', action='store_true', help='segment new files or input text')
 
-    parser.add_argument('--window_size', default= 5, type = int)
+    parser.add_argument('--regex_pattern', default= r'\b\w+\b|[.,:\n&!]')
     parser.add_argument('--max_length', type=int, default= 18432)
     parser.add_argument('--learning_rate', type=float,
                                 default=3e-4, help='learning rate')
@@ -209,7 +209,7 @@ class EDUPredictor(nn.Module):
         super(EDUPredictor, self).__init__()
 
         self.hidden_dim = hidden_dim
-        self.transformer_architecture = 'microsoft/deberta-v3-small'
+        self.transformer_architecture = 'microsoft/deberta-v3-base' #'microsoft/deberta-v3-small' mlcorelib/debertav2-base-uncased microsoft/deberta-v2-xlarge
         self.config = AutoConfig.from_pretrained(self.transformer_architecture, output_hidden_states=True)
         self.config.max_position_embeddings = max_length
         self.tokeniser = AutoTokenizer.from_pretrained(self.transformer_architecture, max_length=self.config.max_position_embeddings, padding="max_length", return_attention_mask=True)
@@ -240,7 +240,7 @@ class EDUPredictor(nn.Module):
             nn.Dropout(0.3),
             nn.Linear(hidden_dim // 64, tagset_size)
         )
-
+        #print("tagset_size: ",tagset_size)
         # Define CRF
         self.crf = CRF(tagset_size)
 
@@ -250,11 +250,11 @@ class EDUPredictor(nn.Module):
  
         lstm_out, _ = self.lstm2(lstm_out)
 
-        tag_space = self.hidden2tag(lstm_out)
+        #tag_space = self.hidden2tag(lstm_out)
+        #print("size of tag_space: ", tag_space.size())
+        tag_scores = self.crf.decode(lstm_out)
 
-        tag_scores = self.crf.decode(tag_space)
-
-        return torch.tensor(tag_scores), tag_space
+        return torch.tensor(tag_scores), lstm_out
 
 
 def main():
@@ -303,7 +303,7 @@ def main():
         train_labels = [ast.literal_eval(label_list) for label_list in train_labels]
         train_labels = torch.tensor(train_labels, dtype=torch.long).to(device)
         print("getting empty embeddings tensor")
-        embeddings = torch.empty((len(train_inputs),args.max_length,args.hidden_dim), dtype=torch.long).to(device)
+        embeddings = torch.empty((len(train_inputs),args.max_length,args.hidden_dim), dtype=torch.float64).to(device)
         print("init model")
         with torch.no_grad():
             input_ids = train_inputs.to(device)
@@ -332,14 +332,16 @@ def main():
         for epoch in tqdm(range(args.epochs), desc='Epochs'):
             epoch_loss = 0.0
             epoch_f1 = [0.0] * 4
+            model = model.to(device)
             model.train()  # Set model to training mode
 
             # Create a tqdm progress bar for the inner loop (train_loader)
             train_loader_tqdm = tqdm(enumerate(train_loader), total=len(train_loader), desc='Batches')
             for step, (embeddings,labels) in train_loader_tqdm:
-                inputs = embeddings #.to(device)
+                inputs = embeddings.to(torch.float) #.to(device)
                 labels = labels.to(device)
-                model = model.to(device)
+                #print(f"type of inputs tensor: {inputs.dtype}, and type of labels tensor: {labels.dtype}") 
+
                 optimizer.zero_grad()  # Zero the gradients
 
                 # Forward propagation
