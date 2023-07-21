@@ -20,13 +20,12 @@ def compute_f1_score_for_labels(y_true, y_pred, labels):
     # y_true: Ground truth labels (list of lists)
     # y_pred: Predicted labels (list of lists)
     # labels: List of unique labels in your dataset
-    print("y_true: ",y_true)
     # Flatten the ground truth and predicted labels
     y_true_flat = [label for sublist in y_true for label in sublist]
     y_pred_flat = [label for sublist in y_pred for label in sublist]
 
     # Compute precision, recall, and F1 score for each label
-    precision, recall, f1_score, _ = precision_recall_fscore_support(y_true_flat, y_pred_flat, labels=labels)
+    precision, recall, f1_score, _ = precision_recall_fscore_support(y_true, y_pred, labels=labels)
 
     # Create a dictionary to store the results for each label
     label_scores = {}
