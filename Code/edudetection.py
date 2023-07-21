@@ -198,9 +198,9 @@ class SelfAttention(nn.Module):
 
     def forward(self, encoder_outputs):
         energy = self.projection(encoder_outputs)
-        print("energy.shape(): ",energy.shape())
+        print("energy.shape(): ",energy.size())
         weights = nn.functional.softmax(energy, dim=1)  # Apply softmax along the token dimension
-        print("weights.shape(): ",weights.shape())
+        print("weights.shape(): ",weights.size())
         outputs = torch.sum(encoder_outputs * weights.unsqueeze(-1), dim=1)  # Weighted sum of encoder outputs
         return outputs, weights
 
