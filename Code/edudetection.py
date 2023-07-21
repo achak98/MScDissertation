@@ -319,7 +319,7 @@ def main():
                 # Forward propagation
                 tag_scores, emissions = model(inputs, attention_mask)
 
-                scores = compute_f1_score_for_labels(tag_scores.detach().cpu().numpy().flatten(), labels.detach().cpu().numpy().flatten(), labels= idx2tag.keys())
+                scores = compute_f1_score_for_labels(tag_scores.detach().cpu().numpy().flatten(), labels.detach().cpu().numpy().flatten(), labels= [int(key) for key in idx2tag.keys()])
                 # Compute the loss
                 loss = -model.crf(emissions, labels)
 
