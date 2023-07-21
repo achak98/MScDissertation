@@ -14,7 +14,30 @@ from sklearn.metrics import classification_report, multilabel_confusion_matrix
 from seqeval.metrics import precision_score, recall_score, f1_score, accuracy_score
 from transformers import AutoTokenizer, AutoModel, AutoConfig
 from tqdm import tqdm
+from sklearn.metrics import precision_recall_fscore_support
 
+def compute_f1_score_for_labels(y_true, y_pred, labels):
+    # y_true: Ground truth labels (list of lists)
+    # y_pred: Predicted labels (list of lists)
+    # labels: List of unique labels in your dataset
+
+    # Flatten the ground truth and predicted labels
+    y_true_flat = [label for sublist in y_true for label in sublist]
+    y_pred_flat = [label for sublist in y_pred for label in sublist]
+
+    # Compute precision, recall, and F1 score for each label
+    precision, recall, f1_score, _ = precision_recall_fscore_support(y_true_flat, y_pred_flat, labels=labels)
+
+    # Create a dictionary to store the results for each label
+    label_scores = {}
+    for i, label in enumerate(labels):
+        label_scores[label] = {
+            'Precision': precision[i],
+            'Recall': recall[i],
+            'F1 Score': f1_score[i]
+        }
+
+    return label_scores
 
 def parse_args():
     parser = argparse.ArgumentParser('EDU segmentation toolkit 1.0')
@@ -283,6 +306,7 @@ def main():
         # Training loop
         for epoch in tqdm(range(args.epochs), desc='Epochs'):
             epoch_loss = 0.0
+            epoch_f1 = 0.0
             model.train()  # Set model to training mode
 
             # Create a tqdm progress bar for the inner loop (train_loader)
@@ -296,6 +320,8 @@ def main():
                 # Forward propagation
                 tag_scores, emissions = model(inputs, attention_mask)
 
+                print(tag_scores)
+                scores = compute_f1_score_for_labels(tag_scores, labels, labels= idx2tag.keys())
                 # Compute the loss
                 loss = -model.crf(emissions, labels)
 
@@ -309,12 +335,12 @@ def main():
                 optimizer.step()
 
                 epoch_loss += loss.item()
-
+                epoch_f1 += scores['F1 Score']
                 # Update the tqdm progress bar with the current loss value
                 train_loader_tqdm.set_postfix({'Loss': epoch_loss / (step + 1)})
 
             # Update the outer tqdm progress bar with the current epoch loss value
-            tqdm.write(f'Epoch [{epoch+1}/{args.epochs}], Loss: {epoch_loss / len(train_loader):.4f}')
+            tqdm.write(f'Epoch [{epoch+1}/{args.epochs}], Loss: {epoch_loss / len(train_loader):.4f}, F1: {epoch_f1 / len(train_loader):.4f}')
 
         # Save the trained model
         model_path = os.path.join(args.model_dir, 'edu_segmentation_model.pt')
