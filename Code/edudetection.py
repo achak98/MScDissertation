@@ -331,7 +331,7 @@ def main():
                 input_id = torch.tensor([input_ids[i]]).to(device)
                 attention_mask = torch.tensor([attention_masks[i]]).to(device)
                 # Obtain BERT embeddings for the current item
-                outputs = model(input_ids, attention_masks)
+                outputs = model(input_id, attention_mask)
                 embeddings[i] = outputs.last_hidden_state.squeeze()
 
         # Create DataLoader for training data
