@@ -321,8 +321,8 @@ def main():
             print("embeddings.size(): ",embeddings.size())
         torch.cuda.empty_cache()
         device_idx = 1
-        #if torch.cuda.is_available() and torch.cuda.device_count() >= device_idx + 1:
-        #    device = torch.device(f"cuda:{device_idx}")
+        if torch.cuda.is_available() and torch.cuda.device_count() >= device_idx + 1:
+            device = torch.device(f"cuda:{device_idx}")
         embeddings = torch.tensor(embeddings).to(device)
         # Create DataLoader for training data
         train_dataset = torch.utils.data.TensorDataset(embeddings, train_labels)
@@ -332,6 +332,7 @@ def main():
         for epoch in tqdm(range(args.epochs), desc='Epochs'):
             epoch_loss = 0.0
             epoch_f1 = [0.0] * 4
+            model = model.to(device)
             model.train()  # Set model to training mode
 
             # Create a tqdm progress bar for the inner loop (train_loader)
