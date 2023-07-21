@@ -339,7 +339,6 @@ def main():
             for step, (embeddings,labels) in train_loader_tqdm:
                 inputs = embeddings.to(torch.float) #.to(device)
                 labels = labels.to(device)
-                labels = labels.to(torch.float)
                 print(f"type of inputs tensor: {inputs.dtype}, and type of labels tensor: {labels.dtype}") 
 
                 optimizer.zero_grad()  # Zero the gradients
