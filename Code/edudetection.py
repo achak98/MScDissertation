@@ -240,7 +240,7 @@ class EDUPredictor(nn.Module):
             nn.Dropout(0.3),
             nn.Linear(hidden_dim // 64, tagset_size)
         )
-
+        print("tagset_size: ",tagset_size)
         # Define CRF
         self.crf = CRF(tagset_size)
 
@@ -251,7 +251,7 @@ class EDUPredictor(nn.Module):
         lstm_out, _ = self.lstm2(lstm_out)
 
         tag_space = self.hidden2tag(lstm_out)
-
+        print("size of tag_space: ", tag_space.size())
         tag_scores = self.crf.decode(tag_space)
 
         return torch.tensor(tag_scores), tag_space
