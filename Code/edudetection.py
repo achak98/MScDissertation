@@ -260,7 +260,7 @@ class EDUPredictor(nn.Module):
         regressed_attn_out = self.regressor(attn_out)
         #print(regressed_attn_out.size())
         residual_regress_attn_out = regressed_attn_out + hidden_states
-        lstm_out, _ = self.lstm2(regressed_attn_out)
+        lstm_out, _ = self.lstm2(residual_regress_attn_out)
         #print(lstm_out.size())
         tag_space = self.hidden2tag(lstm_out)
         #print(tag_space.size())
