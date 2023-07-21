@@ -244,6 +244,10 @@ class EDUPredictor(nn.Module):
         hidden_states = encoded_layers.last_hidden_state
         lstm_out, _ = self.lstm1(hidden_states)
         attn_out, attention_weights = self.self_attention(lstm_out)
+
+        # Transpose attn_out to match the shape of (seq_length, batch_size, hidden_dim)
+        attn_out = attn_out.transpose(0, 1)
+        
         lstm_out, _ = self.lstm2(attn_out)
         tag_space = self.hidden2tag(lstm_out)
         tag_scores = self.crf.decode(tag_space)
