@@ -209,7 +209,7 @@ class EDUPredictor(nn.Module):
         super(EDUPredictor, self).__init__()
 
         self.hidden_dim = hidden_dim
-        self.transformer_architecture = 'microsoft/deberta-v2-small'
+        self.transformer_architecture = 'microsoft/deberta-v3-small'
         self.config = AutoConfig.from_pretrained(self.transformer_architecture, output_hidden_states=True)
         self.config.max_position_embeddings = max_length
         #self.encoder = AutoModel.from_pretrained(self.transformer_architecture, config=self.config)
