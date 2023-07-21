@@ -218,7 +218,7 @@ class EDUPredictor(nn.Module):
         self.lstm1 = nn.LSTM(hidden_dim, hidden_dim, num_layers=2, bidirectional=True)
 
         # Define BiLSTM 2
-        self.lstm2 = nn.LSTM(hidden_dim*2, hidden_dim, num_layers=2, bidirectional=True)
+        self.lstm2 = nn.LSTM(hidden_dim*2, tagset_size, num_layers=2, bidirectional=False)
 
         """self.regressor = nn.Sequential(
             nn.Linear(hidden_dim*2, hidden_dim//2),
