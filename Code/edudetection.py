@@ -12,7 +12,7 @@ from torchcrf import CRF
 import torch.optim as optim
 from sklearn.metrics import classification_report, multilabel_confusion_matrix
 from seqeval.metrics import precision_score, recall_score, f1_score, accuracy_score
-from transformers import AutoTokenizer, AutoModel, AutoConfig
+from transformers import AutoTokenizer, AutoModel, AutoConfig, DebertaV2ForMaskedLM
 from tqdm import tqdm
 from sklearn.metrics import precision_recall_fscore_support
 from sklearn.exceptions import UndefinedMetricWarning
@@ -209,7 +209,7 @@ class EDUPredictor(nn.Module):
         super(EDUPredictor, self).__init__()
 
         self.hidden_dim = hidden_dim
-        self.transformer_architecture = 'mlcorelib/debertav2-base-uncased' #'microsoft/deberta-v3-small' mlcorelib/debertav2-base-uncased microsoft/deberta-v2-xlarge
+        self.transformer_architecture = 'microsoft/deberta-v2-xlarge' #'microsoft/deberta-v3-small' mlcorelib/debertav2-base-uncased microsoft/deberta-v2-xlarge
         self.config = AutoConfig.from_pretrained(self.transformer_architecture, output_hidden_states=True)
         self.config.max_position_embeddings = max_length
         self.tokeniser = AutoTokenizer.from_pretrained(self.transformer_architecture, max_length=self.config.max_position_embeddings, padding="max_length", return_attention_mask=True)
@@ -309,7 +309,7 @@ def main():
             input_ids = train_inputs.to(device)
             print("input_ids shape: ",input_ids.size())
             attention_masks = attention_masks.to(device) 
-            encoder = AutoModel.from_pretrained(model.transformer_architecture, config=model.config)
+            encoder = DebertaV2ForMaskedLM.from_pretrained(model.transformer_architecture, config=model.config)
             encoder = encoder.to(device)
             print("starting tqdm")
             for i in tqdm(range(len(input_ids))):
