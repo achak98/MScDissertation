@@ -334,7 +334,7 @@ def main():
                 outputs = model(input_id, attention_mask)
                 embeddings[i] = torch.tensor(outputs.last_hidden_state).squeeze()
             print("embeddings.size(): ",embeddings.size())
-        embeddings = torch.tensor(embeddings)
+        embeddings = torch.tensor(embeddings).to(device)
         # Create DataLoader for training data
         train_dataset = torch.utils.data.TensorDataset(embeddings, train_labels)
         train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
@@ -347,7 +347,7 @@ def main():
             # Create a tqdm progress bar for the inner loop (train_loader)
             train_loader_tqdm = tqdm(enumerate(train_loader), total=len(train_loader), desc='Batches')
             for step, embeddings in train_loader_tqdm:
-                inputs = embeddings.to(device)
+                inputs = embeddings #.to(device)
                 labels = labels.to(device)
                 #attention_mask = attention_mask.to(device)
                 optimizer.zero_grad()  # Zero the gradients
