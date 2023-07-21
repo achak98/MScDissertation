@@ -346,7 +346,7 @@ def main():
 
             # Create a tqdm progress bar for the inner loop (train_loader)
             train_loader_tqdm = tqdm(enumerate(train_loader), total=len(train_loader), desc='Batches')
-            for step, embeddings in train_loader_tqdm:
+            for step, (embeddings,labels) in train_loader_tqdm:
                 inputs = embeddings #.to(device)
                 labels = labels.to(device)
                 #attention_mask = attention_mask.to(device)
