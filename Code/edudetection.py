@@ -212,15 +212,10 @@ class EDUPredictor(nn.Module):
         self.transformer_architecture = 'microsoft/deberta-v3-small'
         self.config = AutoConfig.from_pretrained(self.transformer_architecture, output_hidden_states=True)
         self.config.max_position_embeddings = max_length
-        #self.encoder = AutoModel.from_pretrained(self.transformer_architecture, config=self.config)
-        #new_tokens = ['[COMMA]', '[SINGLEQUOTATION]', '[DOUBLEQUOTATION]', '[DASH]', '[PERIOD]']
         self.tokeniser = AutoTokenizer.from_pretrained(self.transformer_architecture, max_length=self.config.max_position_embeddings, padding="max_length", return_attention_mask=True)
-        #self.tokeniser.add_tokens(new_tokens)
+
         # Define BiLSTM 1
         self.lstm1 = nn.LSTM(hidden_dim, hidden_dim, num_layers=2, bidirectional=True)
-
-        # Define self-attention
-        #self.mod_self_attention = ModifiedSelfAttention(hidden_dim)
 
         # Define BiLSTM 2
         self.lstm2 = nn.LSTM(hidden_dim*2, hidden_dim, num_layers=2, bidirectional=True)
@@ -250,21 +245,13 @@ class EDUPredictor(nn.Module):
         self.crf = CRF(tagset_size)
 
     def forward(self, embeddings):
-        #encoded_layers = self.encoder(tokens, attention_mask=attn_masks)
-        #print(attn_out.size())
-        #hidden_states = encoded_layers.last_hidden_state
-        #print(hidden_states.size())
+ 
         lstm_out, _ = self.lstm1(embeddings)
-        #print(lstm_out.size())
-        #attn_out, attention_weights = self.mod_self_attention(lstm_out)
-        #print(attn_out.size())
-        #regressed_attn_out = self.regressor(attn_out)
-        #print(regressed_attn_out.size())
-        #residual_regress_attn_out = regressed_attn_out + hidden_states
+ 
         lstm_out, _ = self.lstm2(lstm_out)
-        #print(lstm_out.size())
+
         tag_space = self.hidden2tag(lstm_out)
-        #print(tag_space.size())
+
         tag_scores = self.crf.decode(tag_space)
 
         return torch.tensor(tag_scores), tag_space
@@ -311,22 +298,20 @@ def main():
             train_data['Attention Mask'].iloc[i] =  np.array(ast.literal_eval(train_data['Attention Mask'].iloc[i]))
             train_data['Attention Mask'].iloc[i] = [int(item) for item in train_data['Attention Mask'].iloc[i]]
         attention_masks = torch.tensor(np.array(train_data['Attention Mask' ].tolist()))
-        #attention_masks =  manual_batching(attention_masks, args.batch_size)
-        #train_tuples = list(zip(train_inputs, attention_masks))
-        #train_tuples = torch.stack((train_inputs, attention_masks), dim=0).to(device) #[2, 342, 18432]
-        #train_tuples = train_inputs
-        #torch.tensor(train_tuples, dtype=torch.long).to(device)
+ 
         train_labels = train_data['BIOE'].tolist()
         train_labels = [ast.literal_eval(label_list) for label_list in train_labels]
         train_labels = torch.tensor(train_labels, dtype=torch.long).to(device)
+        print("getting empty embeddings tensor")
         embeddings = torch.tensor([[[0]*args.hidden_dim]*args.max_length]*len(train_inputs)).to(device)
+        print("init model")
         with torch.no_grad():
-        
             input_ids = train_inputs.to(device)
             print("input_ids shape: ",input_ids.size())
             attention_masks = attention_masks.to(device) 
             model = AutoModel.from_pretrained(model.transformer_architecture, config=model.config)
             model = model.to(device)
+            print("starting tqdm")
             for i in tqdm(range(len(input_ids))):
                 input_id = input_ids[i].unsqueeze(0)
                 attention_mask = attention_masks[i].unsqueeze(0)
@@ -338,6 +323,7 @@ def main():
         # Create DataLoader for training data
         train_dataset = torch.utils.data.TensorDataset(embeddings, train_labels)
         train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
+        print("starting training")
         # Training loop
         for epoch in tqdm(range(args.epochs), desc='Epochs'):
             epoch_loss = 0.0
@@ -349,7 +335,6 @@ def main():
             for step, (embeddings,labels) in train_loader_tqdm:
                 inputs = embeddings #.to(device)
                 labels = labels.to(device)
-                #attention_mask = attention_mask.to(device)
                 optimizer.zero_grad()  # Zero the gradients
 
                 # Forward propagation
@@ -362,8 +347,6 @@ def main():
                 # Backward propagation
                 loss.backward()
 
-                # Gradient clipping
-                # nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
 
                 # Optimization step
                 optimizer.step()
