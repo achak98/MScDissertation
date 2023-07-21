@@ -339,6 +339,7 @@ def main():
             for step, (embeddings,labels) in train_loader_tqdm:
                 inputs = embeddings #.to(device)
                 labels = labels.to(device)
+                model = model.to(device)
                 optimizer.zero_grad()  # Zero the gradients
 
                 # Forward propagation
