@@ -201,7 +201,7 @@ class SelfAttention(nn.Module):
         print("energy.shape(): ",energy.size())
         weights = nn.functional.softmax(energy, dim=1)  # Apply softmax along the token dimension
         print("weights.shape(): ",weights.size())
-        outputs = torch.bmm(weights.permute(0, 2, 1), weights)  # Weighted sum of encoder outputs
+        outputs = torch.bmm(weights.permute(0, 2, 1), energy)  # Weighted sum of encoder outputs
         return outputs, weights
 
 class EDUPredictor(nn.Module):
