@@ -155,9 +155,9 @@ def preprocess_RST_Discourse_dataset(path_data, tag2idx, args, model):
             text = txtf.read()
             edus = eduf.read().split('\n')
             text = text.split('\n')
-            text = ' '.join(text)
-            text = text.replace("'", " '\' ").replace("\"", " \" ").replace("-", " - ").replace(",", " , ").replace(".", " . ")
-            edus = [edu.replace("'", " '\' ").replace("\"", " \" ").replace("-", " - ").replace(",", " , ").replace(".", " . ") for edu in edus]
+            text = ' '.join(text).replace(". ", ".[SENT] ")
+            text = text.replace("'", " '\' ").replace("\"", " \" ").replace("-", " - ").replace(",", "[COMMA]").replace(".", " . ")
+            edus = [edu.replace("'", " '\' ").replace("\"", " \" ").replace("-", " - ").replace(",", "[COMMA]").replace(".", " . ") for edu in edus]
             edus = [seq.strip() for seq in edus]
 
             #words = re.findall(args.regex_pattern, ' '.join(text))
@@ -213,8 +213,9 @@ class EDUPredictor(nn.Module):
         self.config = AutoConfig.from_pretrained(self.transformer_architecture, output_hidden_states=True)
         self.config.max_position_embeddings = max_length
         self.encoder = AutoModel.from_pretrained(self.transformer_architecture, config=self.config)
+        new_tokens = ['[COMMA]', '[SENT]']
         self.tokenizer = AutoTokenizer.from_pretrained(self.transformer_architecture, max_length=self.config.max_position_embeddings, padding="max_length", return_attention_mask=True)
-
+        self.tokenizer.add_tokens(new_tokens)
         # Define BiLSTM 1
         self.lstm1 = nn.LSTM(hidden_dim, hidden_dim, num_layers=2, bidirectional=True)
 
