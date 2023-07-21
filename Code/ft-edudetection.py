@@ -212,7 +212,7 @@ class EDUPredictor(nn.Module):
         self.transformer_architecture = 'microsoft/deberta-v3-small'
         self.config = AutoConfig.from_pretrained(self.transformer_architecture, output_hidden_states=True)
         self.config.max_position_embeddings = max_length
-        #self.encoder = AutoModel.from_pretrained(self.transformer_architecture, config=self.config)
+        self.encoder = AutoModel.from_pretrained(self.transformer_architecture, config=self.config)
         #new_tokens = ['[COMMA]', '[SINGLEQUOTATION]', '[DOUBLEQUOTATION]', '[DASH]', '[PERIOD]']
         self.tokeniser = AutoTokenizer.from_pretrained(self.transformer_architecture, max_length=self.config.max_position_embeddings, padding="max_length", return_attention_mask=True)
         #self.tokeniser.add_tokens(new_tokens)
@@ -249,12 +249,12 @@ class EDUPredictor(nn.Module):
         # Define CRF
         self.crf = CRF(tagset_size)
 
-    def forward(self, embeddings):
-        #encoded_layers = self.encoder(tokens, attention_mask=attn_masks)
+    def forward(self, tokens, attn_masks):
+        encoded_layers = self.encoder(tokens, attention_mask=attn_masks)
         #print(attn_out.size())
-        #hidden_states = encoded_layers.last_hidden_state
+        hidden_states = encoded_layers.last_hidden_state
         #print(hidden_states.size())
-        lstm_out, _ = self.lstm1(embeddings)
+        lstm_out, _ = self.lstm1(hidden_states)
         #print(lstm_out.size())
         #attn_out, attention_weights = self.mod_self_attention(lstm_out)
         #print(attn_out.size())
@@ -319,18 +319,9 @@ def main():
         train_labels = train_data['BIOE'].tolist()
         train_labels = [ast.literal_eval(label_list) for label_list in train_labels]
         train_labels = torch.tensor(train_labels, dtype=torch.long).to(device)
-        embeddings = torch.tensor([[0]*args.hidden_dim]*args.max_length).to(device)
-        with torch.no_grad():
-            for i in range(len(train_data['Text'])):
-                input_ids = torch.tensor([train_inputs[i]]).to(device)
-                attention_mask = torch.tensor([attention_masks[i]]).to(device) 
-                model = AutoModel.from_pretrained(model.transformer_architecture, config=model.config)
-                # Obtain BERT embeddings for the current item
-                outputs = model(input_ids, attention_mask)[0]
-                embeddings[i] = outputs.last_hidden_state
 
         # Create DataLoader for training data
-        train_dataset = torch.utils.data.TensorDataset(embeddings, train_labels)
+        train_dataset = torch.utils.data.TensorDataset(train_inputs, train_labels)
         train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
         # Training loop
         for epoch in tqdm(range(args.epochs), desc='Epochs'):
@@ -339,15 +330,15 @@ def main():
             model.train()  # Set model to training mode
 
             # Create a tqdm progress bar for the inner loop (train_loader)
-            train_loader_tqdm = tqdm(enumerate(train_loader), total=len(train_loader), desc='Batches')
-            for step, embeddings in train_loader_tqdm:
-                inputs = embeddings.to(device)
+            train_loader_tqdm = tqdm(enumerate(zip(train_loader, attention_masks)), total=len(train_loader), desc='Batches')
+            for step, ((inputs, labels), attention_mask) in train_loader_tqdm:
+                inputs = inputs.to(device)
                 labels = labels.to(device)
-                #attention_mask = attention_mask.to(device)
+                attention_mask = attention_mask.to(device)
                 optimizer.zero_grad()  # Zero the gradients
 
                 # Forward propagation
-                tag_scores, emissions = model(inputs)
+                tag_scores, emissions = model(inputs, attention_mask)
 
                 scores = compute_f1_score_for_labels(tag_scores.detach().cpu().numpy().flatten(), labels.detach().cpu().numpy().flatten(), labels= [int(key) for key in idx2tag.keys()])
                 # Compute the loss
