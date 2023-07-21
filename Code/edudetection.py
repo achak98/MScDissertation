@@ -222,7 +222,7 @@ class EDUPredictor(nn.Module):
         self.self_attention = SelfAttention(hidden_dim)
 
         # Define BiLSTM 2
-        self.lstm2 = nn.LSTM(max_length, hidden_dim, bidirectional=True)
+        self.lstm2 = nn.LSTM(hidden_dim, hidden_dim, bidirectional=True)
 
         self.regressor = nn.Sequential(
             nn.Linear(max_length, max_length//2),
