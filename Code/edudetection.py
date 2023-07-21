@@ -332,8 +332,8 @@ def main():
                 attention_mask = [attention_masks[i]].unsqueeze(0)
                 # Obtain BERT embeddings for the current item
                 outputs = model(input_id, attention_mask)
-                embeddings[i] = outputs.last_hidden_state.squeeze()
-
+                embeddings[i] = torch.tensor(outputs.last_hidden_state).squeeze()
+            print("embeddings.size(): ",embeddings.size())
         # Create DataLoader for training data
         train_dataset = torch.utils.data.TensorDataset(embeddings, train_labels)
         train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
