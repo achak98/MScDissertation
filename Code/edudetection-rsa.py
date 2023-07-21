@@ -205,7 +205,7 @@ class ModifiedSelfAttention(nn.Module):
         return outputs, weights
 
 class EDUPredictor(nn.Module):
-    def __init__(self, tagset_size=4, hidden_dim=768, max_length=18432):
+    def __init__(self, tagset_size=4, hidden_dim=768, max_length=18432, window_size = 5):
         super(EDUPredictor, self).__init__()
 
         self.hidden_dim = hidden_dim
@@ -213,7 +213,7 @@ class EDUPredictor(nn.Module):
         self.config = AutoConfig.from_pretrained(self.transformer_architecture, output_hidden_states=True)
         self.config.max_position_embeddings = max_length
         self.tokeniser = AutoTokenizer.from_pretrained(self.transformer_architecture, max_length=self.config.max_position_embeddings, padding="max_length", return_attention_mask=True)
-
+        self.window_size = window_size
         # Define BiLSTM 1
         self.lstm1 = nn.LSTM(hidden_dim, hidden_dim, num_layers=2, bidirectional=True)
         # Attention weight computation layer
@@ -253,10 +253,11 @@ class EDUPredictor(nn.Module):
     def forward(self, embeddings):
  
         lstm_out, _ = self.lstm1(embeddings)
-        print("lstm_out: ", lstm_out)
+        print("lstm_out: ", lstm_out.size())
         # Get the sequence length and batch size
+        lstm_out = lstm_out.permute(1, 0, 2)
         seq_length, batch_size, _ = lstm_out.size()
-
+        print("after permute, lstm_out:", lstm_out.size())
         # Initialize attention vector tensor
         attention_vectors = torch.zeros_like(lstm_out)
 
