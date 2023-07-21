@@ -191,9 +191,9 @@ class SelfAttention(nn.Module):
     def __init__(self, hidden_dim):
         super(SelfAttention, self).__init__()
         self.projection = nn.Sequential(
-            nn.Linear(hidden_dim, hidden_dim),
+            nn.Linear(hidden_dim*2, hidden_dim),  # Adjust the projection for the concatenated hidden states
             nn.ReLU(True),
-            nn.Linear(hidden_dim, hidden_dim)  # No output size of 1, keep the original hidden_dim
+            nn.Linear(hidden_dim, 1)
         )
 
     def forward(self, encoder_outputs):
@@ -224,7 +224,7 @@ class EDUPredictor(nn.Module):
 
         # Define MLP
         self.hidden2tag = nn.Sequential(
-            nn.Linear(hidden_dim * 2, hidden_dim),
+            nn.Linear(hidden_dim*2, hidden_dim),
             nn.GELU(),
             nn.Dropout(0.3),
             nn.Linear(hidden_dim, hidden_dim // 16),
