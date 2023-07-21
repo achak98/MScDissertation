@@ -333,12 +333,13 @@ def main():
                 optimizer.step()
                 print(scores)
                 epoch_loss += loss.item()
-                epoch_f1 += [item1 + item2 for item1, item2 in zip(epoch_f1, scores['F1 Score'])]
+                for i in range (len(epoch_f1)):
+                    epoch_f1[i] += scores[i]['F1 Score']
                 # Update the tqdm progress bar with the current loss value
                 train_loader_tqdm.set_postfix({'Loss': epoch_loss / (step + 1)})
 
             # Update the outer tqdm progress bar with the current epoch loss value
-            tqdm.write(f'Epoch [{epoch+1}/{args.epochs}], Loss: {epoch_loss / len(train_loader):.4f}, F1: {[len(train_loader)/10 for item in epoch_f1]:.4f}')
+            tqdm.write(f'Epoch [{epoch+1}/{args.epochs}], Loss: {epoch_loss / len(train_loader):.4f}, F1: {[epoch_f1/len(train_loader) for item in epoch_f1]:.4f}')
 
         # Save the trained model
         model_path = os.path.join(args.model_dir, 'edu_segmentation_model.pt')
