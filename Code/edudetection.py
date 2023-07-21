@@ -331,7 +331,7 @@ def main():
 
                 # Optimization step
                 optimizer.step()
-
+                print(scores)
                 epoch_loss += loss.item()
                 epoch_f1 += [item1 + item2 for item1, item2 in zip(epoch_f1, scores['F1 Score'])]
                 # Update the tqdm progress bar with the current loss value
