@@ -323,6 +323,7 @@ def main():
         with torch.no_grad():
             for i in range(len(train_data['Text'])):
                 input_ids = train_inputs[i].to(device)
+                print("input_ids shape: ",input_ids.size())
                 attention_mask = attention_masks[i].to(device) 
                 model = AutoModel.from_pretrained(model.transformer_architecture, config=model.config)
                 # Obtain BERT embeddings for the current item
