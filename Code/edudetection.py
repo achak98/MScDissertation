@@ -209,7 +209,7 @@ class EDUPredictor(nn.Module):
         super(EDUPredictor, self).__init__()
 
         self.hidden_dim = hidden_dim
-        self.transformer_architecture = 'microsoft/deberta-v3-small'
+        self.transformer_architecture = 'microsoft/deberta-v2-xxlarge' #'microsoft/deberta-v3-small' mlcorelib/debertav2-base-uncased
         self.config = AutoConfig.from_pretrained(self.transformer_architecture, output_hidden_states=True)
         self.config.max_position_embeddings = max_length
         self.tokeniser = AutoTokenizer.from_pretrained(self.transformer_architecture, max_length=self.config.max_position_embeddings, padding="max_length", return_attention_mask=True)
@@ -240,7 +240,7 @@ class EDUPredictor(nn.Module):
             nn.Dropout(0.3),
             nn.Linear(hidden_dim // 64, tagset_size)
         )
-        print("tagset_size: ",tagset_size)
+        #print("tagset_size: ",tagset_size)
         # Define CRF
         self.crf = CRF(tagset_size)
 
@@ -251,7 +251,7 @@ class EDUPredictor(nn.Module):
         lstm_out, _ = self.lstm2(lstm_out)
 
         tag_space = self.hidden2tag(lstm_out)
-        print("size of tag_space: ", tag_space.size())
+        #print("size of tag_space: ", tag_space.size())
         tag_scores = self.crf.decode(tag_space)
 
         return torch.tensor(tag_scores), tag_space
