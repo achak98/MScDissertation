@@ -303,7 +303,7 @@ def main():
         train_labels = [ast.literal_eval(label_list) for label_list in train_labels]
         train_labels = torch.tensor(train_labels, dtype=torch.long).to(device)
         print("getting empty embeddings tensor")
-        embeddings = torch.tensor([[[0]*args.hidden_dim]*args.max_length]*len(train_inputs)).to(device)
+        embeddings = torch.empty((len(train_inputs),args.max_length,args.hidden_dim), dtype=torch.long).to(device)
         print("init model")
         with torch.no_grad():
             input_ids = train_inputs.to(device)
