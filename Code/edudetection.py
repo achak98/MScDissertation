@@ -319,7 +319,7 @@ def main():
         train_labels = train_data['BIOE'].tolist()
         train_labels = [ast.literal_eval(label_list) for label_list in train_labels]
         train_labels = torch.tensor(train_labels, dtype=torch.long).to(device)
-        embeddings = torch.tensor([[[0]*args.hidden_dim]*args.max_length]*len(input_ids)).to(device)
+        embeddings = torch.tensor([[[0]*args.hidden_dim]*args.max_length]*len(train_inputs)).to(device)
         with torch.no_grad():
         
             input_ids = train_inputs.to(device)
