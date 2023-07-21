@@ -216,7 +216,8 @@ class EDUPredictor(nn.Module):
 
         # Define BiLSTM 1
         self.lstm1 = nn.LSTM(hidden_dim, hidden_dim, num_layers=2, bidirectional=True)
-
+        # Attention weight computation layer
+        self.attention_weights = nn.Linear(hidden_dim * 6, 1)
         # Define BiLSTM 2
         self.lstm2 = nn.LSTM(hidden_dim*2, tagset_size, num_layers=2, bidirectional=True)
 
@@ -243,12 +244,44 @@ class EDUPredictor(nn.Module):
         #print("tagset_size: ",tagset_size)
         # Define CRF
         self.crf = CRF(tagset_size)
+    
+    def similarity(self, hi, hj):
+        # Concatenate the hidden representations
+        h_concat = torch.cat([hi, hj, hi * hj], dim=-1)
+        return self.attention_weights(h_concat)
 
     def forward(self, embeddings):
  
         lstm_out, _ = self.lstm1(embeddings)
- 
-        lstm_out, _ = self.lstm2(lstm_out)
+        print("lstm_out: ", lstm_out)
+        # Get the sequence length and batch size
+        seq_length, batch_size, _ = lstm_out.size()
+
+        # Initialize attention vector tensor
+        attention_vectors = torch.zeros_like(lstm_out)
+
+        # Compute attention vector for each word in the sequence
+        for i in range(seq_length):
+            # Define the start and end positions of the window
+            start_pos = max(0, i - self.window_size)
+            end_pos = min(seq_length, i + self.window_size + 1)
+
+            # Compute similarity between the current word and nearby words
+            similarity_scores = torch.cat([self.similarity(lstm_out[i], lstm_out[j]) for j in range(start_pos, end_pos)], dim=-1)
+
+            # Apply softmax to obtain attention weights
+            attention_weights = torch.nn.functional.F.softmax(similarity_scores, dim=-1)
+
+            # Compute the attention vector as a weighted sum of nearby words
+            attention_vector = torch.sum(attention_weights * lstm_out[start_pos:end_pos], dim=0)
+
+            # Store the attention vector for the current word
+            attention_vectors[i] = attention_vector
+
+        # Concatenate the original LSTM output and the attention vectors
+        lstm_output_with_attention = torch.cat([lstm_out, attention_vectors], dim=-1)
+        print("lstm_output_with_attention: ", lstm_output_with_attention.size())
+        lstm_out, _ = self.lstm2(lstm_output_with_attention)
         hidden_dim_size = lstm_out.size(-1)
         #print("lstm_out: ",lstm_out.size())
         first_half = lstm_out[:, :, : hidden_dim_size// 2]
