@@ -187,23 +187,28 @@ def preprocess_RST_Discourse_dataset(path_data, tag2idx, args, model):
     print(messed_up_ones)
     return df
 
+import torch
+import torch.nn as nn
+from torchcrf import CRF
+from transformers import AutoModel, AutoTokenizer, AutoConfig
+
 class SelfAttention(nn.Module):
     def __init__(self, hidden_dim):
         super(SelfAttention, self).__init__()
         self.projection = nn.Sequential(
             nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(True),
-            nn.Linear(hidden_dim, 1)  # Output a scalar for each token
+            nn.Linear(hidden_dim, 1)
         )
 
     def forward(self, encoder_outputs):
         energy = self.projection(encoder_outputs)
-        weights = nn.functional.softmax(energy, dim=1)  # Softmax along the token dimension
+        weights = nn.functional.softmax(energy, dim=1)  # Apply softmax along the token dimension
         outputs = (encoder_outputs * weights).sum(dim=1)  # Weighted sum of encoder outputs
         return outputs, weights
 
 class EDUPredictor(nn.Module):
-    def __init__(self, tagset_size=4, hidden_dim=768, max_length = 18432):
+    def __init__(self, tagset_size=4, hidden_dim=768, max_length=18432):
         super(EDUPredictor, self).__init__()
 
         self.hidden_dim = hidden_dim
@@ -211,8 +216,8 @@ class EDUPredictor(nn.Module):
         self.config = AutoConfig.from_pretrained(self.transformer_architecture, output_hidden_states=True)
         self.config.max_position_embeddings = max_length
         self.encoder = AutoModel.from_pretrained(self.transformer_architecture, config=self.config)
-        self.tokeniser = AutoTokenizer.from_pretrained(self.transformer_architecture, max_length=self.config.max_position_embeddings, 
-                                                       padding="max_length", return_attention_mask=True)
+        self.tokenizer = AutoTokenizer.from_pretrained(self.transformer_architecture, max_length=self.config.max_position_embeddings, padding="max_length", return_attention_mask=True)
+
         # Define BiLSTM 1
         self.lstm1 = nn.LSTM(hidden_dim, hidden_dim, num_layers=2, bidirectional=True)
 
@@ -223,17 +228,17 @@ class EDUPredictor(nn.Module):
         self.lstm2 = nn.LSTM(hidden_dim, hidden_dim, bidirectional=True)
 
         # Define MLP
-        self.hidden2tag = self.regressor1 = torch.nn.Sequential(
-            torch.nn.Linear(hidden_dim*2, hidden_dim),
-            torch.nn.GELU(),
-            torch.nn.Dropout(0.3),
-            torch.nn.Linear(hidden_dim, hidden_dim//16),
-            torch.nn.GELU(),
-            torch.nn.Dropout(0.3),
-            torch.nn.Linear(hidden_dim//16, hidden_dim//64),
-            torch.nn.GELU(),
-            torch.nn.Dropout(0.3),
-            torch.nn.Linear(hidden_dim//64, tagset_size)
+        self.hidden2tag = nn.Sequential(
+            nn.Linear(hidden_dim * 2, hidden_dim),
+            nn.GELU(),
+            nn.Dropout(0.3),
+            nn.Linear(hidden_dim, hidden_dim // 16),
+            nn.GELU(),
+            nn.Dropout(0.3),
+            nn.Linear(hidden_dim // 16, hidden_dim // 64),
+            nn.GELU(),
+            nn.Dropout(0.3),
+            nn.Linear(hidden_dim // 64, tagset_size)
         )
 
         # Define CRF
@@ -241,20 +246,15 @@ class EDUPredictor(nn.Module):
 
     def forward(self, tokens, attn_masks):
         encoded_layers = self.encoder(tokens, attention_mask=attn_masks)
-        #print("hidden states shape: ",encoded_layers.last_hidden_state.size())
         hidden_states = encoded_layers.last_hidden_state
-        #print("hidden states shape after meaning: ",hidden_states.size())
-        lstm_out, final_memory_state = self.lstm1(hidden_states)
-        #print("lstm1 out shape: ",lstm_out.size())
+        lstm_out, _ = self.lstm1(hidden_states)
         attn_out, attention_weights = self.self_attention(lstm_out)
-        #print("attn out shape: ",attn_out.size())
-        lstm_out, _ = self.lstm2(attn_out, final_memory_state)
-        #print("lstm2 out shape: ",lstm_out.size())
+        lstm_out, _ = self.lstm2(attn_out)
         tag_space = self.hidden2tag(lstm_out)
-        #print("h2t out: ",tag_space.size())
         tag_scores = self.crf.decode(tag_space)
 
-        return torch.tensor(tag_scores), tag_space
+        return tag_scores, tag_space
+
 
 def main():
     args = parse_args()
