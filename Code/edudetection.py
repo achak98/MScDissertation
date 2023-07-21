@@ -321,14 +321,14 @@ def main():
         train_labels = torch.tensor(train_labels, dtype=torch.long).to(device)
         embeddings = torch.tensor([[0]*args.hidden_dim]*args.max_length).to(device)
         with torch.no_grad():
-            for i in range(len(train_data['Text'])):
-                input_ids = train_inputs[i].to(device)
-                print("input_ids shape: ",input_ids.size())
-                attention_mask = attention_masks[i].to(device) 
-                model = AutoModel.from_pretrained(model.transformer_architecture, config=model.config)
-                # Obtain BERT embeddings for the current item
-                outputs = model(input_ids, attention_mask)[0]
-                embeddings[i] = outputs.last_hidden_state
+        
+            input_ids = train_inputs.to(device)
+            print("input_ids shape: ",input_ids.size())
+            attention_mask = attention_masks[i].to(device) 
+            model = AutoModel.from_pretrained(model.transformer_architecture, config=model.config)
+            # Obtain BERT embeddings for the current item
+            outputs = model(input_ids, attention_mask)[0]
+            embeddings = outputs.last_hidden_state
 
         # Create DataLoader for training data
         train_dataset = torch.utils.data.TensorDataset(embeddings, train_labels)
