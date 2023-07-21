@@ -53,7 +53,7 @@ def parse_args():
     parser.add_argument('--evaluate', action='store_true', help='evaluate the model')
     parser.add_argument('--segment', action='store_true', help='segment new files or input text')
 
-    parser.add_argument('--regex_pattern', default= r'\b\w+\b|[.,:\n&!]')
+    parser.add_argument('--window_size', default= 5, type = int)
     parser.add_argument('--max_length', type=int, default= 18432)
     parser.add_argument('--learning_rate', type=float,
                                 default=3e-4, help='learning rate')
@@ -321,8 +321,8 @@ def main():
             print("embeddings.size(): ",embeddings.size())
         torch.cuda.empty_cache()
         device_idx = 1
-        #if torch.cuda.is_available() and torch.cuda.device_count() >= device_idx + 1:
-        #    device = torch.device(f"cuda:{device_idx}")
+        if torch.cuda.is_available() and torch.cuda.device_count() >= device_idx + 1:
+            device = torch.device(f"cuda:{device_idx}")
         embeddings = torch.tensor(embeddings).to(device)
         # Create DataLoader for training data
         train_dataset = torch.utils.data.TensorDataset(embeddings, train_labels)
