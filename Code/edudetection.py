@@ -207,7 +207,7 @@ class EDUPredictor(nn.Module):
         super(EDUPredictor, self).__init__()
 
         self.hidden_dim = hidden_dim
-        self.transformer_architecture = 'microsoft/deberta-v3-small'
+        self.transformer_architecture = 'microsoft/deberta-v3-base'
         self.config = AutoConfig.from_pretrained(self.transformer_architecture, output_hidden_states=True)
         self.config.max_position_embeddings = max_length
         self.encoder = AutoModel.from_pretrained(self.transformer_architecture, config=self.config)
@@ -225,13 +225,13 @@ class EDUPredictor(nn.Module):
         # Define MLP
         self.hidden2tag = self.regressor1 = torch.nn.Sequential(
             torch.nn.Linear(hidden_dim*2, hidden_dim),
-            torch.nn.ReLU(),
+            torch.nn.GeLU(),
             torch.nn.Dropout(0.3),
             torch.nn.Linear(hidden_dim, hidden_dim//16),
-            torch.nn.ReLU(),
+            torch.nn.GeLU(),
             torch.nn.Dropout(0.3),
             torch.nn.Linear(hidden_dim//16, hidden_dim//64),
-            torch.nn.ReLU(),
+            torch.nn.GeLU(),
             torch.nn.Dropout(0.3),
             torch.nn.Linear(hidden_dim//64, tagset_size)
         )
