@@ -222,14 +222,21 @@ class EDUPredictor(nn.Module):
         self.self_attention = SelfAttention(hidden_dim)
 
         # Define BiLSTM 2
-        self.lstm2 = nn.LSTM(max_length, max_length, bidirectional=True)
+        self.lstm2 = nn.LSTM(max_length, hidden_dim, bidirectional=True)
 
-        # Define MLP
-        self.hidden2tag = nn.Sequential(
-            nn.Linear(max_length*2, hidden_dim),
+        self.regressor = nn.Sequential(
+            nn.Linear(max_length, max_length//2),
             nn.GELU(),
             nn.Dropout(0.3),
-            nn.Linear(hidden_dim, hidden_dim // 16),
+            nn.Linear( max_length//2,  max_length//4 * 1.5),
+            nn.GELU()
+        )
+        # Define MLP
+        self.hidden2tag = nn.Sequential(
+            nn.Linear(hidden_dim*2, hidden_dim//2),
+            nn.GELU(),
+            nn.Dropout(0.3),
+            nn.Linear(hidden_dim//2, hidden_dim // 16),
             nn.GELU(),
             nn.Dropout(0.3),
             nn.Linear(hidden_dim // 16, hidden_dim // 64),
@@ -243,14 +250,16 @@ class EDUPredictor(nn.Module):
 
     def forward(self, tokens, attn_masks):
         encoded_layers = self.encoder(tokens, attention_mask=attn_masks)
-        #print(attn_out.size())
+        print(attn_out.size())
         hidden_states = encoded_layers.last_hidden_state
         print(hidden_states.size())
         lstm_out, _ = self.lstm1(hidden_states)
         print(lstm_out.size())
         attn_out, attention_weights = self.self_attention(lstm_out)
         print(attn_out.size())
-        lstm_out, _ = self.lstm2(attn_out)
+        regressed_attn_out = self.regressor(attn_out)
+        print(regressed_attn_out.size())
+        lstm_out, _ = self.lstm2(regressed_attn_out)
         print(lstm_out.size())
         tag_space = self.hidden2tag(lstm_out)
         print(tag_space.size())
