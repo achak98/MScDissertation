@@ -27,13 +27,13 @@ def parse_args():
     parser.add_argument('--regex_pattern', default= r'\b\w+\b|[.,:\n&!]')
     parser.add_argument('--max_length', type=int, default= 18432)
     parser.add_argument('--learning_rate', type=float,
-                                default=0.001, help='learning rate')
+                                default=3e-4, help='learning rate')
     parser.add_argument('--weight_decay', type=float,
-                                default=1e-4, help='weight decay')
+                                default=3e-4, help='weight decay')
     parser.add_argument('--batch_size', type=int,
                                 default=2, help='batch size')
     parser.add_argument('--epochs', type=int,
-                                default=50, help='train epochs')
+                                default=100, help='train epochs')
     parser.add_argument('--seed', type=int,
                                 default=42, help='the random seed')
     parser.add_argument('--tagset_size', type=int,
