@@ -228,7 +228,7 @@ class EDUPredictor(nn.Module):
             nn.Linear(max_length, max_length//2),
             nn.GELU(),
             nn.Dropout(0.3),
-            nn.Linear( max_length//2,  max_length//4 * 1.5),
+            nn.Linear( max_length//2,  hidden_dim),
             nn.GELU()
         )
         # Define MLP
