@@ -209,7 +209,7 @@ class EDUPredictor(nn.Module):
         super(EDUPredictor, self).__init__()
 
         self.hidden_dim = hidden_dim
-        self.transformer_architecture = 'microsoft/deberta-v3-small'
+        self.transformer_architecture = 'microsoft/deberta-v2-small'
         self.config = AutoConfig.from_pretrained(self.transformer_architecture, output_hidden_states=True)
         self.config.max_position_embeddings = max_length
         #self.encoder = AutoModel.from_pretrained(self.transformer_architecture, config=self.config)
@@ -330,7 +330,7 @@ def main():
             for i in range(len(input_ids)):
                 input_id = input_ids[i].unsqueeze(0)
                 attention_mask = attention_masks[i].unsqueeze(0)
-                # Obtain BERT embeddings for the current item
+                # Obtain deberta embeddings for the current item
                 outputs = model(input_id, attention_mask)
                 embeddings[i] = torch.tensor(outputs.last_hidden_state).squeeze()
             print("embeddings.size(): ",embeddings.size())
