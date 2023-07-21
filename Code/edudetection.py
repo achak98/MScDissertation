@@ -345,9 +345,9 @@ def main():
                 # Update the tqdm progress bar with the current loss value
                 running_f1 = [item/(step+1) for item in epoch_f1]
                 train_loader_tqdm.set_postfix({f"f1 scores for tag B: {running_f1[0]:.4f}, tag I: {running_f1[1]:.4f}, tag O: {running_f1[2]:.4f}, tag E: {running_f1[3]:.4f} and Loss": epoch_loss / (step + 1)})
-
+            epoch_f1 = [item/len(train_loader) for item in epoch_f1]
             # Update the outer tqdm progress bar with the current epoch loss value
-            tqdm.write(f'Epoch [{epoch+1}/{args.epochs}], Loss: {epoch_loss / len(train_loader):.4f}, F1: {[item/len(train_loader) for item in epoch_f1]:.4f}')
+            tqdm.write(f'Epoch [{epoch+1}/{args.epochs}], Loss: {epoch_loss / len(train_loader):.4f}, f1 scores for tag B: {epoch_f1[0]:.4f}, tag I: {epoch_f1[1]:.4f}, tag O: {epoch_f1[2]:.4f}, tag E: {epoch_f1[3]:.4f}')
 
         # Save the trained model
         model_path = os.path.join(args.model_dir, 'edu_segmentation_model.pt')
