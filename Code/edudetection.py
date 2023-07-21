@@ -198,8 +198,8 @@ class SelfAttention(nn.Module):
 
     def forward(self, encoder_outputs):
         energy = self.projection(encoder_outputs)
-        weights = nn.functional.softmax(energy.squeeze(-1), dim=1)
-        outputs = (encoder_outputs * weights.unsqueeze(-1)).sum(dim=1)
+        weights = nn.functional.softmax(energy, dim=-1)  # Do not use squeeze(-1)
+        outputs = torch.sum(encoder_outputs * weights.unsqueeze(-1), dim=1)  # Keep the original dimensionality
         return outputs, weights
 
 class EDUPredictor(nn.Module):
@@ -217,10 +217,10 @@ class EDUPredictor(nn.Module):
         self.lstm1 = nn.LSTM(hidden_dim, hidden_dim, num_layers=2, bidirectional=True)
 
         # Define self-attention
-        #self.self_attention = SelfAttention(hidden_dim)
+        self.self_attention = SelfAttention(hidden_dim)
 
         # Define BiLSTM 2
-        #self.lstm2 = nn.LSTM(hidden_dim//4, hidden_dim // 2, bidirectional=True)
+        self.lstm2 = nn.LSTM(hidden_dim, hidden_dim, bidirectional=True)
 
         # Define MLP
         self.hidden2tag = self.regressor1 = torch.nn.Sequential(
@@ -246,9 +246,9 @@ class EDUPredictor(nn.Module):
         #print("hidden states shape after meaning: ",hidden_states.size())
         lstm_out, final_memory_state = self.lstm1(hidden_states)
         #print("lstm1 out shape: ",lstm_out.size())
-        #attn_out, attention_weights = self.self_attention(lstm_out)
+        attn_out, attention_weights = self.self_attention(lstm_out)
         #print("attn out shape: ",attn_out.size())
-        #lstm_out, _ = self.lstm2(lstm_out, final_memory_state)
+        lstm_out, _ = self.lstm2(attn_out, final_memory_state)
         #print("lstm2 out shape: ",lstm_out.size())
         tag_space = self.hidden2tag(lstm_out)
         #print("h2t out: ",tag_space.size())
