@@ -309,7 +309,7 @@ def main():
             input_ids = train_inputs.to(device)
             print("input_ids shape: ",input_ids.size())
             attention_masks = attention_masks.to(device) 
-            encoder = DebertaV2ForMaskedLM.from_pretrained(model.transformer_architecture, config=model.config)
+            encoder = AutoModel.from_pretrained(model.transformer_architecture, config=model.config)
             encoder = encoder.to(device)
             print("starting tqdm")
             for i in tqdm(range(len(input_ids))):
