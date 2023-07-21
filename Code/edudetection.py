@@ -309,17 +309,20 @@ def main():
             input_ids = train_inputs.to(device)
             print("input_ids shape: ",input_ids.size())
             attention_masks = attention_masks.to(device) 
-            model = AutoModel.from_pretrained(model.transformer_architecture, config=model.config)
-            model = model.to(device)
+            encoder = AutoModel.from_pretrained(model.transformer_architecture, config=model.config)
+            encoder = model.to(device)
             print("starting tqdm")
             for i in tqdm(range(len(input_ids))):
                 input_id = input_ids[i].unsqueeze(0)
                 attention_mask = attention_masks[i].unsqueeze(0)
                 # Obtain deberta embeddings for the current item
-                outputs = model(input_id, attention_mask)
+                outputs = encoder(input_id, attention_mask)
                 embeddings[i] = torch.tensor(outputs.last_hidden_state).squeeze()
             print("embeddings.size(): ",embeddings.size())
         torch.cuda.empty_cache()
+        device_idx = 1
+        if torch.cuda.is_available() and torch.cuda.device_count() >= device_idx + 1:
+            device = torch.device(f"cuda:{device_idx}")
         embeddings = torch.tensor(embeddings).to(device)
         # Create DataLoader for training data
         train_dataset = torch.utils.data.TensorDataset(embeddings, train_labels)
