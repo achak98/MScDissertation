@@ -250,7 +250,7 @@ class EDUPredictor(nn.Module):
 
     def forward(self, tokens, attn_masks):
         encoded_layers = self.encoder(tokens, attention_mask=attn_masks)
-        print(attn_out.size())
+        #print(attn_out.size())
         hidden_states = encoded_layers.last_hidden_state
         print(hidden_states.size())
         lstm_out, _ = self.lstm1(hidden_states)
