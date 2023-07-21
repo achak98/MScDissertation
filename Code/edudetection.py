@@ -187,18 +187,13 @@ def preprocess_RST_Discourse_dataset(path_data, tag2idx, args, model):
     print(messed_up_ones)
     return df
 
-import torch
-import torch.nn as nn
-from torchcrf import CRF
-from transformers import AutoModel, AutoTokenizer, AutoConfig
-
 class SelfAttention(nn.Module):
     def __init__(self, hidden_dim):
         super(SelfAttention, self).__init__()
         self.projection = nn.Sequential(
             nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(True),
-            nn.Linear(hidden_dim, 1)
+            nn.Linear(hidden_dim, hidden_dim)  # No output size of 1, keep the original hidden_dim
         )
 
     def forward(self, encoder_outputs):
