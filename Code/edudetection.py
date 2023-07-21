@@ -256,7 +256,7 @@ class EDUPredictor(nn.Module):
         print(tag_space.size())
         tag_scores = self.crf.decode(tag_space)
 
-        return tag_scores, tag_space
+        return torch.tensor(tag_scores), tag_space
 
 
 def main():
