@@ -220,7 +220,7 @@ class EDUPredictor(nn.Module):
         self.self_attention = SelfAttention(hidden_dim)
 
         # Define BiLSTM 2
-        self.lstm2 = nn.LSTM(hidden_dim, hidden_dim, bidirectional=True)
+        self.lstm2 = nn.LSTM(hidden_dim*2, hidden_dim, bidirectional=True)
 
         # Define MLP
         self.hidden2tag = nn.Sequential(
@@ -245,9 +245,6 @@ class EDUPredictor(nn.Module):
         lstm_out, _ = self.lstm1(hidden_states)
         attn_out, attention_weights = self.self_attention(lstm_out)
 
-        # Transpose attn_out to match the shape of (seq_length, batch_size, hidden_dim)
-        attn_out = attn_out.transpose(0, 1)
-        
         lstm_out, _ = self.lstm2(attn_out)
         tag_space = self.hidden2tag(lstm_out)
         tag_scores = self.crf.decode(tag_space)
