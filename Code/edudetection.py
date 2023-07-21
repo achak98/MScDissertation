@@ -328,8 +328,8 @@ def main():
             model = AutoModel.from_pretrained(model.transformer_architecture, config=model.config)
             model = model.to(device)
             for i in range(len(input_ids)):
-                input_id = torch.tensor([input_ids[i]]).to(device)
-                attention_mask = torch.tensor([attention_masks[i]]).to(device)
+                input_id = [input_ids[i]].unsqueeze(0)
+                attention_mask = [attention_masks[i]].unsqueeze(0)
                 # Obtain BERT embeddings for the current item
                 outputs = model(input_id, attention_mask)
                 embeddings[i] = outputs.last_hidden_state.squeeze()
