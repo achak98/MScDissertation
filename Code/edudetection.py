@@ -319,6 +319,7 @@ def main():
                 outputs = model(input_id, attention_mask)
                 embeddings[i] = torch.tensor(outputs.last_hidden_state).squeeze()
             print("embeddings.size(): ",embeddings.size())
+        torch.cuda.empty_cache()
         embeddings = torch.tensor(embeddings).to(device)
         # Create DataLoader for training data
         train_dataset = torch.utils.data.TensorDataset(embeddings, train_labels)
