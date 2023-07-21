@@ -226,7 +226,7 @@ class EDUPredictor(nn.Module):
 
         # Define MLP
         self.hidden2tag = nn.Sequential(
-            nn.Linear(max_length, hidden_dim),
+            nn.Linear(max_length*2, hidden_dim),
             nn.GELU(),
             nn.Dropout(0.3),
             nn.Linear(hidden_dim, hidden_dim // 16),
