@@ -322,8 +322,8 @@ def main():
         embeddings = torch.tensor([[0]*args.hidden_dim]*args.max_length).to(device)
         with torch.no_grad():
             for i in range(len(train_data['Text'])):
-                input_ids = torch.tensor([train_inputs[i]]).to(device)
-                attention_mask = torch.tensor([attention_masks[i]]).to(device) 
+                input_ids = train_inputs[i].to(device)
+                attention_mask = attention_masks[i].to(device) 
                 model = AutoModel.from_pretrained(model.transformer_architecture, config=model.config)
                 # Obtain BERT embeddings for the current item
                 outputs = model(input_ids, attention_mask)[0]
