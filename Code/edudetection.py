@@ -324,7 +324,7 @@ def main():
         
             input_ids = train_inputs.to(device)
             print("input_ids shape: ",input_ids.size())
-            attention_mask = attention_masks[i].to(device) 
+            attention_mask = attention_masks.to(device) 
             model = AutoModel.from_pretrained(model.transformer_architecture, config=model.config)
             # Obtain BERT embeddings for the current item
             outputs = model(input_ids, attention_mask)[0]
