@@ -218,7 +218,7 @@ class EDUPredictor(nn.Module):
         self.lstm1 = nn.LSTM(hidden_dim, hidden_dim, num_layers=2, bidirectional=True)
 
         # Define BiLSTM 2
-        self.lstm2 = nn.LSTM(hidden_dim*2, tagset_size, num_layers=2, bidirectional=False)
+        self.lstm2 = nn.LSTM(hidden_dim*2, tagset_size, num_layers=2, bidirectional=True)
 
         """self.regressor = nn.Sequential(
             nn.Linear(hidden_dim*2, hidden_dim//2),
@@ -249,10 +249,16 @@ class EDUPredictor(nn.Module):
         lstm_out, _ = self.lstm1(embeddings)
  
         lstm_out, _ = self.lstm2(lstm_out)
+        hidden_dim_size = lstm_out.size(-1)
 
+        first_half = lstm_out[:, :, : hidden_dim_size// 2]
+        second_half = lstm_out[:, :, hidden_dim_size // 2:]
+
+        # Sum the two halves together along the last dimension
+        output_sum = first_half + second_half
         #tag_space = self.hidden2tag(lstm_out)
         #print("size of tag_space: ", tag_space.size())
-        tag_scores = self.crf.decode(lstm_out)
+        tag_scores = self.crf.decode(output_sum)
 
         return torch.tensor(tag_scores), lstm_out
 
