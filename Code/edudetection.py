@@ -310,7 +310,7 @@ def main():
             print("input_ids shape: ",input_ids.size())
             attention_masks = attention_masks.to(device) 
             encoder = AutoModel.from_pretrained(model.transformer_architecture, config=model.config)
-            encoder = model.to(device)
+            encoder = encoder.to(device)
             print("starting tqdm")
             for i in tqdm(range(len(input_ids))):
                 input_id = input_ids[i].unsqueeze(0)
