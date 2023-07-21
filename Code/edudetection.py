@@ -320,8 +320,7 @@ def main():
                 # Forward propagation
                 tag_scores, emissions = model(inputs, attention_mask)
 
-                print(tag_scores)
-                scores = compute_f1_score_for_labels(tag_scores, labels, labels= idx2tag.keys())
+                scores = compute_f1_score_for_labels(tag_scores.detach().cpu().numpy().flatten(), labels.detach().cpu().numpy().flatten(), labels= idx2tag.keys())
                 # Compute the loss
                 loss = -model.crf(emissions, labels)
 
@@ -360,12 +359,14 @@ def main():
         model.eval()  # Set model to evaluation mode
         with torch.no_grad():
             # Predict output for test set
-            test_tag_scores = model(test_inputs)
-            test_pred = model.crf.decode(test_tag_scores)
-
+            test_tag_scores = model(test_inputs).detach().cpu().numpy().flatten()
+            test_pred_tags = test_tag_scores.detach().cpu().numpy().flatten()
+            test_tags = test_labels.detach().cpu().numpy().flatten()
+            #test_pred = model.crf.decode(test_tag_scores)
+            #scores = compute_f1_score_for_labels(test_tag_scores.detach().cpu().numpy().flatten(), test_labels.detach().cpu().numpy().flatten(), labels= idx2tag.keys())
             # Flatten both labels and predictions
-            test_tags = [idx2tag[i] for row in test_labels for i in row]
-            test_pred_tags = [idx2tag[i] for row in test_pred for i in row]
+            #test_tags = [idx2tag[i] for row in test_labels for i in row]
+            #test_pred_tags = [idx2tag[i] for row in test_pred.detach().cpu().numpy().flatten() for i in row]
 
             # Compute evaluation metrics
             accuracy = accuracy_score(test_tags, test_pred_tags)
