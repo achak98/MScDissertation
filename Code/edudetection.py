@@ -301,9 +301,9 @@ def main():
  
         train_labels = train_data['BIOE'].tolist()
         train_labels = [ast.literal_eval(label_list) for label_list in train_labels]
-        train_labels = torch.tensor(train_labels, dtype=torch.long).to(device)
+        train_labels = torch.tensor(train_labels, dtype=torch.float64).to(device)
         print("getting empty embeddings tensor")
-        embeddings = torch.empty((len(train_inputs),args.max_length,args.hidden_dim), dtype=torch.long).to(device)
+        embeddings = torch.empty((len(train_inputs),args.max_length,args.hidden_dim), dtype=torch.float64).to(device)
         print("init model")
         with torch.no_grad():
             input_ids = train_inputs.to(device)
