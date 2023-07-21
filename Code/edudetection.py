@@ -311,7 +311,7 @@ def main():
             train_data['Attention Mask'].iloc[i] =  np.array(ast.literal_eval(train_data['Attention Mask'].iloc[i]))
             train_data['Attention Mask'].iloc[i] = [int(item) for item in train_data['Attention Mask'].iloc[i]]
         attention_masks = torch.tensor(np.array(train_data['Attention Mask' ].tolist()))
-        attention_masks =  manual_batching(attention_masks, args.batch_size)
+        #attention_masks =  manual_batching(attention_masks, args.batch_size)
         #train_tuples = list(zip(train_inputs, attention_masks))
         #train_tuples = torch.stack((train_inputs, attention_masks), dim=0).to(device) #[2, 342, 18432]
         #train_tuples = train_inputs
@@ -324,10 +324,10 @@ def main():
         
             input_ids = train_inputs.to(device)
             print("input_ids shape: ",input_ids.size())
-            attention_mask = attention_masks.to(device) 
+            attention_masks = attention_masks.to(device) 
             model = AutoModel.from_pretrained(model.transformer_architecture, config=model.config)
             # Obtain BERT embeddings for the current item
-            outputs = model(input_ids, attention_mask)[0]
+            outputs = model(input_ids, attention_masks)[0]
             embeddings = outputs.last_hidden_state
 
         # Create DataLoader for training data
