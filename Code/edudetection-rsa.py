@@ -255,9 +255,8 @@ class EDUPredictor(nn.Module):
         lstm_out, _ = self.lstm1(embeddings)
         print("lstm_out: ", lstm_out.size())
         # Get the sequence length and batch size
-        lstm_out = lstm_out.permute(1, 0, 2)
-        seq_length, batch_size, _ = lstm_out.size()
-        print("after permute, lstm_out:", lstm_out.size())
+        batch_size, seq_length, hidden_dim = lstm_out.size()
+
         # Initialize attention vector tensor
         attention_vectors = torch.zeros_like(lstm_out)
 
@@ -268,17 +267,18 @@ class EDUPredictor(nn.Module):
             end_pos = min(seq_length, i + self.window_size + 1)
 
             # Compute similarity between the current word and nearby words
-            similarity_scores = torch.cat([self.similarity(lstm_out[i], lstm_out[j]) for j in range(start_pos, end_pos)], dim=-1)
-
+            similarity_scores = torch.cat([self.similarity(lstm_out[:, i], lstm_out[:, j]) for j in range(start_pos, end_pos)], dim=1)
+            print("similarity_scores: ",similarity_scores.size())
             # Apply softmax to obtain attention weights
             attention_weights = torch.nn.functional.softmax(similarity_scores, dim=-1)
-
+            print("attention_weights: ",attention_weights.size())
             # Compute the attention vector as a weighted sum of nearby words
             attention_vector = torch.sum(attention_weights * lstm_out[start_pos:end_pos], dim=0)
-
+            print("attention_vector: ",attention_vector.size())
             # Store the attention vector for the current word
             attention_vectors[i] = attention_vector
 
+        print("attention_vectors: ",attention_vectors.size())
         # Concatenate the original LSTM output and the attention vectors
         lstm_output_with_attention = torch.cat([lstm_out, attention_vectors], dim=-1)
         print("lstm_output_with_attention: ", lstm_output_with_attention.size())
