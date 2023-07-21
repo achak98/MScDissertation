@@ -252,17 +252,18 @@ class EDUPredictor(nn.Module):
         encoded_layers = self.encoder(tokens, attention_mask=attn_masks)
         #print(attn_out.size())
         hidden_states = encoded_layers.last_hidden_state
-        print(hidden_states.size())
+        #print(hidden_states.size())
         lstm_out, _ = self.lstm1(hidden_states)
-        print(lstm_out.size())
+        #print(lstm_out.size())
         attn_out, attention_weights = self.self_attention(lstm_out)
-        print(attn_out.size())
+        #print(attn_out.size())
         regressed_attn_out = self.regressor(attn_out)
-        print(regressed_attn_out.size())
+        #print(regressed_attn_out.size())
+        residual_regress_attn_out = regressed_attn_out + hidden_states
         lstm_out, _ = self.lstm2(regressed_attn_out)
-        print(lstm_out.size())
+        #print(lstm_out.size())
         tag_space = self.hidden2tag(lstm_out)
-        print(tag_space.size())
+        #print(tag_space.size())
         tag_scores = self.crf.decode(tag_space)
 
         return torch.tensor(tag_scores), tag_space
