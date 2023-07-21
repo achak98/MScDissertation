@@ -250,18 +250,18 @@ class EDUPredictor(nn.Module):
  
         lstm_out, _ = self.lstm2(lstm_out)
         hidden_dim_size = lstm_out.size(-1)
-        print("lstm_out: ",lstm_out.size())
+        #print("lstm_out: ",lstm_out.size())
         first_half = lstm_out[:, :, : hidden_dim_size// 2]
         second_half = lstm_out[:, :, hidden_dim_size // 2:]
-        print("first_half: ", first_half.size())
+        #print("first_half: ", first_half.size())
         # Sum the two halves together along the last dimension
         output_sum = first_half + second_half
-        print("output_sum: ",output_sum.size())
+        #rint("output_sum: ",output_sum.size())
         #tag_space = self.hidden2tag(lstm_out)
         #print("size of tag_space: ", tag_space.size())
         tag_scores = self.crf.decode(output_sum)
 
-        return torch.tensor(tag_scores), lstm_out
+        return torch.tensor(tag_scores), output_sum
 
 
 def main():
