@@ -214,8 +214,8 @@ class EDUPredictor(nn.Module):
         self.config.max_position_embeddings = max_length
         self.encoder = AutoModel.from_pretrained(self.transformer_architecture, config=self.config)
         new_tokens = ['[COMMA]', '[SINGLEQUOTATION]', '[DOUBLEQUOTATION]', '[DASH]', '[PERIOD]']
-        self.tokenizer = AutoTokenizer.from_pretrained(self.transformer_architecture, max_length=self.config.max_position_embeddings, padding="max_length", return_attention_mask=True)
-        self.tokenizer.add_tokens(new_tokens)
+        self.tokeniser = AutoTokenizer.from_pretrained(self.transformer_architecture, max_length=self.config.max_position_embeddings, padding="max_length", return_attention_mask=True)
+        self.tokeniser.add_tokens(new_tokens)
         # Define BiLSTM 1
         self.lstm1 = nn.LSTM(hidden_dim, hidden_dim, num_layers=2, bidirectional=True)
 
