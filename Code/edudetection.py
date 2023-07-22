@@ -261,14 +261,14 @@ class EDUPredictor(nn.Module):
 def validation(args,idx2tag,model):
     # Detect device (CPU or CUDA)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    test_data = pd.read_csv(os.path.join(args.rst_dir, 'preprocessed_data_test.csv'))[:10]
+    test_data = pd.read_csv(os.path.join(args.rst_dir, 'preprocessed_data_test.csv'))
         
     test_data['Text'] = test_data['Text'].tolist()
     for i in range(len(test_data['Text'])):
         #print(test_data['Text'].iloc[i])
         test_data['Text'].iloc[i] =  np.array(ast.literal_eval(test_data['Text'].iloc[i]))
         test_data['Text'].iloc[i] = [int(item) for item in test_data['Text'].iloc[i]]
-    test_inputs = torch.tensor(np.array(test_data['Text'].tolist()))
+    test_inputs = torch.tensor(np.array(test_data['Text'].tolist()))[:10]
 
     attention_masks = test_data['Attention Mask' ].tolist()
     for i in range(len(test_data['Attention Mask'])):
@@ -367,14 +367,14 @@ def main():
 
     if args.train:
          # Convert data to PyTorch tensors and move to the device
-        train_data = pd.read_csv(os.path.join(args.rst_dir, 'preprocessed_data_train.csv'))[:20]
+        train_data = pd.read_csv(os.path.join(args.rst_dir, 'preprocessed_data_train.csv'))
         
         train_data['Text'] = train_data['Text'].tolist()
         for i in range(len(train_data['Text'])):
             #print(train_data['Text'].iloc[i])
             train_data['Text'].iloc[i] =  np.array(ast.literal_eval(train_data['Text'].iloc[i]))
             train_data['Text'].iloc[i] = [int(item) for item in train_data['Text'].iloc[i]]
-        train_inputs = torch.tensor(np.array(train_data['Text'].tolist()))
+        train_inputs = torch.tensor(np.array(train_data['Text'].tolist()))[:20]
  
         attention_masks = train_data['Attention Mask' ].tolist()
         for i in range(len(train_data['Attention Mask'])):
@@ -389,7 +389,7 @@ def main():
         if (not args.get_embeddings_anyway) and os.path.exists(os.path.join(args.rst_dir,'embeddings_train.pt')):
             embeddings = torch.load(os.path.join(args.rst_dir,'embeddings_train.pt'))
         else:
-            embeddings = torch.empty((len(train_inputs),args.max_length,args.hidden_dim), dtype=torch.float64).to(device)[:20]
+            embeddings = torch.empty((len(train_inputs),args.max_length,args.hidden_dim), dtype=torch.float64).to(device)
             print("init model")
             with torch.no_grad():
                 input_ids = train_inputs.to(device)
