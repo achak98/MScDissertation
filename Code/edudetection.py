@@ -261,7 +261,7 @@ class EDUPredictor(nn.Module):
 def validation(args,idx2tag,model):
     # Detect device (CPU or CUDA)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    test_data = pd.read_csv(os.path.join(args.rst_dir, 'preprocessed_data_test.csv'))[:40]
+    test_data = pd.read_csv(os.path.join(args.rst_dir, 'preprocessed_data_test.csv'))[:10]
         
     test_data['Text'] = test_data['Text'].tolist()
     for i in range(len(test_data['Text'])):
@@ -278,7 +278,7 @@ def validation(args,idx2tag,model):
 
     test_labels = test_data['BIOE'].tolist()
     test_labels = [ast.literal_eval(label_list) for label_list in test_labels]
-    test_labels = torch.tensor(test_labels, dtype=torch.long).to(device)
+    test_labels = torch.tensor(test_labels, dtype=torch.long).to(device)[:10]
     print("getting empty embeddings tensor")
     print("args.get_embeddings_anyway in val: ", args.get_embeddings_anyway)
     if (not args.get_embeddings_anyway) and os.path.exists(os.path.join(args.rst_dir,'embeddings_val.pt')):
@@ -367,7 +367,7 @@ def main():
 
     if args.train:
          # Convert data to PyTorch tensors and move to the device
-        train_data = pd.read_csv(os.path.join(args.rst_dir, 'preprocessed_data_train.csv'))[20:]
+        train_data = pd.read_csv(os.path.join(args.rst_dir, 'preprocessed_data_train.csv'))[:20]
         
         train_data['Text'] = train_data['Text'].tolist()
         for i in range(len(train_data['Text'])):
@@ -389,7 +389,7 @@ def main():
         if (not args.get_embeddings_anyway) and os.path.exists(os.path.join(args.rst_dir,'embeddings_train.pt')):
             embeddings = torch.load(os.path.join(args.rst_dir,'embeddings_train.pt'))
         else:
-            embeddings = torch.empty((len(train_inputs),args.max_length,args.hidden_dim), dtype=torch.float64).to(device)
+            embeddings = torch.empty((len(train_inputs),args.max_length,args.hidden_dim), dtype=torch.float64).to(device)[:20]
             print("init model")
             with torch.no_grad():
                 input_ids = train_inputs.to(device)
