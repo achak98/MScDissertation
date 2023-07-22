@@ -433,6 +433,7 @@ def main():
         model.eval()  # Set model to evaluation mode
         with torch.no_grad():
             # Predict output for test set
+            embeddings = embeddings.to(torch.float)
             test_tag = model(embeddings)
             test_pred_tags = test_tag.detach().cpu().numpy().flatten()
             test_tags = test_labels.detach().cpu().numpy().flatten()
