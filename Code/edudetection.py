@@ -282,7 +282,9 @@ def getValData(args, model):
     print("args.get_embeddings_anyway in val: ", args.get_embeddings_anyway)
     if (not args.get_embeddings_anyway) and os.path.exists(os.path.join(args.rst_dir,'embeddings_val.pt')):
         val_embeddings = torch.load(os.path.join(args.rst_dir,'embeddings_val.pt'))
+        print(f"val embeddings loaded from {os.path.join(args.rst_dir,'embeddings_val.pt')}")
     else:
+        print(f"getting val embeddings...")
         val_embeddings = torch.empty((len(test_inputs),args.max_length,args.hidden_dim), dtype=torch.float64).to(device)
         print("init model")
         with torch.no_grad():
@@ -302,7 +304,7 @@ def getValData(args, model):
             #print("embeddings.size(): ",val_embeddings.size())
         torch.save(val_embeddings, os.path.join(args.rst_dir,'embeddings_test.pt'))
     torch.cuda.empty_cache()
-    return val_labels, val_embeddings
+    return val_embeddings,val_labels
 
 def main():
     args = parse_args()
@@ -349,10 +351,12 @@ def main():
         train_labels = train_data['BIOE'].tolist()
         train_labels = [ast.literal_eval(label_list) for label_list in train_labels]
         train_labels = torch.tensor(train_labels, dtype=torch.long).to(device)
-        print("getting empty embeddings tensor")
+
         if (not args.get_embeddings_anyway) and os.path.exists(os.path.join(args.rst_dir,'embeddings_train.pt')):
             embeddings = torch.load(os.path.join(args.rst_dir,'embeddings_train.pt'))
+            print(f"train embeddings loaded from {os.path.join(args.rst_dir,'embeddings_train.pt')}")
         else:
+            print(f"getting train embeddings...")
             embeddings = torch.empty((len(train_inputs),args.max_length,args.hidden_dim), dtype=torch.float64).to(device)
             print("init model")
             with torch.no_grad():
@@ -464,7 +468,9 @@ def main():
         print("getting empty embeddings tensor")
         if (not args.get_embeddings_anyway) and os.path.exists(os.path.join(args.rst_dir,'embeddings_test.pt')):
             embeddings = torch.load(os.path.join(args.rst_dir,'embeddings_test.pt'))
+            print(f"test embeddings loaded from {os.path.join(args.rst_dir,'embeddings_test.pt')}")
         else:
+            print(f"getting test embeddings...")
             embeddings = torch.empty((len(test_inputs),args.max_length,args.hidden_dim), dtype=torch.float64).to(device)
             print("init model")
             with torch.no_grad():
