@@ -84,27 +84,6 @@ def parse_args():
     parser.add_argument('--log_path', help='the file to output log')
     return parser.parse_args()
 
-
-def manual_batching(tensor, batch_size):
-    num_samples = tensor.size(0)
-    num_batches = (num_samples + batch_size - 1) // batch_size
-
-    # Create a list to store the batches
-    batches = []
-
-    for i in range(num_batches):
-        # Calculate the start and end indices for the current batch
-        start_idx = i * batch_size
-        end_idx = min((i + 1) * batch_size, num_samples)
-
-        # Extract the current batch from the tensor
-        batch = tensor[start_idx:end_idx]
-
-        # Append the batch to the list
-        batches.append(batch)
-
-    return batches
-
 def find_sequence_spans(text, target_sequences, model, args):
     sequence_spans = []
     idx_edu = 0
@@ -189,23 +168,6 @@ def preprocess_RST_Discourse_dataset(path_data, tag2idx, args, model):
     print(messed_up_ones)
     return df
 
-class ModifiedSelfAttention(nn.Module):
-    def __init__(self, hidden_dim):
-        super(ModifiedSelfAttention, self).__init__()
-        self.projection = nn.Sequential(
-            nn.Linear(hidden_dim*2, hidden_dim),  # Project to hidden_dim
-            nn.ReLU(True),
-            nn.Linear(hidden_dim, hidden_dim)  # Output with shape hidden_dim
-        )
-
-    def forward(self, encoder_outputs):
-        energy = self.projection(encoder_outputs)
-        #print("energy.shape(): ",energy.size())
-        weights = nn.functional.softmax(energy, dim=1)  # Apply softmax along the token dimension
-        #print("weights.shape(): ",weights.size())
-        outputs = torch.bmm(energy,weights.permute(0, 2, 1))  # Weighted sum of encoder outputs
-        return outputs, weights
-
 class EDUPredictor(nn.Module):
     def __init__(self, tagset_size=4, hidden_dim=768, max_length=18432):
         super(EDUPredictor, self).__init__()
@@ -276,6 +238,8 @@ def validation(args,idx2tag,model, val_embeddings, val_labels):
         val_embeddings = val_embeddings.to(torch.float)
         loss = 0.0
         for i, (embedding, test_label) in enumerate(zip(val_embeddings,val_labels)):
+            print("embedding in val: ",embedding.size())
+            print("unsq embedding in val: ",embedding.unsqueeze(0).size())
             output, emissions = model(embedding.unsqueeze(0))
             loss -= model.crf(emissions, test_label.unsqueeze(0))
             outputs[i] = output.squeeze()
@@ -415,7 +379,7 @@ def main():
         # Create DataLoader for training data
         print(train_labels.size())
         print(embeddings.size())
-        train_dataset = torch.utils.data.TensorDataset(embeddings, train_labels)
+        train_dataset = torch.utils.data.TensorDataset(embeddings[:10], train_labels[:10])
         train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
         print("starting training")
         # Training loop
@@ -436,7 +400,7 @@ def main():
                 #print(f"type of inputs tensor: {inputs.dtype}, and type of labels tensor: {labels.dtype}") 
 
                 optimizer.zero_grad()  # Zero the gradients
-
+                print("inputs in train: ",inputs.size())
                 # Forward propagation
                 tag_scores, emissions = model(inputs)
 
