@@ -443,8 +443,9 @@ def main():
             #test_tags = [idx2tag[i] for row in test_labels for i in row]
             #test_pred_tags = [idx2tag[i] for row in test_pred.detach().cpu().numpy().flatten() for i in row]
             print("\n \n test_pred_tags: ",test_pred_tags)
-            
+            print("\n \n test_pred_tags: ",type(test_pred_tags))
             print("\n \n test_tags: ", test_tags)
+            print("\n \n test_tags: ", type(test_tags))
             # Compute evaluation metrics
             accuracy = accuracy_score(test_tags, test_pred_tags)
             precision = precision_score(test_tags, test_pred_tags)
