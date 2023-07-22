@@ -435,8 +435,8 @@ def main():
             # Predict output for test set
             embeddings = embeddings.to(torch.float)
             test_tag, _ = model(embeddings)
-            test_pred_tags = test_tag.detach().cpu().numpy()
-            test_tags = test_labels.detach().cpu().numpy()
+            test_pred_tags = test_tag.detach().cpu().numpy().flatten().tolist()
+            test_tags = test_labels.detach().cpu().numpy().flatten().tolist()
             #test_pred = model.crf.decode(test_tag_scores)
             #scores = compute_f1_score_for_labels(test_tag_scores.detach().cpu().numpy().flatten(), test_labels.detach().cpu().numpy().flatten(), labels= idx2tag.keys())
             # Flatten both labels and predictions
