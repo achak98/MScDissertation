@@ -270,8 +270,8 @@ def getValData(args, model):
     for i in range(len(val_data['Attention Mask'])):
         val_data['Attention Mask'].iloc[i] =  np.array(ast.literal_eval(val_data['Attention Mask'].iloc[i]))
         val_data['Attention Mask'].iloc[i] = [int(item) for item in val_data['Attention Mask'].iloc[i]]
-    attention_masks = torch.tensor(np.array(val_data['Attention Mask' ].tolist()))
-
+    attention_masks = torch.cat((torch.tensor(np.array(val_data['Attention Mask' ].tolist()))[:40], torch.tensor(np.array(val_data['Attention Mask' ].tolist()))[-40:]), dim=0)
+    
     val_labels = val_data['BIOE'].tolist()
     val_labels = [ast.literal_eval(label_list) for label_list in val_labels]
     val_labels = torch.tensor(val_labels, dtype=torch.long).to(device)[:40]
