@@ -472,7 +472,7 @@ def main():
             print(f'F1 scores for tag B: {epoch_f1[0]:.4f}, tag I: {epoch_f1[1]:.4f}, tag O: {epoch_f1[2]:.4f}, tag E: {epoch_f1[3]:.4f}')
 
             with open(os.path.join(args.result_dir, "edu_results.txt"), 'w') as file:
-                file.write(f'Loss: {loss.item():.4f}, f1 scores for tag B: {epoch_f1[0]:.4f}, tag I: {epoch_f1[1]:.4f}, tag O: {epoch_f1[2]:.4f}, tag E: {epoch_f1[3]:.4f}, and Acc: {epoch_acc}:.4f')
+                file.write(f'Loss: {loss.item():.4f}, f1 scores for tag B: {epoch_f1[0]:.4f}, tag I: {epoch_f1[1]:.4f}, tag O: {epoch_f1[2]:.4f}, tag E: {epoch_f1[3]:.4f}, and Acc: {accuracy_score}:.4f')
 
             # Generate confusion matrix
             confusion_matrix = multilabel_confusion_matrix(test_tags, test_pred_tags)
