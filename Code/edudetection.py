@@ -259,6 +259,8 @@ class EDUPredictor(nn.Module):
         return torch.tensor(tag_scores), tag_space
 
 def validation(args,idx2tag):
+    # Detect device (CPU or CUDA)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     test_data = pd.read_csv(os.path.join(args.rst_dir, 'preprocessed_data_test.csv'))[40:]
         
     test_data['Text'] = test_data['Text'].tolist()
