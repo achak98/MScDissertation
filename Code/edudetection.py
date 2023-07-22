@@ -32,8 +32,8 @@ def compute_f1_score_for_labels(y_true, y_pred, labels):
     #y_pred_flat = [label for sublist in y_pred for label in sublist]
 
     # Compute precision, recall, and F1 score for each label
-    precision, recall, f1_score_for_label, _ = precision_recall_fscore_support(y_true, y_pred, labels=labels)
-    overall_f1 = f1_score(y_true, y_pred, average='weighted')
+    precision, recall, f1_score_for_label, support = precision_recall_fscore_support(y_true, y_pred, labels=labels)
+    overall_f1 = (f1_score_for_label[0]*support[0] + f1_score_for_label[1]*support[1] + f1_score_for_label[2]*support[2] + f1_score_for_label[3]*support[3])/(support[0]+support[1]+support[2]+support[3])
     correct = sum(1 for true_label, pred_label in zip(y_true, y_pred) if true_label == pred_label)
     total = len(y_true)
     accuracy = correct / total * 100.0
