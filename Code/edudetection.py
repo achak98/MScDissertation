@@ -426,6 +426,7 @@ def main():
         # Load the trained model
         model_path = os.path.join(args.model_dir, 'edu_segmentation_model.pt')
         model.load_state_dict(torch.load(model_path))
+        model = model.to(device)
         print(f"Loaded trained model from: {model_path}")
 
         # Evaluation
