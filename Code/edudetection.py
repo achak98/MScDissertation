@@ -411,7 +411,7 @@ def main():
         device_idx = 1
         if torch.cuda.is_available() and torch.cuda.device_count() >= device_idx + 1:
             device = torch.device(f"cuda:{device_idx}")
-        embeddings = torch.tensor(embeddings).to(device)[:20]
+        embeddings = torch.tensor(embeddings).to(device)
         # Create DataLoader for training data
         print(train_labels.size())
         print(embeddings.size())
