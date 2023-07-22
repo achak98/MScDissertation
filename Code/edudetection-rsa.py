@@ -217,9 +217,9 @@ class EDUPredictor(nn.Module):
         # Define BiLSTM 1
         self.lstm1 = nn.LSTM(hidden_dim, hidden_dim, num_layers=2, bidirectional=True)
         # Attention weight computation layer
-        self.attention_weights = nn.Linear(hidden_dim * 6, 1)
+        self.attention_weights = nn.Linear(hidden_dim * 3, 1)
         # Define BiLSTM 2
-        self.lstm2 = nn.LSTM(hidden_dim*2, tagset_size, num_layers=2, bidirectional=True)
+        self.lstm2 = nn.LSTM(hidden_dim, tagset_size, num_layers=2, bidirectional=True)
 
         """self.regressor = nn.Sequential(
             nn.Linear(hidden_dim*2, hidden_dim//2),
@@ -256,27 +256,34 @@ class EDUPredictor(nn.Module):
         print("lstm_out: ", lstm_out.size())
         # Get the sequence length and batch size
         batch_size, seq_length, hidden_dim = lstm_out.size()
-
+        hidden_dim_size = lstm_out.size(-1)
+        #print("lstm_out: ",lstm_out.size())
+        first_half = lstm_out[:, :, : hidden_dim_size// 2]
+        second_half = lstm_out[:, :, hidden_dim_size // 2:]
+        #print("first_half: ", first_half.size())
+        # Sum the two halves together along the last dimension
+        output_sum = first_half + second_half
         # Initialize attention vector tensor
-        attention_vectors = torch.zeros_like(lstm_out)
+        attention_vectors = torch.zeros_like(output_sum)
 
         # Compute attention vector for each word in the sequence
         for i in range(seq_length):
             # Define the start and end positions of the window
             start_pos = max(0, i - self.window_size)
             end_pos = min(seq_length, i + self.window_size + 1)
-
+            
             # Compute similarity between the current word and nearby words
             similarity_scores = torch.cat([self.similarity(lstm_out[:, i], lstm_out[:, j]) for j in range(start_pos, end_pos)], dim=1)
             print("similarity_scores: ",similarity_scores.size())
+            #similarity scores has all s(i,j)s from start pos to end pos of window
             # Apply softmax to obtain attention weights
-            attention_weights = torch.nn.functional.softmax(similarity_scores, dim=-1)
+            attention_weights = torch.nn.functional.softmax(similarity_scores, dim=-1) #this has all alpha(i,j)s
             print("attention_weights: ",attention_weights.size())
             # Compute the attention vector as a weighted sum of nearby words
-            attention_vector = torch.sum(attention_weights * lstm_out[:, start_pos:end_pos], dim=0)
+            attention_vector = torch.sum(attention_weights * lstm_out[:, start_pos:end_pos, :], dim=1)
             print("attention_vector: ",attention_vector.size())
             # Store the attention vector for the current word
-            attention_vectors[i] = attention_vector
+            attention_vectors[1,i] = attention_vector #(seqlen,hiddim)
 
         print("attention_vectors: ",attention_vectors.size())
         # Concatenate the original LSTM output and the attention vectors
