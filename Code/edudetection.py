@@ -245,6 +245,9 @@ def validation(args,idx2tag,model, val_embeddings, val_labels):
         #outputs, emissions = model(val_embeddings)
         test_pred_tags = outputs.detach().cpu().numpy().flatten()
         test_tags = val_labels.detach().cpu().numpy().flatten()
+        print("idx2tag.keys(): ",idx2tag.keys())
+        print("test_pred_tags: ",test_pred_tags)
+        print("test_tags: ",test_tags)
         scores, accuracy_score = compute_f1_score_for_labels(test_pred_tags, test_tags, labels= [int(key) for key in idx2tag.keys()])
 
         epoch_f1 = [0.0]*4
@@ -275,6 +278,7 @@ def getValData(args, model):
     val_labels = val_data['BIOE'].tolist()
     val_labels = [ast.literal_eval(label_list) for label_list in val_labels]
     val_labels = torch.cat(((torch.tensor(val_labels, dtype=torch.long).to(device))[:40], torch.tensor(val_labels, dtype=torch.long).to(device))[-40:], dim=0)
+    print("val_labels: ",val_labels)
     print("getting empty embeddings tensor")
     print("args.get_embeddings_anyway in val: ", args.get_embeddings_anyway)
     if (not args.get_embeddings_anyway) and os.path.exists(os.path.join(args.rst_dir,'embeddings_val.pt')):
