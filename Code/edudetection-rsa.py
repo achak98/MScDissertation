@@ -184,11 +184,11 @@ class EDUPredictor(nn.Module):
         self.tokeniser = AutoTokenizer.from_pretrained(self.transformer_architecture, max_length=self.config.max_position_embeddings, padding="max_length", return_attention_mask=True)
         self.window_size = args.window_size
         # Define BiLSTM 1
-        self.lstm1 = nn.LSTM(args.hidden_dim, args.hidden_dim, num_layers=2, bidirectional=True)
+        self.lstm1 = nn.LSTM(args.hidden_dim, args.hidden_dim, num_layers=1, bidirectional=True)
         # Attention weight computation layer
         self.attention_weights = nn.Linear(args.hidden_dim * 3, 1)
         # Define BiLSTM 2
-        self.lstm2 = nn.LSTM(args.hidden_dim*2, args.tagset_size, num_layers=2, bidirectional=True)
+        self.lstm2 = nn.LSTM(args.hidden_dim*2, args.tagset_size, num_layers=1, bidirectional=True)
 
         """self.regressor = nn.Sequential(
             nn.Linear(hidden_dim*2, hidden_dim//2),
