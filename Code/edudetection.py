@@ -237,8 +237,8 @@ def validation(args,idx2tag,model, val_embeddings, val_labels):
         # Predict output for test set
         val_embeddings = val_embeddings.to(torch.float)
         for i, (embedding, test_label) in enumerate(zip(val_embeddings,val_labels)):
-            print("embedding in val: ",embedding.size())
-            print("unsq embedding in val: ",embedding.unsqueeze(0).size())
+            #print("embedding in val: ",embedding.size())
+            #print("unsq embedding in val: ",embedding.unsqueeze(0).size())
             output, _ = model(embedding.unsqueeze(0))
             outputs[i] = output.squeeze()
         val_labels = val_labels.to(device)
@@ -265,8 +265,7 @@ def getValData(args, model):
         #print(test_data['Text'].iloc[i])
         val_data['Text'].iloc[i] =  np.array(ast.literal_eval(val_data['Text'].iloc[i]))
         val_data['Text'].iloc[i] = [int(item) for item in val_data['Text'].iloc[i]]
-    test_inputs = torch.tensor(np.array(val_data['Text'].tolist()))[:40]
-
+    test_inputs = torch.cat((torch.tensor(np.array(val_data['Text'].tolist()))[:40], torch.tensor(np.array(val_data['Text'].tolist()))[-40:]), dim=0)
     attention_masks = val_data['Attention Mask' ].tolist()
     for i in range(len(val_data['Attention Mask'])):
         val_data['Attention Mask'].iloc[i] =  np.array(ast.literal_eval(val_data['Attention Mask'].iloc[i]))
@@ -276,6 +275,7 @@ def getValData(args, model):
     val_labels = val_data['BIOE'].tolist()
     val_labels = [ast.literal_eval(label_list) for label_list in val_labels]
     val_labels = torch.tensor(val_labels, dtype=torch.long).to(device)[:40]
+    val_labels = torch.cat((torch.tensor(val_labels, dtype=torch.long).to(device), torch.tensor(torch.tensor(val_labels, dtype=torch.long).to(device))[-40:]), dim=0)
     print("getting empty embeddings tensor")
     print("args.get_embeddings_anyway in val: ", args.get_embeddings_anyway)
     if (not args.get_embeddings_anyway) and os.path.exists(os.path.join(args.rst_dir,'embeddings_val.pt')):
@@ -287,8 +287,8 @@ def getValData(args, model):
         print("init model")
         with torch.no_grad():
             input_ids = test_inputs.to(device)
-            print("input_ids in val: ",input_ids)
-            print("input_ids shape: ",input_ids.size())
+            #print("input_ids in val: ",input_ids)
+            #print("input_ids shape: ",input_ids.size())
             attention_masks = attention_masks.to(device) 
             encoder = AutoModel.from_pretrained(model.transformer_architecture, config=model.config)
             encoder = encoder.to(device)
@@ -370,7 +370,7 @@ def main():
                     # Obtain deberta embeddings for the current item
                     outputs = encoder(input_id, attention_mask)
                     embeddings[i] = torch.tensor(outputs.last_hidden_state).squeeze()
-                print("embeddings.size(): ",embeddings.size())
+                #print("embeddings.size(): ",embeddings.size())
             torch.save(embeddings, os.path.join(args.rst_dir,'embeddings_train.pt'))
         torch.cuda.empty_cache()
         val_embeddings, val_labels = getValData(args, model)
@@ -379,8 +379,8 @@ def main():
             device = torch.device(f"cuda:{device_idx}")
         embeddings = torch.tensor(embeddings).to(device)
         # Create DataLoader for training data
-        print(train_labels.size())
-        print(embeddings.size())
+        #print(train_labels.size())
+        #print(embeddings.size())
         train_dataset = torch.utils.data.TensorDataset(embeddings, train_labels)
         train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
         print("starting training")
