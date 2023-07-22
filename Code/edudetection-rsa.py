@@ -172,21 +172,21 @@ def preprocess_RST_Discourse_dataset(path_data, tag2idx, args, model):
     return df
 
 class EDUPredictor(nn.Module):
-    def __init__(self, tagset_size=4, hidden_dim=768, max_length=18432, window_size = 5):
+    def __init__(self, args):
         super(EDUPredictor, self).__init__()
 
-        self.hidden_dim = hidden_dim
+        self.hidden_dim = args.hidden_dim
         self.transformer_architecture = 'microsoft/deberta-v3-base' #'microsoft/deberta-v3-small' mlcorelib/debertav2-base-uncased microsoft/deberta-v2-xlarge
         self.config = AutoConfig.from_pretrained(self.transformer_architecture, output_hidden_states=True)
-        self.config.max_position_embeddings = max_length
+        self.config.max_position_embeddings = args.max_length
         self.tokeniser = AutoTokenizer.from_pretrained(self.transformer_architecture, max_length=self.config.max_position_embeddings, padding="max_length", return_attention_mask=True)
-        self.window_size = window_size
+        self.window_size = args.window_size
         # Define BiLSTM 1
-        self.lstm1 = nn.LSTM(hidden_dim, hidden_dim, num_layers=2, bidirectional=True)
+        self.lstm1 = nn.LSTM(args.hidden_dim, args.hidden_dim, num_layers=2, bidirectional=True)
         # Attention weight computation layer
-        self.attention_weights = nn.Linear(hidden_dim * 3, 1)
+        self.attention_weights = nn.Linear(args.hidden_dim * 3, 1)
         # Define BiLSTM 2
-        self.lstm2 = nn.LSTM(hidden_dim, tagset_size, num_layers=2, bidirectional=True)
+        self.lstm2 = nn.LSTM(args.hidden_dim, args.tagset_size, num_layers=2, bidirectional=True)
 
         """self.regressor = nn.Sequential(
             nn.Linear(hidden_dim*2, hidden_dim//2),
@@ -195,7 +195,7 @@ class EDUPredictor(nn.Module):
             nn.Linear( hidden_dim//2,  hidden_dim),
             nn.GELU()
         )"""
-        # Define MLP
+        """ # Define MLP
         self.hidden2tag = nn.Sequential(
             nn.Linear(hidden_dim*2, hidden_dim//2),
             nn.GELU(),
@@ -207,10 +207,10 @@ class EDUPredictor(nn.Module):
             nn.GELU(),
             nn.Dropout(0.3),
             nn.Linear(hidden_dim // 64, tagset_size)
-        )
+        )"""
         #print("tagset_size: ",tagset_size)
         # Define CRF
-        self.crf = CRF(tagset_size)
+        self.crf = CRF(args.tagset_size)
     
     def similarity(self, hi, hj):
         # Concatenate the hidden representations
