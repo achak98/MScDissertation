@@ -444,7 +444,7 @@ def main():
             loss = -model.crf(emissions, test_labels)
             test_pred_tags = outputs.detach().cpu().numpy().flatten()
             test_tags = test_labels.detach().cpu().numpy().flatten()
-            scores, accuracy_score = compute_f1_score_for_labels(test_pred_tags, test_tags.detach(), labels= [int(key) for key in idx2tag.keys()])
+            scores, accuracy_score = compute_f1_score_for_labels(test_pred_tags, test_tags, labels= [int(key) for key in idx2tag.keys()])
             #test_pred = model.crf.decode(test_tag_scores)
             #scores = compute_f1_score_for_labels(test_tag_scores.detach().cpu().numpy().flatten(), test_labels.detach().cpu().numpy().flatten(), labels= idx2tag.keys())
             # Flatten both labels and predictions
