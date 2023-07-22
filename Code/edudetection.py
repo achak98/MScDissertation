@@ -322,9 +322,9 @@ def validation(args,idx2tag,model):
         embeddings = embeddings.to(torch.float)
         loss = 0.0
         for i, embedding in enumerate(embeddings):
-            output, emissions = model(embedding)
+            output, emissions = model(embedding.unsqueeze(0))
             loss -= model.crf(emissions, test_labels)
-            outputs[i] = output
+            outputs[i] = output.squeeze()
         test_labels = test_labels.to(device)
         #outputs, emissions = model(embeddings)
         test_pred_tags = outputs.detach().cpu().numpy().flatten()
