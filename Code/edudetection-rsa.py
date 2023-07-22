@@ -495,7 +495,7 @@ def main():
             print(f'Test Recall: {recall:.3f}')
             print(f'Test F1-Score: {f1:.3f}')
 
-            with open(os.path.join(args.results_dir, "edu_results.txt"), 'w') as file:
+            with open(os.path.join(args.result_dir, "edu_results.txt"), 'w') as file:
                 file.write(f'Test Accuracy: {accuracy:.3f}\nTest Precision: {precision:.3f}\nTest Recall: {recall:.3f}\nTest F1-Score: {f1:.3f}')
 
             # Generate confusion matrix
@@ -506,7 +506,7 @@ def main():
                 plt.title(f'Confusion Matrix for tag {i}')
                 plt.xlabel('Predicted')
                 plt.ylabel('True')
-                plt.savefig(os.path.join(args.results_dir, 'confusion_matrix_edu.pdf'))
+                plt.savefig(os.path.join(args.result_dir, 'confusion_matrix_edu.pdf'))
 
     if args.segment:
         text_files = sorted([f for f in os.listdir(args.seg_data_path) if f.endswith('.txt')]) #TODO: FIGURE THIS OUT

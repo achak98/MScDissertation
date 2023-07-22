@@ -471,7 +471,7 @@ def main():
             print(f'Recall scores for tag B: {epoch_re[0]:.4f}, tag I: {epoch_re[1]:.4f}, tag O: {epoch_re[2]:.4f}, tag E: {epoch_re[3]:.4f}')
             print(f'F1 scores for tag B: {epoch_f1[0]:.4f}, tag I: {epoch_f1[1]:.4f}, tag O: {epoch_f1[2]:.4f}, tag E: {epoch_f1[3]:.4f}')
 
-            with open(os.path.join(args.results_dir, "edu_results.txt"), 'w') as file:
+            with open(os.path.join(args.result_dir, "edu_results.txt"), 'w') as file:
                 file.write(f'Loss: {loss.item():.4f}, f1 scores for tag B: {epoch_f1[0]:.4f}, tag I: {epoch_f1[1]:.4f}, tag O: {epoch_f1[2]:.4f}, tag E: {epoch_f1[3]:.4f}, and Acc: {epoch_acc}:.4f')
 
             # Generate confusion matrix
@@ -482,7 +482,7 @@ def main():
                 plt.title(f'Confusion Matrix for tag {i}')
                 plt.xlabel('Predicted')
                 plt.ylabel('True')
-                plt.savefig(os.path.join(args.results_dir, 'confusion_matrix_edu.pdf'))
+                plt.savefig(os.path.join(args.result_dir, 'confusion_matrix_edu.pdf'))
 
     if args.segment:
         text_files = sorted([f for f in os.listdir(args.seg_data_path) if f.endswith('.txt')]) #TODO: FIGURE THIS OUT
