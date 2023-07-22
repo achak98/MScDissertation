@@ -440,9 +440,9 @@ def main():
             # Predict output for test set
             embeddings = embeddings.to(torch.float)
             test_labels = test_labels.to(device)
-            test_tag, emissions = model(embeddings)
-            loss = -model.crf(emissions, test_tags)
-            test_pred_tags = test_tag.detach().cpu().numpy().flatten()
+            outputs, emissions = model(embeddings)
+            loss = -model.crf(emissions, test_labels)
+            test_pred_tags = outputs.detach().cpu().numpy().flatten()
             test_tags = test_labels.detach().cpu().numpy().flatten()
             scores, accuracy_score = compute_f1_score_for_labels(test_pred_tags, test_tags.detach(), labels= [int(key) for key in idx2tag.keys()])
             #test_pred = model.crf.decode(test_tag_scores)
