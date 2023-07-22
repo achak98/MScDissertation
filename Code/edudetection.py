@@ -245,9 +245,9 @@ def validation(args,idx2tag,model, val_embeddings, val_labels):
         #outputs, emissions = model(val_embeddings)
         test_pred_tags = outputs.detach().to(torch.long).cpu().numpy().flatten()
         test_tags = val_labels.detach().cpu().numpy().flatten()
-        print("idx2tag.keys(): ",idx2tag.keys())
-        print("test_pred_tags: ",test_pred_tags)
-        print("test_tags: ",test_tags)
+        #print("idx2tag.keys(): ",idx2tag.keys())
+        #print("test_pred_tags: ",test_pred_tags)
+        #print("test_tags: ",test_tags)
         scores, accuracy_score = compute_f1_score_for_labels(test_pred_tags, test_tags, labels= [int(key) for key in idx2tag.keys()])
 
         epoch_f1 = [0.0]*4
@@ -278,9 +278,9 @@ def getValData(args, model):
     val_labels = val_data['BIOE'].tolist()
     val_labels = [ast.literal_eval(label_list) for label_list in val_labels]
     val_labels = torch.cat(((torch.tensor(val_labels, dtype=torch.long).to(device))[:40], torch.tensor(val_labels, dtype=torch.long).to(device))[-40:], dim=0)
-    print("val_labels: ",val_labels)
+    #print("val_labels: ",val_labels)
     print("getting empty embeddings tensor")
-    print("args.get_embeddings_anyway in val: ", args.get_embeddings_anyway)
+    #print("args.get_embeddings_anyway in val: ", args.get_embeddings_anyway)
     if (not args.get_embeddings_anyway) and os.path.exists(os.path.join(args.rst_dir,'embeddings_val.pt')):
         val_embeddings = torch.load(os.path.join(args.rst_dir,'embeddings_val.pt'))
         print(f"val embeddings loaded from {os.path.join(args.rst_dir,'embeddings_val.pt')}")
@@ -430,6 +430,8 @@ def main():
                 running_f1 = [item/(step+1) for item in epoch_f1]
                 train_loader_tqdm.set_postfix({f"f1 scores for tag B: {running_f1[0]:.4f}, tag I: {running_f1[1]:.4f}, tag O: {running_f1[2]:.4f}, tag E: {running_f1[3]:.4f}, Acc: {(epoch_acc/(step+1)):.4f} and Loss": epoch_loss / (step + 1)})
             epoch_f1 = [item/len(train_loader) for item in epoch_f1]
+            epoch_pre = [item/len(train_loader) for item in epoch_pre]
+            epoch_re = [item/len(train_loader) for item in epoch_re]
             epoch_acc = epoch_acc/len(train_loader)
             # Update the outer tqdm progress bar with the current epoch loss value
             val_accuracy_score, val_epoch_pre, val_epoch_f1, val_epoch_re = validation(args,idx2tag,model, val_embeddings, val_labels)
