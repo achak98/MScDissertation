@@ -249,7 +249,7 @@ class EDUPredictor(nn.Module):
             attention_weights = torch.nn.functional.softmax(similarity_scores, dim=-1) #this has all alpha(i,j)s
             print("attention_weights: ",attention_weights.size())
             # Compute the attention vector as a weighted sum of nearby words
-            attention_vector = torch.sum(attention_weights * output_sum[:, start_pos:end_pos, :], dim=1)
+            attention_vector = torch.sum(attention_weights * output_sum[:, start_pos:end_pos, :].permute(0,2,1), dim=1)
             print("attention_vector: ",attention_vector.size())
             # Store the attention vector for the current word
             attention_vectors[1,i] = attention_vector #(seqlen,hiddim)
