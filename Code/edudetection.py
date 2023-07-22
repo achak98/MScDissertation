@@ -306,6 +306,7 @@ def validation(args,idx2tag,model):
     device_idx = 1
     if torch.cuda.is_available() and torch.cuda.device_count() >= device_idx + 1:
         device = torch.device(f"cuda:{device_idx}")
+    outputs = torch.empty(embeddings.size(), dtype=torch.float).to(device)
     embeddings = torch.tensor(embeddings).to(device)
     print("embeddings in val: ",embeddings)
     # Load the trained model
@@ -319,9 +320,13 @@ def validation(args,idx2tag,model):
     with torch.no_grad():
         # Predict output for test set
         embeddings = embeddings.to(torch.float)
+        loss = 0.0
+        for i, embedding in enumerate(embeddings):
+            output, emissions = model(embedding)
+            loss -= model.crf(emissions, test_labels)
+            outputs[i] = output
         test_labels = test_labels.to(device)
-        outputs, emissions = model(embeddings)
-        loss = -model.crf(emissions, test_labels)
+        #outputs, emissions = model(embeddings)
         test_pred_tags = outputs.detach().cpu().numpy().flatten()
         test_tags = test_labels.detach().cpu().numpy().flatten()
         scores, accuracy_score = compute_f1_score_for_labels(test_pred_tags, test_tags, labels= [int(key) for key in idx2tag.keys()])
@@ -362,7 +367,7 @@ def main():
 
     if args.train:
          # Convert data to PyTorch tensors and move to the device
-        train_data = pd.read_csv(os.path.join(args.rst_dir, 'preprocessed_data_train.csv'))
+        train_data = pd.read_csv(os.path.join(args.rst_dir, 'preprocessed_data_train.csv'))[20:]
         
         train_data['Text'] = train_data['Text'].tolist()
         for i in range(len(train_data['Text'])):
