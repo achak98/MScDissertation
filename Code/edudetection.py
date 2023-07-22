@@ -33,7 +33,9 @@ def compute_f1_score_for_labels(y_true, y_pred, labels):
 
     # Compute precision, recall, and F1 score for each label
     precision, recall, f1_score, _ = precision_recall_fscore_support(y_true, y_pred, labels=labels)
-
+    correct = sum(1 for true_label, pred_label in zip(y_true, y_pred) if true_label == pred_label)
+    total = len(y_true)
+    accuracy = correct / total * 100.0
     # Create a dictionary to store the results for each label
     label_scores = {}
     for i, label in enumerate(labels):
@@ -43,7 +45,7 @@ def compute_f1_score_for_labels(y_true, y_pred, labels):
             'F1 Score': f1_score[i]
         }
 
-    return label_scores
+    return label_scores, accuracy
 
 def parse_args():
     parser = argparse.ArgumentParser('EDU segmentation toolkit 1.0')
@@ -335,6 +337,7 @@ def main():
         # Training loop
         for epoch in tqdm(range(args.epochs), desc='Epochs'):
             epoch_loss = 0.0
+            epoch_acc = 0.0
             epoch_f1 = [0.0] * 4
             model = model.to(device)
             model.train()  # Set model to training mode
@@ -351,7 +354,7 @@ def main():
                 # Forward propagation
                 tag_scores, emissions = model(inputs)
 
-                scores = compute_f1_score_for_labels(tag_scores.detach().cpu().numpy().flatten(), labels.detach().cpu().numpy().flatten(), labels= [int(key) for key in idx2tag.keys()])
+                scores, accuracy_score = compute_f1_score_for_labels(tag_scores.detach().cpu().numpy().flatten(), labels.detach().cpu().numpy().flatten(), labels= [int(key) for key in idx2tag.keys()])
                 # Compute the loss
                 loss = -model.crf(emissions, labels)
 
@@ -363,14 +366,16 @@ def main():
                 optimizer.step()
                 #print(scores)
                 epoch_loss += loss.item()
+                epoch_acc += accuracy_score
                 for i in range (len(epoch_f1)):
                     epoch_f1[i] += scores[i]['F1 Score']
                 # Update the tqdm progress bar with the current loss value
                 running_f1 = [item/(step+1) for item in epoch_f1]
-                train_loader_tqdm.set_postfix({f"f1 scores for tag B: {running_f1[0]:.4f}, tag I: {running_f1[1]:.4f}, tag O: {running_f1[2]:.4f}, tag E: {running_f1[3]:.4f} and Loss": epoch_loss / (step + 1)})
+                train_loader_tqdm.set_postfix({f"f1 scores for tag B: {running_f1[0]:.4f}, tag I: {running_f1[1]:.4f}, tag O: {running_f1[2]:.4f}, tag E: {running_f1[3]:.4f}, Acc: {epoch_acc/(step+1)}:.4f and Loss": epoch_loss / (step + 1)})
             epoch_f1 = [item/len(train_loader) for item in epoch_f1]
+            epoch_acc = epoch_acc/len(train_loader)
             # Update the outer tqdm progress bar with the current epoch loss value
-            tqdm.write(f'Epoch [{epoch+1}/{args.epochs}], Loss: {epoch_loss / len(train_loader):.4f}, f1 scores for tag B: {epoch_f1[0]:.4f}, tag I: {epoch_f1[1]:.4f}, tag O: {epoch_f1[2]:.4f}, tag E: {epoch_f1[3]:.4f}')
+            tqdm.write(f'Epoch [{epoch+1}/{args.epochs}], Loss: {epoch_loss / len(train_loader):.4f}, f1 scores for tag B: {epoch_f1[0]:.4f}, tag I: {epoch_f1[1]:.4f}, tag O: {epoch_f1[2]:.4f}, tag E: {epoch_f1[3]:.4f}, and Acc: {epoch_acc}:.4f')
 
         # Save the trained model
         model_path = os.path.join(args.model_dir, 'edu_segmentation_model.pt')
@@ -434,9 +439,12 @@ def main():
         with torch.no_grad():
             # Predict output for test set
             embeddings = embeddings.to(torch.float)
-            test_tag, _ = model(embeddings)
-            test_pred_tags = test_tag.detach().cpu().numpy().flatten().tolist()
-            test_tags = test_labels.detach().cpu().numpy().flatten().tolist()
+            test_labels = test_labels.to(device)
+            test_tag, emissions = model(embeddings)
+            loss = -model.crf(emissions, test_tags)
+            test_pred_tags = test_tag.detach().cpu().numpy().flatten()
+            test_tags = test_labels.detach().cpu().numpy().flatten()
+            scores, accuracy_score = compute_f1_score_for_labels(test_pred_tags, test_tags.detach(), labels= [int(key) for key in idx2tag.keys()])
             #test_pred = model.crf.decode(test_tag_scores)
             #scores = compute_f1_score_for_labels(test_tag_scores.detach().cpu().numpy().flatten(), test_labels.detach().cpu().numpy().flatten(), labels= idx2tag.keys())
             # Flatten both labels and predictions
@@ -447,18 +455,24 @@ def main():
             print("\n \n test_tags: ", test_tags)
             print("\n \n test_tags: ", type(test_tags))
             # Compute evaluation metrics
-            accuracy = accuracy_score(test_tags, test_pred_tags)
-            precision = precision_score(test_tags, test_pred_tags)
-            recall = recall_score(test_tags, test_pred_tags)
-            f1 = f1_score(test_tags, test_pred_tags)
-
-            print(f'Test Accuracy: {accuracy:.3f}')
-            print(f'Test Precision: {precision:.3f}')
-            print(f'Test Recall: {recall:.3f}')
-            print(f'Test F1-Score: {f1:.3f}')
+            #accuracy = accuracy_score(test_tags, test_pred_tags)
+            #precision = precision_score(test_tags, test_pred_tags)
+            #recall = recall_score(test_tags, test_pred_tags)
+            #f1 = f1_score(test_tags, test_pred_tags)
+            epoch_f1 = [0.0]*4
+            epoch_pre = [0.0]*4
+            epoch_re = [0.0]*4
+            for i in range (len(epoch_f1)):
+                    epoch_f1[i] += scores[i]['F1 Score']
+                    epoch_pre[i] += scores[i]['Precision']
+                    epoch_re[i] += scores[i]['Recall']
+            print(f'Test Accuracy: {accuracy_score:.3f}')
+            print(f'Test Precision: {epoch_pre:.3f}')
+            print(f'Test Recall: {epoch_re:.3f}')
+            print(f'Test F1-Score: {epoch_f1:.3f}')
 
             with open(os.path.join(args.results_dir, "edu_results.txt"), 'w') as file:
-                file.write(f'Test Accuracy: {accuracy:.3f}\nTest Precision: {precision:.3f}\nTest Recall: {recall:.3f}\nTest F1-Score: {f1:.3f}')
+                file.write(f'Loss: {loss.item():.4f}, f1 scores for tag B: {epoch_f1[0]:.4f}, tag I: {epoch_f1[1]:.4f}, tag O: {epoch_f1[2]:.4f}, tag E: {epoch_f1[3]:.4f}, and Acc: {epoch_acc}:.4f')
 
             # Generate confusion matrix
             confusion_matrix = multilabel_confusion_matrix(test_tags, test_pred_tags)
