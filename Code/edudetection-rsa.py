@@ -62,7 +62,7 @@ def parse_args():
     parser.add_argument('--batch_size', type=int,
                                 default=2, help='batch size')
     parser.add_argument('--epochs', type=int,
-                                default=100, help='train epochs')
+                                default=30, help='train epochs')
     parser.add_argument('--seed', type=int,
                                 default=42, help='the random seed')
     parser.add_argument('--tagset_size', type=int,
@@ -345,7 +345,7 @@ def main():
         train_labels = torch.tensor(train_labels, dtype=torch.long).to(device)
         print("getting empty embeddings tensor")
         if os.path.exists(os.path.join(args.rst_dir,'embeddings_train.pt')):
-            embeddings = torch.load('my_tensor.pt')
+            embeddings = torch.load('embeddings_train.pt')
         else:
             embeddings = torch.empty((len(train_inputs),args.max_length,args.hidden_dim), dtype=torch.float64).to(device)
             print("init model")

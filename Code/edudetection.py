@@ -62,7 +62,7 @@ def parse_args():
     parser.add_argument('--batch_size', type=int,
                                 default=2, help='batch size')
     parser.add_argument('--epochs', type=int,
-                                default=100, help='train epochs')
+                                default=30, help='train epochs')
     parser.add_argument('--seed', type=int,
                                 default=42, help='the random seed')
     parser.add_argument('--tagset_size', type=int,
