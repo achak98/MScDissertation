@@ -236,12 +236,10 @@ def validation(args,idx2tag,model, val_embeddings, val_labels):
     with torch.no_grad():
         # Predict output for test set
         val_embeddings = val_embeddings.to(torch.float)
-        loss = 0.0
         for i, (embedding, test_label) in enumerate(zip(val_embeddings,val_labels)):
             print("embedding in val: ",embedding.size())
             print("unsq embedding in val: ",embedding.unsqueeze(0).size())
-            output, emissions = model(embedding.unsqueeze(0))
-            loss -= model.crf(emissions, test_label.unsqueeze(0))
+            output, _ = model(embedding.unsqueeze(0))
             outputs[i] = output.squeeze()
         val_labels = val_labels.to(device)
         #outputs, emissions = model(val_embeddings)
@@ -302,7 +300,7 @@ def getValData(args, model):
                 outputs = encoder(input_id, attention_mask)
                 val_embeddings[i] = torch.tensor(outputs.last_hidden_state).squeeze()
             #print("embeddings.size(): ",val_embeddings.size())
-        torch.save(val_embeddings, os.path.join(args.rst_dir,'embeddings_test.pt'))
+        torch.save(val_embeddings, os.path.join(args.rst_dir,'embeddings_val.pt'))
     torch.cuda.empty_cache()
     return val_embeddings,val_labels
 
@@ -383,7 +381,7 @@ def main():
         # Create DataLoader for training data
         print(train_labels.size())
         print(embeddings.size())
-        train_dataset = torch.utils.data.TensorDataset(embeddings[:10], train_labels[:10])
+        train_dataset = torch.utils.data.TensorDataset(embeddings, train_labels)
         train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
         print("starting training")
         # Training loop
@@ -404,7 +402,7 @@ def main():
                 #print(f"type of inputs tensor: {inputs.dtype}, and type of labels tensor: {labels.dtype}") 
 
                 optimizer.zero_grad()  # Zero the gradients
-                print("inputs in train: ",inputs.size())
+                #print("inputs in train: ",inputs.size())
                 # Forward propagation
                 tag_scores, emissions = model(inputs)
 
@@ -433,13 +431,17 @@ def main():
             # Update the outer tqdm progress bar with the current epoch loss value
             val_accuracy_score, val_epoch_pre, val_epoch_f1, val_epoch_re = validation(args,idx2tag,model, val_embeddings, val_labels)
             
-            print(f'F1 scores for tag B: {epoch_f1[0]:.4f}, tag I: {epoch_f1[1]:.4f}, tag O: {epoch_f1[2]:.4f}, tag E: {epoch_f1[3]:.4f}')
-            tqdm.write(f'Epoch [{epoch+1}/{args.epochs}], Loss: {epoch_loss / len(train_loader):.4f}, f1 scores for tag B: {epoch_f1[0]:.4f}, tag I: {epoch_f1[1]:.4f}, tag O: {epoch_f1[2]:.4f}, tag E: {epoch_f1[3]:.4f}, and Acc: {epoch_acc}:.4f\n \
+            #print(f'F1 scores for tag B: {epoch_f1[0]:.4f}, tag I: {epoch_f1[1]:.4f}, tag O: {epoch_f1[2]:.4f}, tag E: {epoch_f1[3]:.4f}')
+            tqdm.write(f'-------------------------------------------------------------------------------------------------------------------------------------\n \
+                        Epoch [{epoch+1}/{args.epochs}], Loss: {epoch_loss / len(train_loader):.4f}, and Acc: {epoch_acc}:.4f \n \
+                        f1 scores for tag B: {epoch_f1[0]:.4f}, tag I: {epoch_f1[1]:.4f}, tag O: {epoch_f1[2]:.4f}, tag E: {epoch_f1[3]:.4f} \n \
                         Precision scores for tag B: {epoch_pre[0]:.4f}, tag I: {epoch_pre[1]:.4f}, tag O: {epoch_pre[2]:.4f}, tag E: {epoch_pre[3]:.4f} \n \
                         Recall scores for tag B: {epoch_re[0]:.4f}, tag I: {epoch_re[1]:.4f}, tag O: {epoch_re[2]:.4f}, tag E: {epoch_re[3]:.4f} \n \
+                        -------------------------------------------------------------------------------------------------------------------------------------\n \
                         Val Test Accuracy: {val_accuracy_score:.3f}, Val Precision scores for tag B: {val_epoch_pre[0]:.4f}, tag I: {val_epoch_pre[1]:.4f}, tag O: {val_epoch_pre[2]:.4f}, tag E: {val_epoch_pre[3]:.4f} \n \
                         Val Recall scores for tag B: {val_epoch_re[0]:.4f}, tag I: {val_epoch_re[1]:.4f}, tag O: {val_epoch_re[2]:.4f}, tag E: {val_epoch_re[3]:.4f} \n \
-                        Val F1 scores for tag B: {val_epoch_f1[0]:.4f}, tag I: {val_epoch_f1[1]:.4f}, tag O: {val_epoch_f1[2]:.4f}, tag E: {val_epoch_f1[3]:.4f}')
+                        Val F1 scores for tag B: {val_epoch_f1[0]:.4f}, tag I: {val_epoch_f1[1]:.4f}, tag O: {val_epoch_f1[2]:.4f}, tag E: {val_epoch_f1[3]:.4f} \n \
+                        -------------------------------------------------------------------------------------------------------------------------------------')
 
         # Save the trained model
         model_path = os.path.join(args.model_dir, 'edu_segmentation_model.pt')
@@ -532,7 +534,7 @@ def main():
                     epoch_f1[i] += scores[i]['F1 Score']
                     epoch_pre[i] += scores[i]['Precision']
                     epoch_re[i] += scores[i]['Recall']
-            print(f'Test Accuracy: {accuracy_score:.3f}')
+            print(f'Test Accuracy: {accuracy_score:.3f} and Test Loss: {loss:.3f}')
             print(f'Precision scores for tag B: {epoch_pre[0]:.4f}, tag I: {epoch_pre[1]:.4f}, tag O: {epoch_pre[2]:.4f}, tag E: {epoch_pre[3]:.4f}')
             print(f'Recall scores for tag B: {epoch_re[0]:.4f}, tag I: {epoch_re[1]:.4f}, tag O: {epoch_re[2]:.4f}, tag E: {epoch_re[3]:.4f}')
             print(f'F1 scores for tag B: {epoch_f1[0]:.4f}, tag I: {epoch_f1[1]:.4f}, tag O: {epoch_f1[2]:.4f}, tag E: {epoch_f1[3]:.4f}')
