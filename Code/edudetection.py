@@ -412,6 +412,8 @@ def main():
             device = torch.device(f"cuda:{device_idx}")
         embeddings = torch.tensor(embeddings).to(device)
         # Create DataLoader for training data
+        print(train_labels.size())
+        print(embeddings.size())
         train_dataset = torch.utils.data.TensorDataset(embeddings, train_labels)
         train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
         print("starting training")
