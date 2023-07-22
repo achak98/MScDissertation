@@ -258,7 +258,7 @@ class EDUPredictor(nn.Module):
 
         return torch.tensor(tag_scores), tag_space
 
-def validation(args,idx2tag):
+def validation(args,idx2tag,model):
     # Detect device (CPU or CUDA)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     test_data = pd.read_csv(os.path.join(args.rst_dir, 'preprocessed_data_test.csv'))[40:]
@@ -449,7 +449,7 @@ def main():
             epoch_f1 = [item/len(train_loader) for item in epoch_f1]
             epoch_acc = epoch_acc/len(train_loader)
             # Update the outer tqdm progress bar with the current epoch loss value
-            val_accuracy_score, val_epoch_pre, val_epoch_f1, val_epoch_re = validation(args,idx2tag)
+            val_accuracy_score, val_epoch_pre, val_epoch_f1, val_epoch_re = validation(args,idx2tag,model)
             
             print(f'F1 scores for tag B: {epoch_f1[0]:.4f}, tag I: {epoch_f1[1]:.4f}, tag O: {epoch_f1[2]:.4f}, tag E: {epoch_f1[3]:.4f}')
             tqdm.write(f'Epoch [{epoch+1}/{args.epochs}], Loss: {epoch_loss / len(train_loader):.4f}, f1 scores for tag B: {epoch_f1[0]:.4f}, tag I: {epoch_f1[1]:.4f}, tag O: {epoch_f1[2]:.4f}, tag E: {epoch_f1[3]:.4f}, and Acc: {epoch_acc}:.4f\n \
