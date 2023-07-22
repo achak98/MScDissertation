@@ -33,6 +33,7 @@ def compute_f1_score_for_labels(y_true, y_pred, labels):
 
     # Compute precision, recall, and F1 score for each label
     precision, recall, f1_score, _ = precision_recall_fscore_support(y_true, y_pred, labels=labels)
+    overall_f1 = f1_score(y_true, y_pred, average='weighted')
     correct = sum(1 for true_label, pred_label in zip(y_true, y_pred) if true_label == pred_label)
     total = len(y_true)
     accuracy = correct / total * 100.0
@@ -45,7 +46,7 @@ def compute_f1_score_for_labels(y_true, y_pred, labels):
             'F1 Score': f1_score[i]
         }
 
-    return label_scores, accuracy
+    return label_scores, accuracy, overall_f1
 
 def parse_args():
     parser = argparse.ArgumentParser('EDU segmentation toolkit 1.0')
@@ -74,7 +75,7 @@ def parse_args():
     parser.add_argument('--hidden_dim', type=int,
                                 default=768, help='hidden size')
     parser.add_argument('--max_grad_norm', type=float,
-                                default=1.0, help='gradient norm')
+                                default=3.0, help='gradient norm')
     parser.add_argument('--rst_dir', default='../Data/rst/',
                                help='the path of the rst data directory')
     parser.add_argument('--seg_data_path',
@@ -261,8 +262,8 @@ def validation(args,idx2tag,model, val_embeddings, val_labels):
         #print("idx2tag.keys(): ",idx2tag.keys())
         #print("test_pred_tags: ",test_pred_tags)
         #print("test_tags: ",test_tags)
-        scores, accuracy_score = compute_f1_score_for_labels(test_pred_tags, test_tags, labels= [int(key) for key in idx2tag.keys()])
-
+        scores, accuracy_score, overall_f1 = compute_f1_score_for_labels(test_pred_tags, test_tags, labels= [int(key) for key in idx2tag.keys()])
+        print("len(epoch_f1): ",len(epoch_f1))
         epoch_f1 = [0.0]*4
         epoch_pre = [0.0]*4
         epoch_re = [0.0]*4
@@ -270,7 +271,7 @@ def validation(args,idx2tag,model, val_embeddings, val_labels):
                 epoch_f1[i] += scores[i]['F1 Score']
                 epoch_pre[i] += scores[i]['Precision']
                 epoch_re[i] += scores[i]['Recall']
-        return accuracy_score, epoch_pre, epoch_f1, epoch_re
+        return accuracy_score, epoch_pre, epoch_f1, epoch_re, overall_f1
 
 def getValData(args, model):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -422,7 +423,7 @@ def main():
                 # Forward propagation
                 tag_scores, emissions = model(inputs)
 
-                scores, accuracy_score = compute_f1_score_for_labels(tag_scores.detach().to(torch.long).cpu().numpy().flatten(), labels.detach().cpu().numpy().flatten(), labels= [int(key) for key in idx2tag.keys()])
+                scores, accuracy_score, overall_f1 = compute_f1_score_for_labels(tag_scores.detach().to(torch.long).cpu().numpy().flatten(), labels.detach().cpu().numpy().flatten(), labels= [int(key) for key in idx2tag.keys()])
                 # Compute the loss
                 loss = -model.crf(emissions, labels)
 
@@ -443,24 +444,39 @@ def main():
                     epoch_re[i] += scores[i]['Recall']
                 # Update the tqdm progress bar with the current loss value
                 running_f1 = [item/(step+1) for item in epoch_f1]
-                train_loader_tqdm.set_postfix({f"f1 scores for tag B: {running_f1[0]:.4f}, tag I: {running_f1[1]:.4f}, tag O: {running_f1[2]:.4f}, tag E: {running_f1[3]:.4f}, Acc: {(epoch_acc/(step+1)):.4f} and Loss": epoch_loss / (step + 1)})
+                train_loader_tqdm.set_postfix({f"f1 scores for tag B: {running_f1[0]:.3f}, tag I: {running_f1[1]:.3f}, tag O: {running_f1[2]:.3f}, tag E: {running_f1[3]:.3f}, Acc: {(epoch_acc/(step+1)):.3f} and Loss": epoch_loss / (step + 1)})
             epoch_f1 = [item/len(train_loader) for item in epoch_f1]
             epoch_pre = [item/len(train_loader) for item in epoch_pre]
             epoch_re = [item/len(train_loader) for item in epoch_re]
             epoch_acc = epoch_acc/len(train_loader)
             # Update the outer tqdm progress bar with the current epoch loss value
-            val_accuracy_score, val_epoch_pre, val_epoch_f1, val_epoch_re = validation(args,idx2tag,model, val_embeddings, val_labels)
+            val_accuracy_score, val_epoch_pre, val_epoch_f1, val_epoch_re, val_overall_f1 = validation(args,idx2tag,model, val_embeddings, val_labels)
             
-            #print(f'F1 scores for tag B: {epoch_f1[0]:.4f}, tag I: {epoch_f1[1]:.4f}, tag O: {epoch_f1[2]:.4f}, tag E: {epoch_f1[3]:.4f}')
+            #print(f'F1 scores for tag B: {epoch_f1[0]:.3f}, tag I: {epoch_f1[1]:.3f}, tag O: {epoch_f1[2]:.3f}, tag E: {epoch_f1[3]:.3f}')
             tqdm.write(f'-------------------------------------------------------------------------------------------------------------------------------------\n \
-                        Epoch [{epoch+1}/{args.epochs}], Loss: {epoch_loss / len(train_loader):.4f}, and Acc: {epoch_acc}:.4f \n \
-                        f1 scores for tag B: {epoch_f1[0]:.4f}, tag I: {epoch_f1[1]:.4f}, tag O: {epoch_f1[2]:.4f}, tag E: {epoch_f1[3]:.4f} \n \
-                        Precision scores for tag B: {epoch_pre[0]:.4f}, tag I: {epoch_pre[1]:.4f}, tag O: {epoch_pre[2]:.4f}, tag E: {epoch_pre[3]:.4f} \n \
-                        Recall scores for tag B: {epoch_re[0]:.4f}, tag I: {epoch_re[1]:.4f}, tag O: {epoch_re[2]:.4f}, tag E: {epoch_re[3]:.4f} \n \
+                        Epoch [{epoch+1}/{args.epochs}], Loss: {epoch_loss / len(train_loader):.3f}\n \
+                        Acc: {epoch_acc:.3f} and Test Acc: {val_accuracy_score:.3f}\n \
+                        Overall F1: {overall_f1:.3f} Val Overall F1: {val_overall_f1:.3f} \n\
                         -------------------------------------------------------------------------------------------------------------------------------------\n \
-                        Val Test Accuracy: {val_accuracy_score:.3f}, Val Precision scores for tag B: {val_epoch_pre[0]:.4f}, tag I: {val_epoch_pre[1]:.4f}, tag O: {val_epoch_pre[2]:.4f}, tag E: {val_epoch_pre[3]:.4f} \n \
-                        Val Recall scores for tag B: {val_epoch_re[0]:.4f}, tag I: {val_epoch_re[1]:.4f}, tag O: {val_epoch_re[2]:.4f}, tag E: {val_epoch_re[3]:.4f} \n \
-                        Val F1 scores for tag B: {val_epoch_f1[0]:.4f}, tag I: {val_epoch_f1[1]:.4f}, tag O: {val_epoch_f1[2]:.4f}, tag E: {val_epoch_f1[3]:.4f} \n \
+                        for tag B: \n\
+                        Train F1: {epoch_f1[0]:.3f}, Val F1: {val_epoch_f1[0]:.3f} \n \
+                        Train Precision: {epoch_pre[0]:.3f}, Val Precision: {val_epoch_pre[0]:.3f} \n \
+                        Train Recall: {epoch_re[0]:.3f}, Val Recall: {val_epoch_re[0]:.3f} \n \
+                        -------------------------------------------------------------------------------------------------------------------------------------\n \
+                        for tag I: \n\
+                        Train F1: {epoch_f1[1]:.3f}, Val F1: {val_epoch_f1[1]:.3f} \n \
+                        Train Precision: {epoch_pre[1]:.3f}, Val Precision: {val_epoch_pre[1]:.3f} \n \
+                        Train Recall: {epoch_re[1]:.3f}, Val Recall: {val_epoch_re[1]:.3f} \n \
+                        -------------------------------------------------------------------------------------------------------------------------------------\n \
+                        for tag O: \n\
+                        Train F1: {epoch_f1[2]:.3f}, Val F1: {val_epoch_f1[2]:.3f} \n \
+                        Train Precision: {epoch_pre[2]:.3f}, Val Precision: {val_epoch_pre[2]:.3f} \n \
+                        Train Recall: {epoch_re[2]:.3f}, Val Recall: {val_epoch_re[2]:.3f} \n \
+                        -------------------------------------------------------------------------------------------------------------------------------------\n \
+                        for tag E: \n\
+                        Train F1: {epoch_f1[3]:.3f}, Val F1: {val_epoch_f1[3]:.3f} \n \
+                        Train Precision: {epoch_pre[3]:.3f}, Val Precision: {val_epoch_pre[3]:.3f} \n \
+                        Train Recall: {epoch_re[3]:.3f}, Val Recall: {val_epoch_re[3]:.3f} \n \
                         -------------------------------------------------------------------------------------------------------------------------------------')
 
         # Save the trained model
@@ -532,7 +548,7 @@ def main():
             loss = -model.crf(emissions, test_labels)
             test_pred_tags = outputs.detach().cpu().numpy().flatten()
             test_tags = test_labels.detach().cpu().numpy().flatten()
-            scores, accuracy_score = compute_f1_score_for_labels(test_pred_tags, test_tags, labels= [int(key) for key in idx2tag.keys()])
+            scores, accuracy_score, test_overall_f1 = compute_f1_score_for_labels(test_pred_tags, test_tags, labels= [int(key) for key in idx2tag.keys()])
             #test_pred = model.crf.decode(test_tag_scores)
             #scores = compute_f1_score_for_labels(test_tag_scores.detach().cpu().numpy().flatten(), test_labels.detach().cpu().numpy().flatten(), labels= idx2tag.keys())
             # Flatten both labels and predictions
@@ -554,13 +570,32 @@ def main():
                     epoch_f1[i] += scores[i]['F1 Score']
                     epoch_pre[i] += scores[i]['Precision']
                     epoch_re[i] += scores[i]['Recall']
-            print(f'Test Accuracy: {accuracy_score:.3f} and Test Loss: {loss:.3f}')
-            print(f'Precision scores for tag B: {epoch_pre[0]:.4f}, tag I: {epoch_pre[1]:.4f}, tag O: {epoch_pre[2]:.4f}, tag E: {epoch_pre[3]:.4f}')
-            print(f'Recall scores for tag B: {epoch_re[0]:.4f}, tag I: {epoch_re[1]:.4f}, tag O: {epoch_re[2]:.4f}, tag E: {epoch_re[3]:.4f}')
-            print(f'F1 scores for tag B: {epoch_f1[0]:.4f}, tag I: {epoch_f1[1]:.4f}, tag O: {epoch_f1[2]:.4f}, tag E: {epoch_f1[3]:.4f}')
+            print(f'-------------------------------------------------------------------------------------------------------------------------------------\n \
+                        Acc: {accuracy_score:.3f} Overall F1: {test_overall_f1:.3f} \n\
+                        -------------------------------------------------------------------------------------------------------------------------------------\n \
+                        for tag B: \n\
+                        Test F1: {epoch_f1[0]:.3f}\n \
+                        Test Precision: {epoch_pre[0]:.3f}\n \
+                        Test Recall: {epoch_re[0]:.3f}\n \
+                        -------------------------------------------------------------------------------------------------------------------------------------\n \
+                        for tag I: \n\
+                        Test F1: {epoch_f1[1]:.3f}\n \
+                        Test Precision: {epoch_pre[1]:.3f}\n \
+                        Test Recall: {epoch_re[1]:.3f}\n \
+                        -------------------------------------------------------------------------------------------------------------------------------------\n \
+                        for tag O: \n\
+                        Test F1: {epoch_f1[2]:.3f}\n \
+                        Test Precision: {epoch_pre[2]:.3f}\n \
+                        Test Recall: {epoch_re[2]:.3f}\n \
+                        -------------------------------------------------------------------------------------------------------------------------------------\n \
+                        for tag E: \n\
+                        Test F1: {epoch_f1[3]:.3f}\n \
+                        Test Precision: {epoch_pre[3]:.3f}\n \
+                        Test Recall: {epoch_re[3]:.3f}\n \
+                        -------------------------------------------------------------------------------------------------------------------------------------')
 
             with open(os.path.join(args.result_dir, "edu_results.txt"), 'w') as file:
-                file.write(f'Loss: {loss.item():.4f}, f1 scores for tag B: {epoch_f1[0]:.4f}, tag I: {epoch_f1[1]:.4f}, tag O: {epoch_f1[2]:.4f}, tag E: {epoch_f1[3]:.4f}, and Acc: {accuracy_score}:.4f')
+                file.write(f'Loss: {loss.item():.3f}, f1 scores for tag B: {epoch_f1[0]:.3f}, tag I: {epoch_f1[1]:.3f}, tag O: {epoch_f1[2]:.3f}, tag E: {epoch_f1[3]:.3f}, and Acc: {accuracy_score}:.3f')
 
             # Generate confusion matrix
             confusion_matrix = multilabel_confusion_matrix(test_tags, test_pred_tags)
