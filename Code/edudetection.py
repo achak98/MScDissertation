@@ -309,11 +309,6 @@ def validation(args,idx2tag,model):
     outputs = torch.empty(embeddings.size(), dtype=torch.float).to(device)
     embeddings = torch.tensor(embeddings).to(device)[:10]
     print("embeddings in val: ",embeddings)
-    # Load the trained model
-    model_path = os.path.join(args.model_dir, 'edu_segmentation_model.pt')
-    model.load_state_dict(torch.load(model_path))
-    model = model.to(device)
-    print(f"Loaded trained model from: {model_path}")
 
     # Evaluation
     model.eval()  # Set model to evaluation mode
@@ -321,9 +316,9 @@ def validation(args,idx2tag,model):
         # Predict output for test set
         embeddings = embeddings.to(torch.float)
         loss = 0.0
-        for i, embedding in enumerate(embeddings):
+        for i, (embedding, test_label) in enumerate(zip(embeddings,test_labels)):
             output, emissions = model(embedding.unsqueeze(0))
-            loss -= model.crf(emissions, test_labels)
+            loss -= model.crf(emissions, test_label.unsqueeze(0))
             outputs[i] = output.squeeze()
         test_labels = test_labels.to(device)
         #outputs, emissions = model(embeddings)
