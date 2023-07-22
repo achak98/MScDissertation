@@ -32,7 +32,7 @@ def compute_f1_score_for_labels(y_true, y_pred, labels):
     #y_pred_flat = [label for sublist in y_pred for label in sublist]
 
     # Compute precision, recall, and F1 score for each label
-    precision, recall, f1_score, _ = precision_recall_fscore_support(y_true, y_pred, labels=labels)
+    precision, recall, f1_score_for_label, _ = precision_recall_fscore_support(y_true, y_pred, labels=labels)
     print(type(y_true))
     print(type(y_true.tolist()))
     print(type(y_true[0]))
@@ -51,7 +51,7 @@ def compute_f1_score_for_labels(y_true, y_pred, labels):
         label_scores[label] = {
             'Precision': precision[i],
             'Recall': recall[i],
-            'F1 Score': f1_score[i]
+            'F1 Score': f1_score_for_label[i]
         }
 
     return label_scores, accuracy, overall_f1
