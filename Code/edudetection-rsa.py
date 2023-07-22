@@ -32,18 +32,21 @@ def compute_f1_score_for_labels(y_true, y_pred, labels):
     #y_pred_flat = [label for sublist in y_pred for label in sublist]
 
     # Compute precision, recall, and F1 score for each label
-    precision, recall, f1_score, _ = precision_recall_fscore_support(y_true, y_pred, labels=labels)
-
+    precision, recall, f1_score_for_label, support = precision_recall_fscore_support(y_true, y_pred, labels=labels)
+    overall_f1 = (f1_score_for_label[0]*support[0] + f1_score_for_label[1]*support[1] + f1_score_for_label[2]*support[2] + f1_score_for_label[3]*support[3])/(support[0]+support[1]+support[2]+support[3])
+    correct = sum(1 for true_label, pred_label in zip(y_true, y_pred) if true_label == pred_label)
+    total = len(y_true)
+    accuracy = correct / total * 100.0
     # Create a dictionary to store the results for each label
     label_scores = {}
     for i, label in enumerate(labels):
         label_scores[label] = {
             'Precision': precision[i],
             'Recall': recall[i],
-            'F1 Score': f1_score[i]
+            'F1 Score': f1_score_for_label[i]
         }
 
-    return label_scores
+    return label_scores, accuracy, overall_f1
 
 def parse_args():
     parser = argparse.ArgumentParser('EDU segmentation toolkit 1.0')
@@ -52,15 +55,17 @@ def parse_args():
     parser.add_argument('--train', action='store_true', help='train the segmentation model')
     parser.add_argument('--evaluate', action='store_true', help='evaluate the model')
     parser.add_argument('--segment', action='store_true', help='segment new files or input text')
-
+    parser.add_argument('--get_embeddings_anyway', action='store_true', help='train the segmentation model')
     parser.add_argument('--regex_pattern', default= r'\b\w+\b|[.,:\n&!]')
-    parser.add_argument('--max_length', type=int, default= 18432)
+    parser.add_argument('--max_length', type=int, default= 2048)
     parser.add_argument('--learning_rate', type=float,
                                 default=3e-4, help='learning rate')
     parser.add_argument('--weight_decay', type=float,
-                                default=3e-4, help='weight decay')
+                                default=1e-3, help='weight decay')
+    parser.add_argument('--dropout', type=float,
+                                default=0.2, help='weight decay')
     parser.add_argument('--batch_size', type=int,
-                                default=2, help='batch size')
+                                default=1, help='batch size')
     parser.add_argument('--epochs', type=int,
                                 default=30, help='train epochs')
     parser.add_argument('--seed', type=int,
@@ -70,7 +75,7 @@ def parse_args():
     parser.add_argument('--hidden_dim', type=int,
                                 default=768, help='hidden size')
     parser.add_argument('--max_grad_norm', type=float,
-                                default=1.0, help='gradient norm')
+                                default=3.0, help='gradient norm')
     parser.add_argument('--rst_dir', default='../Data/rst/',
                                help='the path of the rst data directory')
     parser.add_argument('--seg_data_path',
@@ -81,27 +86,6 @@ def parse_args():
                                help='the directory to save edu segmentation results')
     parser.add_argument('--log_path', help='the file to output log')
     return parser.parse_args()
-
-
-def manual_batching(tensor, batch_size):
-    num_samples = tensor.size(0)
-    num_batches = (num_samples + batch_size - 1) // batch_size
-
-    # Create a list to store the batches
-    batches = []
-
-    for i in range(num_batches):
-        # Calculate the start and end indices for the current batch
-        start_idx = i * batch_size
-        end_idx = min((i + 1) * batch_size, num_samples)
-
-        # Extract the current batch from the tensor
-        batch = tensor[start_idx:end_idx]
-
-        # Append the batch to the list
-        batches.append(batch)
-
-    return batches
 
 def find_sequence_spans(text, target_sequences, model, args):
     sequence_spans = []
@@ -186,23 +170,6 @@ def preprocess_RST_Discourse_dataset(path_data, tag2idx, args, model):
     df = pd.DataFrame(data, columns=['Text', 'Attention Mask', 'BIOE'])
     print(messed_up_ones)
     return df
-
-class ModifiedSelfAttention(nn.Module):
-    def __init__(self, hidden_dim):
-        super(ModifiedSelfAttention, self).__init__()
-        self.projection = nn.Sequential(
-            nn.Linear(hidden_dim*2, hidden_dim),  # Project to hidden_dim
-            nn.ReLU(True),
-            nn.Linear(hidden_dim, hidden_dim)  # Output with shape hidden_dim
-        )
-
-    def forward(self, encoder_outputs):
-        energy = self.projection(encoder_outputs)
-        #print("energy.shape(): ",energy.size())
-        weights = nn.functional.softmax(energy, dim=1)  # Apply softmax along the token dimension
-        #print("weights.shape(): ",weights.size())
-        outputs = torch.bmm(energy,weights.permute(0, 2, 1))  # Weighted sum of encoder outputs
-        return outputs, weights
 
 class EDUPredictor(nn.Module):
     def __init__(self, tagset_size=4, hidden_dim=768, max_length=18432, window_size = 5):
@@ -305,6 +272,92 @@ class EDUPredictor(nn.Module):
         return torch.tensor(tag_scores), output_sum
 
 
+def validation(args,idx2tag,model, val_embeddings, val_labels):
+    # Detect device (CPU or CUDA)
+    torch.cuda.empty_cache()
+    device_idx = 1
+    if torch.cuda.is_available() and torch.cuda.device_count() >= device_idx + 1:
+        device = torch.device(f"cuda:{device_idx}")
+    outputs = torch.empty((len(val_labels),args.max_length), dtype=torch.float).to(device)
+    val_embeddings = torch.tensor(val_embeddings).to(device)
+    val_labels = val_labels.to(device)
+    #print("embeddings in val: ",val_embeddings)
+
+    # Evaluation
+    model.eval()  # Set model to evaluation mode
+    with torch.no_grad():
+        # Predict output for test set
+        val_embeddings = val_embeddings.to(torch.float)
+        for i, (embedding, test_label) in enumerate(zip(val_embeddings,val_labels)):
+            #print("embedding in val: ",embedding.size())
+            #print("unsq embedding in val: ",embedding.unsqueeze(0).size())
+            output, _ = model(embedding.unsqueeze(0))
+            outputs[i] = output.squeeze()
+        val_labels = val_labels.to(device)
+        #outputs, emissions = model(val_embeddings)
+        test_pred_tags = outputs.detach().to(torch.long).cpu().numpy().flatten()
+        test_tags = val_labels.detach().cpu().numpy().flatten()
+        #print("idx2tag.keys(): ",idx2tag.keys())
+        #print("test_pred_tags: ",test_pred_tags)
+        #print("test_tags: ",test_tags)
+        scores, accuracy_score, overall_f1 = compute_f1_score_for_labels(test_pred_tags, test_tags, labels= [int(key) for key in idx2tag.keys()])
+        epoch_f1 = [0.0]*4
+        epoch_pre = [0.0]*4
+        epoch_re = [0.0]*4
+        for i in range (len(epoch_f1)):
+                epoch_f1[i] += scores[i]['F1 Score']
+                epoch_pre[i] += scores[i]['Precision']
+                epoch_re[i] += scores[i]['Recall']
+        return accuracy_score, epoch_pre, epoch_f1, epoch_re, overall_f1
+
+def getValData(args, model):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    val_data = pd.read_csv(os.path.join(args.rst_dir, 'preprocessed_data_test.csv'))
+        
+    val_data['Text'] = val_data['Text'].tolist()
+    for i in range(len(val_data['Text'])):
+        #print(test_data['Text'].iloc[i])
+        val_data['Text'].iloc[i] =  np.array(ast.literal_eval(val_data['Text'].iloc[i]))
+        val_data['Text'].iloc[i] = [int(item) for item in val_data['Text'].iloc[i]]
+    test_inputs = torch.cat((torch.tensor(np.array(val_data['Text'].tolist()))[:4], torch.tensor(np.array(val_data['Text'].tolist()))[-4:]), dim=0)
+    attention_masks = val_data['Attention Mask' ].tolist()
+    for i in range(len(val_data['Attention Mask'])):
+        val_data['Attention Mask'].iloc[i] =  np.array(ast.literal_eval(val_data['Attention Mask'].iloc[i]))
+        val_data['Attention Mask'].iloc[i] = [int(item) for item in val_data['Attention Mask'].iloc[i]]
+    attention_masks = torch.cat((torch.tensor(np.array(val_data['Attention Mask' ].tolist()))[:4], torch.tensor(np.array(val_data['Attention Mask' ].tolist()))[-4:]), dim=0)
+    
+    val_labels = val_data['BIOE'].tolist()
+    val_labels = [ast.literal_eval(label_list) for label_list in val_labels]
+    val_labels = torch.cat(((torch.tensor(val_labels, dtype=torch.long).to(device))[:4], torch.tensor(val_labels, dtype=torch.long).to(device))[-4:], dim=0)
+    #print("val_labels: ",val_labels)
+    print("getting empty embeddings tensor")
+    #print("args.get_embeddings_anyway in val: ", args.get_embeddings_anyway)
+    if (not args.get_embeddings_anyway) and os.path.exists(os.path.join(args.rst_dir,'embeddings_val.pt')):
+        val_embeddings = torch.load(os.path.join(args.rst_dir,'embeddings_val.pt'))
+        print(f"val embeddings loaded from {os.path.join(args.rst_dir,'embeddings_val.pt')}")
+    else:
+        print(f"getting val embeddings...")
+        val_embeddings = torch.empty((len(test_inputs),args.max_length,args.hidden_dim), dtype=torch.float64).to(device)
+        print("init model")
+        with torch.no_grad():
+            input_ids = test_inputs.to(device)
+            #print("input_ids in val: ",input_ids)
+            #print("input_ids shape: ",input_ids.size())
+            attention_masks = attention_masks.to(device) 
+            encoder = AutoModel.from_pretrained(model.transformer_architecture, config=model.config)
+            encoder = encoder.to(device)
+            print("starting tqdm")
+            for i in tqdm(range(len(input_ids))):
+                input_id = input_ids[i].unsqueeze(0)
+                attention_mask = attention_masks[i].unsqueeze(0)
+                # Obtain deberta embeddings for the current item
+                outputs = encoder(input_id, attention_mask)
+                val_embeddings[i] = torch.tensor(outputs.last_hidden_state).squeeze()
+            #print("embeddings.size(): ",val_embeddings.size())
+        torch.save(val_embeddings, os.path.join(args.rst_dir,'embeddings_val.pt'))
+    torch.cuda.empty_cache()
+    return val_embeddings,val_labels
+
 def main():
     args = parse_args()
 
@@ -316,7 +369,7 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
     # Initialize the model
-    model = EDUPredictor(tagset_size=len(idx2tag.keys()), hidden_dim=args.hidden_dim, max_length = args.max_length).to(device)
+    model = EDUPredictor(args).to(device)
 
     if args.prepare:
         # Use the function
@@ -350,10 +403,12 @@ def main():
         train_labels = train_data['BIOE'].tolist()
         train_labels = [ast.literal_eval(label_list) for label_list in train_labels]
         train_labels = torch.tensor(train_labels, dtype=torch.long).to(device)
-        print("getting empty embeddings tensor")
-        if os.path.exists(os.path.join(args.rst_dir,'embeddings_train.pt')):
+
+        if (not args.get_embeddings_anyway) and os.path.exists(os.path.join(args.rst_dir,'embeddings_train.pt')):
             embeddings = torch.load(os.path.join(args.rst_dir,'embeddings_train.pt'))
+            print(f"train embeddings loaded from {os.path.join(args.rst_dir,'embeddings_train.pt')}")
         else:
+            print(f"getting train embeddings...")
             embeddings = torch.empty((len(train_inputs),args.max_length,args.hidden_dim), dtype=torch.float64).to(device)
             print("init model")
             with torch.no_grad():
@@ -369,21 +424,28 @@ def main():
                     # Obtain deberta embeddings for the current item
                     outputs = encoder(input_id, attention_mask)
                     embeddings[i] = torch.tensor(outputs.last_hidden_state).squeeze()
-                print("embeddings.size(): ",embeddings.size())
+                #print("embeddings.size(): ",embeddings.size())
             torch.save(embeddings, os.path.join(args.rst_dir,'embeddings_train.pt'))
         torch.cuda.empty_cache()
+        val_embeddings, val_labels = getValData(args, model)
         device_idx = 1
         if torch.cuda.is_available() and torch.cuda.device_count() >= device_idx + 1:
             device = torch.device(f"cuda:{device_idx}")
         embeddings = torch.tensor(embeddings).to(device)
         # Create DataLoader for training data
+        #print(train_labels.size())
+        #print(embeddings.size())
         train_dataset = torch.utils.data.TensorDataset(embeddings, train_labels)
         train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
         print("starting training")
         # Training loop
         for epoch in tqdm(range(args.epochs), desc='Epochs'):
             epoch_loss = 0.0
+            epoch_acc = 0.0
             epoch_f1 = [0.0] * 4
+            epoch_pre = [0.0] * 4
+            epoch_re = [0.0] * 4
+            epoch_overall_f1 = 0.0
             model = model.to(device)
             model.train()  # Set model to training mode
 
@@ -395,36 +457,73 @@ def main():
                 #print(f"type of inputs tensor: {inputs.dtype}, and type of labels tensor: {labels.dtype}") 
 
                 optimizer.zero_grad()  # Zero the gradients
-
+                #print("inputs in train: ",inputs.size())
                 # Forward propagation
                 tag_scores, emissions = model(inputs)
 
-                scores = compute_f1_score_for_labels(tag_scores.detach().cpu().numpy().flatten(), labels.detach().cpu().numpy().flatten(), labels= [int(key) for key in idx2tag.keys()])
+                scores, accuracy_score, overall_f1 = compute_f1_score_for_labels(tag_scores.detach().to(torch.long).cpu().numpy().flatten(), labels.detach().cpu().numpy().flatten(), labels= [int(key) for key in idx2tag.keys()])
                 # Compute the loss
                 loss = -model.crf(emissions, labels)
 
                 # Backward propagation
                 loss.backward()
 
+                # Gradient clipping
+                nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
 
                 # Optimization step
                 optimizer.step()
                 #print(scores)
                 epoch_loss += loss.item()
+                epoch_acc += accuracy_score
+                epoch_overall_f1 += overall_f1
                 for i in range (len(epoch_f1)):
                     epoch_f1[i] += scores[i]['F1 Score']
+                    epoch_pre[i] += scores[i]['Precision']
+                    epoch_re[i] += scores[i]['Recall']
                 # Update the tqdm progress bar with the current loss value
                 running_f1 = [item/(step+1) for item in epoch_f1]
-                train_loader_tqdm.set_postfix({f"f1 scores for tag B: {running_f1[0]:.4f}, tag I: {running_f1[1]:.4f}, tag O: {running_f1[2]:.4f}, tag E: {running_f1[3]:.4f} and Loss": epoch_loss / (step + 1)})
+                train_loader_tqdm.set_postfix({f"f1 scores for tag B: {running_f1[0]:.3f}, tag I: {running_f1[1]:.3f}, tag O: {running_f1[2]:.3f}, tag E: {running_f1[3]:.3f}, Acc: {(epoch_acc/(step+1)):.3f} and Loss": epoch_loss / (step + 1)})
             epoch_f1 = [item/len(train_loader) for item in epoch_f1]
+            epoch_pre = [item/len(train_loader) for item in epoch_pre]
+            epoch_re = [item/len(train_loader) for item in epoch_re]
+            epoch_acc = epoch_acc/len(train_loader)
+            epoch_overall_f1 = epoch_overall_f1/len(train_loader)
             # Update the outer tqdm progress bar with the current epoch loss value
-            tqdm.write(f'Epoch [{epoch+1}/{args.epochs}], Loss: {epoch_loss / len(train_loader):.4f}, f1 scores for tag B: {epoch_f1[0]:.4f}, tag I: {epoch_f1[1]:.4f}, tag O: {epoch_f1[2]:.4f}, tag E: {epoch_f1[3]:.4f}')
+            val_accuracy_score, val_epoch_pre, val_epoch_f1, val_epoch_re, val_overall_f1 = validation(args,idx2tag,model, val_embeddings, val_labels)
+            
+            #print(f'F1 scores for tag B: {epoch_f1[0]:.3f}, tag I: {epoch_f1[1]:.3f}, tag O: {epoch_f1[2]:.3f}, tag E: {epoch_f1[3]:.3f}')
+            tqdm.write(f'-------------------------------------------------------------------------------------------------------------------------------------\n \
+                        Epoch [{epoch+1}/{args.epochs}], Loss: {epoch_loss / len(train_loader):.3f}\n \
+                        Acc: {epoch_acc:.3f} and Test Acc: {val_accuracy_score:.3f}\n \
+                        Overall F1: {overall_f1:.3f} Val Overall F1: {val_overall_f1:.3f} \n\
+                        -------------------------------------------------------------------------------------------------------------------------------------\n \
+                        for tag B: \n\
+                        Train F1: {epoch_f1[0]:.3f}, Val F1: {val_epoch_f1[0]:.3f} \n \
+                        Train Precision: {epoch_pre[0]:.3f}, Val Precision: {val_epoch_pre[0]:.3f} \n \
+                        Train Recall: {epoch_re[0]:.3f}, Val Recall: {val_epoch_re[0]:.3f} \n \
+                        -------------------------------------------------------------------------------------------------------------------------------------\n \
+                        for tag I: \n\
+                        Train F1: {epoch_f1[1]:.3f}, Val F1: {val_epoch_f1[1]:.3f} \n \
+                        Train Precision: {epoch_pre[1]:.3f}, Val Precision: {val_epoch_pre[1]:.3f} \n \
+                        Train Recall: {epoch_re[1]:.3f}, Val Recall: {val_epoch_re[1]:.3f} \n \
+                        -------------------------------------------------------------------------------------------------------------------------------------\n \
+                        for tag O: \n\
+                        Train F1: {epoch_f1[2]:.3f}, Val F1: {val_epoch_f1[2]:.3f} \n \
+                        Train Precision: {epoch_pre[2]:.3f}, Val Precision: {val_epoch_pre[2]:.3f} \n \
+                        Train Recall: {epoch_re[2]:.3f}, Val Recall: {val_epoch_re[2]:.3f} \n \
+                        -------------------------------------------------------------------------------------------------------------------------------------\n \
+                        for tag E: \n\
+                        Train F1: {epoch_f1[3]:.3f}, Val F1: {val_epoch_f1[3]:.3f} \n \
+                        Train Precision: {epoch_pre[3]:.3f}, Val Precision: {val_epoch_pre[3]:.3f} \n \
+                        Train Recall: {epoch_re[3]:.3f}, Val Recall: {val_epoch_re[3]:.3f} \n \
+                        -------------------------------------------------------------------------------------------------------------------------------------')
 
         # Save the trained model
         model_path = os.path.join(args.model_dir, 'edu_segmentation_model.pt')
         torch.save(model.state_dict(), model_path)
         print(f"Trained model saved to: {model_path}")
-
+    torch.cuda.empty_cache()
     if args.evaluate:
         test_data = pd.read_csv(os.path.join(args.rst_dir, 'preprocessed_data_test.csv'))
         
@@ -445,9 +544,11 @@ def main():
         test_labels = [ast.literal_eval(label_list) for label_list in test_labels]
         test_labels = torch.tensor(test_labels, dtype=torch.long).to(device)
         print("getting empty embeddings tensor")
-        if os.path.exists(os.path.join(args.rst_dir,'embeddings_test.pt')):
+        if (not args.get_embeddings_anyway) and os.path.exists(os.path.join(args.rst_dir,'embeddings_test.pt')):
             embeddings = torch.load(os.path.join(args.rst_dir,'embeddings_test.pt'))
+            print(f"test embeddings loaded from {os.path.join(args.rst_dir,'embeddings_test.pt')}")
         else:
+            print(f"getting test embeddings...")
             embeddings = torch.empty((len(test_inputs),args.max_length,args.hidden_dim), dtype=torch.float64).to(device)
             print("init model")
             with torch.no_grad():
@@ -482,28 +583,59 @@ def main():
         with torch.no_grad():
             # Predict output for test set
             embeddings = embeddings.to(torch.float)
-            test_tag = model(embeddings)
-            test_pred_tags = test_tag.detach().cpu().numpy().flatten()
+            test_labels = test_labels.to(device)
+            outputs, emissions = model(embeddings)
+            loss = -model.crf(emissions, test_labels)
+            test_pred_tags = outputs.detach().cpu().numpy().flatten()
             test_tags = test_labels.detach().cpu().numpy().flatten()
+            scores, accuracy_score, test_overall_f1 = compute_f1_score_for_labels(test_pred_tags, test_tags, labels= [int(key) for key in idx2tag.keys()])
             #test_pred = model.crf.decode(test_tag_scores)
             #scores = compute_f1_score_for_labels(test_tag_scores.detach().cpu().numpy().flatten(), test_labels.detach().cpu().numpy().flatten(), labels= idx2tag.keys())
             # Flatten both labels and predictions
             #test_tags = [idx2tag[i] for row in test_labels for i in row]
             #test_pred_tags = [idx2tag[i] for row in test_pred.detach().cpu().numpy().flatten() for i in row]
-
+            print("\n \n test_pred_tags: ",test_pred_tags)
+            print("\n \n test_pred_tags: ",type(test_pred_tags))
+            print("\n \n test_tags: ", test_tags)
+            print("\n \n test_tags: ", type(test_tags))
             # Compute evaluation metrics
-            accuracy = accuracy_score(test_tags, test_pred_tags)
-            precision = precision_score(test_tags, test_pred_tags)
-            recall = recall_score(test_tags, test_pred_tags)
-            f1 = f1_score(test_tags, test_pred_tags)
-
-            print(f'Test Accuracy: {accuracy:.3f}')
-            print(f'Test Precision: {precision:.3f}')
-            print(f'Test Recall: {recall:.3f}')
-            print(f'Test F1-Score: {f1:.3f}')
+            #accuracy = accuracy_score(test_tags, test_pred_tags)
+            #precision = precision_score(test_tags, test_pred_tags)
+            #recall = recall_score(test_tags, test_pred_tags)
+            #f1 = f1_score(test_tags, test_pred_tags)
+            epoch_f1 = [0.0]*4
+            epoch_pre = [0.0]*4
+            epoch_re = [0.0]*4
+            for i in range (len(epoch_f1)):
+                    epoch_f1[i] += scores[i]['F1 Score']
+                    epoch_pre[i] += scores[i]['Precision']
+                    epoch_re[i] += scores[i]['Recall']
+            print(f'-------------------------------------------------------------------------------------------------------------------------------------\n \
+                        Acc: {accuracy_score:.3f} Overall F1: {test_overall_f1:.3f} \n\
+                        -------------------------------------------------------------------------------------------------------------------------------------\n \
+                        for tag B: \n\
+                        Test F1: {epoch_f1[0]:.3f}\n \
+                        Test Precision: {epoch_pre[0]:.3f}\n \
+                        Test Recall: {epoch_re[0]:.3f}\n \
+                        -------------------------------------------------------------------------------------------------------------------------------------\n \
+                        for tag I: \n\
+                        Test F1: {epoch_f1[1]:.3f}\n \
+                        Test Precision: {epoch_pre[1]:.3f}\n \
+                        Test Recall: {epoch_re[1]:.3f}\n \
+                        -------------------------------------------------------------------------------------------------------------------------------------\n \
+                        for tag O: \n\
+                        Test F1: {epoch_f1[2]:.3f}\n \
+                        Test Precision: {epoch_pre[2]:.3f}\n \
+                        Test Recall: {epoch_re[2]:.3f}\n \
+                        -------------------------------------------------------------------------------------------------------------------------------------\n \
+                        for tag E: \n\
+                        Test F1: {epoch_f1[3]:.3f}\n \
+                        Test Precision: {epoch_pre[3]:.3f}\n \
+                        Test Recall: {epoch_re[3]:.3f}\n \
+                        -------------------------------------------------------------------------------------------------------------------------------------')
 
             with open(os.path.join(args.result_dir, "edu_results.txt"), 'w') as file:
-                file.write(f'Test Accuracy: {accuracy:.3f}\nTest Precision: {precision:.3f}\nTest Recall: {recall:.3f}\nTest F1-Score: {f1:.3f}')
+                file.write(f'Loss: {loss.item():.3f}, f1 scores for tag B: {epoch_f1[0]:.3f}, tag I: {epoch_f1[1]:.3f}, tag O: {epoch_f1[2]:.3f}, tag E: {epoch_f1[3]:.3f}, and Acc: {accuracy_score}:.3f')
 
             # Generate confusion matrix
             confusion_matrix = multilabel_confusion_matrix(test_tags, test_pred_tags)
