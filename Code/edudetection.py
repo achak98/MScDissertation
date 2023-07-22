@@ -261,7 +261,7 @@ class EDUPredictor(nn.Module):
 def validation(args,idx2tag,model):
     # Detect device (CPU or CUDA)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    test_data = pd.read_csv(os.path.join(args.rst_dir, 'preprocessed_data_test.csv'))[40:]
+    test_data = pd.read_csv(os.path.join(args.rst_dir, 'preprocessed_data_test.csv'))[:40]
         
     test_data['Text'] = test_data['Text'].tolist()
     for i in range(len(test_data['Text'])):
@@ -280,6 +280,7 @@ def validation(args,idx2tag,model):
     test_labels = [ast.literal_eval(label_list) for label_list in test_labels]
     test_labels = torch.tensor(test_labels, dtype=torch.long).to(device)
     print("getting empty embeddings tensor")
+    print("args.get_embeddings_anyway in val: ", args.get_embeddings_anyway)
     if (not args.get_embeddings_anyway) and os.path.exists(os.path.join(args.rst_dir,'embeddings_val.pt')):
         embeddings = torch.load(os.path.join(args.rst_dir,'embeddings_val.pt'))
     else:
@@ -287,6 +288,7 @@ def validation(args,idx2tag,model):
         print("init model")
         with torch.no_grad():
             input_ids = test_inputs.to(device)
+            print("input_ids in val: ",input_ids)
             print("input_ids shape: ",input_ids.size())
             attention_masks = attention_masks.to(device) 
             encoder = AutoModel.from_pretrained(model.transformer_architecture, config=model.config)
@@ -305,7 +307,7 @@ def validation(args,idx2tag,model):
     if torch.cuda.is_available() and torch.cuda.device_count() >= device_idx + 1:
         device = torch.device(f"cuda:{device_idx}")
     embeddings = torch.tensor(embeddings).to(device)
-
+    print("embeddings in val: ",embeddings)
     # Load the trained model
     model_path = os.path.join(args.model_dir, 'edu_segmentation_model.pt')
     model.load_state_dict(torch.load(model_path))
