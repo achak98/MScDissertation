@@ -56,13 +56,15 @@ def parse_args():
     parser.add_argument('--segment', action='store_true', help='segment new files or input text')
     parser.add_argument('--get_embeddings_anyway', action='store_true', help='train the segmentation model')
     parser.add_argument('--regex_pattern', default= r'\b\w+\b|[.,:\n&!]')
-    parser.add_argument('--max_length', type=int, default= 18432)
+    parser.add_argument('--max_length', type=int, default= 2048)
     parser.add_argument('--learning_rate', type=float,
                                 default=3e-4, help='learning rate')
     parser.add_argument('--weight_decay', type=float,
-                                default=3e-4, help='weight decay')
+                                default=1e-3, help='weight decay')
+    parser.add_argument('--dropout', type=float,
+                                default=0.2, help='weight decay')
     parser.add_argument('--batch_size', type=int,
-                                default=2, help='batch size')
+                                default=1, help='batch size')
     parser.add_argument('--epochs', type=int,
                                 default=30, help='train epochs')
     parser.add_argument('--seed', type=int,
@@ -169,21 +171,24 @@ def preprocess_RST_Discourse_dataset(path_data, tag2idx, args, model):
     return df
 
 class EDUPredictor(nn.Module):
-    def __init__(self, tagset_size=4, hidden_dim=768, max_length=18432):
+    def __init__(self, args):
         super(EDUPredictor, self).__init__()
 
-        self.hidden_dim = hidden_dim
+        self.hidden_dim = args.hidden_dim
+        self.tagset_size = args.tagset_size
+        self.max_length = args.max_length
         self.transformer_architecture = 'microsoft/deberta-v3-base' #'microsoft/deberta-v3-small' mlcorelib/debertav2-base-uncased microsoft/deberta-v2-xlarge
         self.config = AutoConfig.from_pretrained(self.transformer_architecture, output_hidden_states=True)
-        self.config.max_position_embeddings = max_length
+        self.config.max_position_embeddings = self.max_length
         self.tokeniser = AutoTokenizer.from_pretrained(self.transformer_architecture, max_length=self.config.max_position_embeddings, padding="max_length", return_attention_mask=True)
 
         # Define BiLSTM 1
-        self.lstm1 = nn.LSTM(hidden_dim, hidden_dim, num_layers=2, bidirectional=True)
-
+        self.lstm1 = nn.LSTM(self.hidden_dim, self.hidden_dim, num_layers=2, bidirectional=True)
+        self.dropout1 = nn.Dropout(args.dropout) 
+        
         # Define BiLSTM 2
-        self.lstm2 = nn.LSTM(hidden_dim*2, hidden_dim, num_layers=2, bidirectional=True)
-
+        self.lstm2 = nn.LSTM(self.hidden_dim*2, self.tagset_size, num_layers=2, bidirectional=True)
+        self.dropout2 = nn.Dropout(args.dropout)  
         """self.regressor = nn.Sequential(
             nn.Linear(hidden_dim*2, hidden_dim//2),
             nn.GELU(),
@@ -193,20 +198,20 @@ class EDUPredictor(nn.Module):
         )"""
         # Define MLP
         self.hidden2tag = nn.Sequential(
-            nn.Linear(hidden_dim*2, hidden_dim//2),
+            nn.Linear(self.hidden_dim*2, self.hidden_dim//2),
             nn.GELU(),
             nn.Dropout(0.3),
-            nn.Linear(hidden_dim//2, hidden_dim // 16),
+            nn.Linear(self.hidden_dim//2, self.hidden_dim // 16),
             nn.GELU(),
             nn.Dropout(0.3),
-            nn.Linear(hidden_dim // 16, hidden_dim // 64),
+            nn.Linear(self.hidden_dim // 16, self.hidden_dim // 64),
             nn.GELU(),
             nn.Dropout(0.3),
-            nn.Linear(hidden_dim // 64, tagset_size)
+            nn.Linear(self.hidden_dim // 64, self.tagset_size)
         )
         #print("tagset_size: ",tagset_size)
         # Define CRF
-        self.crf = CRF(tagset_size)
+        self.crf = CRF(self.tagset_size)
 
     def forward(self, embeddings):
  
@@ -214,11 +219,19 @@ class EDUPredictor(nn.Module):
  
         lstm_out, _ = self.lstm2(lstm_out)
 
-        tag_space = self.hidden2tag(lstm_out)
+        #tag_space = self.hidden2tag(lstm_out)
         #print("size of tag_space: ", tag_space.size())
-        tag_scores = self.crf.decode(tag_space)
+        hidden_dim_size = lstm_out.size(-1)
+        first_half = lstm_out[:, :, : hidden_dim_size// 2]
+        second_half = lstm_out[:, :, hidden_dim_size // 2:]
+        
+        #print("first_half: ", first_half.size())
+        # Sum the two halves together along the last dimension
+        output_sum = first_half + second_half
 
-        return torch.tensor(tag_scores), tag_space
+        tag_scores = self.crf.decode(output_sum)
+
+        return torch.tensor(tag_scores), output_sum
 
 def validation(args,idx2tag,model, val_embeddings, val_labels):
     # Detect device (CPU or CUDA)
@@ -318,7 +331,7 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
     # Initialize the model
-    model = EDUPredictor(tagset_size=len(idx2tag.keys()), hidden_dim=args.hidden_dim, max_length = args.max_length).to(device)
+    model = EDUPredictor(args).to(device)
 
     if args.prepare:
         # Use the function
@@ -416,6 +429,8 @@ def main():
                 # Backward propagation
                 loss.backward()
 
+                # Gradient clipping
+                nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
 
                 # Optimization step
                 optimizer.step()
