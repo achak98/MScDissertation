@@ -307,7 +307,7 @@ def validation(args,idx2tag,model):
     if torch.cuda.is_available() and torch.cuda.device_count() >= device_idx + 1:
         device = torch.device(f"cuda:{device_idx}")
     outputs = torch.empty(embeddings.size(), dtype=torch.float).to(device)
-    embeddings = torch.tensor(embeddings).to(device)
+    embeddings = torch.tensor(embeddings).to(device)[:10]
     print("embeddings in val: ",embeddings)
     # Load the trained model
     model_path = os.path.join(args.model_dir, 'edu_segmentation_model.pt')
@@ -410,7 +410,7 @@ def main():
         device_idx = 1
         if torch.cuda.is_available() and torch.cuda.device_count() >= device_idx + 1:
             device = torch.device(f"cuda:{device_idx}")
-        embeddings = torch.tensor(embeddings).to(device)
+        embeddings = torch.tensor(embeddings).to(device)[:20]
         # Create DataLoader for training data
         print(train_labels.size())
         print(embeddings.size())
