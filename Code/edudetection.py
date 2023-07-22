@@ -384,7 +384,7 @@ def main():
  
         train_labels = train_data['BIOE'].tolist()
         train_labels = [ast.literal_eval(label_list) for label_list in train_labels]
-        train_labels = torch.tensor(train_labels, dtype=torch.long).to(device)
+        train_labels = torch.tensor(train_labels, dtype=torch.long).to(device)[:20]
         print("getting empty embeddings tensor")
         if (not args.get_embeddings_anyway) and os.path.exists(os.path.join(args.rst_dir,'embeddings_train.pt')):
             embeddings = torch.load(os.path.join(args.rst_dir,'embeddings_train.pt'))
