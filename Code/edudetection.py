@@ -408,6 +408,7 @@ def main():
             epoch_f1 = [0.0] * 4
             epoch_pre = [0.0] * 4
             epoch_re = [0.0] * 4
+            epoch_overall_f1 = 0.0
             model = model.to(device)
             model.train()  # Set model to training mode
 
@@ -438,6 +439,7 @@ def main():
                 #print(scores)
                 epoch_loss += loss.item()
                 epoch_acc += accuracy_score
+                epoch_overall_f1 += overall_f1
                 for i in range (len(epoch_f1)):
                     epoch_f1[i] += scores[i]['F1 Score']
                     epoch_pre[i] += scores[i]['Precision']
@@ -449,6 +451,7 @@ def main():
             epoch_pre = [item/len(train_loader) for item in epoch_pre]
             epoch_re = [item/len(train_loader) for item in epoch_re]
             epoch_acc = epoch_acc/len(train_loader)
+            epoch_overall_f1 = epoch_overall_f1/len(train_loader)
             # Update the outer tqdm progress bar with the current epoch loss value
             val_accuracy_score, val_epoch_pre, val_epoch_f1, val_epoch_re, val_overall_f1 = validation(args,idx2tag,model, val_embeddings, val_labels)
             
