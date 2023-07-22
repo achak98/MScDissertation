@@ -263,7 +263,6 @@ def validation(args,idx2tag,model, val_embeddings, val_labels):
         #print("test_pred_tags: ",test_pred_tags)
         #print("test_tags: ",test_tags)
         scores, accuracy_score, overall_f1 = compute_f1_score_for_labels(test_pred_tags, test_tags, labels= [int(key) for key in idx2tag.keys()])
-        print("len(epoch_f1): ",len(epoch_f1))
         epoch_f1 = [0.0]*4
         epoch_pre = [0.0]*4
         epoch_re = [0.0]*4
