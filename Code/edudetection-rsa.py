@@ -250,6 +250,8 @@ class EDUPredictor(nn.Module):
             print("attention_weights: ",attention_weights.size())
             # Compute the attention vector as a weighted sum of nearby words
             _sum = torch.zeros_like(output_sum[0, 0, :])
+            print("_sum : ",_sum.size())
+            print("output_sum[:, 0, :]: ", output_sum[:, 0, :].size())
             for j in range(attention_weights.size()[1]):
                 _sum += attention_weights[:,j] * output_sum[:, j, :]
             attention_vector = _sum
