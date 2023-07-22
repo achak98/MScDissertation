@@ -33,14 +33,6 @@ def compute_f1_score_for_labels(y_true, y_pred, labels):
 
     # Compute precision, recall, and F1 score for each label
     precision, recall, f1_score_for_label, _ = precision_recall_fscore_support(y_true, y_pred, labels=labels)
-    print(type(y_true))
-    print(type(y_true.tolist()))
-    print(type(y_true[0]))
-    print(type(y_pred))
-    print(type(y_pred.tolist()))
-    print(type(y_pred[0]))
-    y_true = y_true.tolist()
-    y_pred = y_pred.tolist()
     overall_f1 = f1_score(y_true, y_pred, average='weighted')
     correct = sum(1 for true_label, pred_label in zip(y_true, y_pred) if true_label == pred_label)
     total = len(y_true)
