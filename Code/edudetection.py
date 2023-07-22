@@ -303,22 +303,26 @@ def main():
         train_labels = [ast.literal_eval(label_list) for label_list in train_labels]
         train_labels = torch.tensor(train_labels, dtype=torch.long).to(device)
         print("getting empty embeddings tensor")
-        embeddings = torch.empty((len(train_inputs),args.max_length,args.hidden_dim), dtype=torch.float64).to(device)
-        print("init model")
-        with torch.no_grad():
-            input_ids = train_inputs.to(device)
-            print("input_ids shape: ",input_ids.size())
-            attention_masks = attention_masks.to(device) 
-            encoder = AutoModel.from_pretrained(model.transformer_architecture, config=model.config)
-            encoder = encoder.to(device)
-            print("starting tqdm")
-            for i in tqdm(range(len(input_ids))):
-                input_id = input_ids[i].unsqueeze(0)
-                attention_mask = attention_masks[i].unsqueeze(0)
-                # Obtain deberta embeddings for the current item
-                outputs = encoder(input_id, attention_mask)
-                embeddings[i] = torch.tensor(outputs.last_hidden_state).squeeze()
-            print("embeddings.size(): ",embeddings.size())
+        if os.path.exists(os.path.join(args.rst_dir,'embeddings_train.pt')):
+            embeddings = torch.load('my_tensor.pt')
+        else:
+            embeddings = torch.empty((len(train_inputs),args.max_length,args.hidden_dim), dtype=torch.float64).to(device)
+            print("init model")
+            with torch.no_grad():
+                input_ids = train_inputs.to(device)
+                print("input_ids shape: ",input_ids.size())
+                attention_masks = attention_masks.to(device) 
+                encoder = AutoModel.from_pretrained(model.transformer_architecture, config=model.config)
+                encoder = encoder.to(device)
+                print("starting tqdm")
+                for i in tqdm(range(len(input_ids))):
+                    input_id = input_ids[i].unsqueeze(0)
+                    attention_mask = attention_masks[i].unsqueeze(0)
+                    # Obtain deberta embeddings for the current item
+                    outputs = encoder(input_id, attention_mask)
+                    embeddings[i] = torch.tensor(outputs.last_hidden_state).squeeze()
+                print("embeddings.size(): ",embeddings.size())
+            torch.save(embeddings, os.path.join(args.rst_dir,'embeddings_train.pt'))
         torch.cuda.empty_cache()
         device_idx = 1
         if torch.cuda.is_available() and torch.cuda.device_count() >= device_idx + 1:
@@ -375,8 +379,50 @@ def main():
 
     if args.evaluate:
         test_data = pd.read_csv(os.path.join(args.rst_dir, 'preprocessed_data_test.csv'))
-        test_inputs = torch.tensor(test_data['Text'], dtype=torch.long).to(device)
-        test_labels = torch.tensor(test_data['BIOE'], dtype=torch.long).to(device)
+        
+        test_data['Text'] = test_data['Text'].tolist()
+        for i in range(len(test_data['Text'])):
+            #print(test_data['Text'].iloc[i])
+            test_data['Text'].iloc[i] =  np.array(ast.literal_eval(test_data['Text'].iloc[i]))
+            test_data['Text'].iloc[i] = [int(item) for item in test_data['Text'].iloc[i]]
+        test_inputs = torch.tensor(np.array(test_data['Text'].tolist()))
+ 
+        attention_masks = test_data['Attention Mask' ].tolist()
+        for i in range(len(test_data['Attention Mask'])):
+            test_data['Attention Mask'].iloc[i] =  np.array(ast.literal_eval(test_data['Attention Mask'].iloc[i]))
+            test_data['Attention Mask'].iloc[i] = [int(item) for item in test_data['Attention Mask'].iloc[i]]
+        attention_masks = torch.tensor(np.array(test_data['Attention Mask' ].tolist()))
+ 
+        test_labels = test_data['BIOE'].tolist()
+        test_labels = [ast.literal_eval(label_list) for label_list in test_labels]
+        test_labels = torch.tensor(test_labels, dtype=torch.long).to(device)
+        print("getting empty embeddings tensor")
+        if os.path.exists(os.path.join(args.rst_dir,'embeddings_train.pt')):
+            embeddings = torch.load('my_tensor.pt')
+        else:
+            embeddings = torch.empty((len(test_inputs),args.max_length,args.hidden_dim), dtype=torch.float64).to(device)
+            print("init model")
+            with torch.no_grad():
+                input_ids = test_inputs.to(device)
+                print("input_ids shape: ",input_ids.size())
+                attention_masks = attention_masks.to(device) 
+                encoder = AutoModel.from_pretrained(model.transformer_architecture, config=model.config)
+                encoder = encoder.to(device)
+                print("starting tqdm")
+                for i in tqdm(range(len(input_ids))):
+                    input_id = input_ids[i].unsqueeze(0)
+                    attention_mask = attention_masks[i].unsqueeze(0)
+                    # Obtain deberta embeddings for the current item
+                    outputs = encoder(input_id, attention_mask)
+                    embeddings[i] = torch.tensor(outputs.last_hidden_state).squeeze()
+                print("embeddings.size(): ",embeddings.size())
+            torch.save(embeddings, os.path.join(args.rst_dir,'embeddings_train.pt'))
+        torch.cuda.empty_cache()
+        device_idx = 1
+        if torch.cuda.is_available() and torch.cuda.device_count() >= device_idx + 1:
+            device = torch.device(f"cuda:{device_idx}")
+        embeddings = torch.tensor(embeddings).to(device)
+    
         # Load the trained model
         model_path = os.path.join(args.model_dir, 'edu_segmentation_model.pt')
         model.load_state_dict(torch.load(model_path))
@@ -386,8 +432,8 @@ def main():
         model.eval()  # Set model to evaluation mode
         with torch.no_grad():
             # Predict output for test set
-            test_tag_scores = model(test_inputs).detach().cpu().numpy().flatten()
-            test_pred_tags = test_tag_scores.detach().cpu().numpy().flatten()
+            test_tag = model(embeddings)
+            test_pred_tags = test_tag.detach().cpu().numpy().flatten()
             test_tags = test_labels.detach().cpu().numpy().flatten()
             #test_pred = model.crf.decode(test_tag_scores)
             #scores = compute_f1_score_for_labels(test_tag_scores.detach().cpu().numpy().flatten(), test_labels.detach().cpu().numpy().flatten(), labels= idx2tag.keys())
