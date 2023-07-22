@@ -54,7 +54,7 @@ def parse_args():
     parser.add_argument('--train', action='store_true', help='train the segmentation model')
     parser.add_argument('--evaluate', action='store_true', help='evaluate the model')
     parser.add_argument('--segment', action='store_true', help='segment new files or input text')
-    parser.add_argument('--get_embeddings_anyway', default = False, type = bool)
+    parser.add_argument('--get_embeddings_anyway', action='store_true', help='train the segmentation model')
     parser.add_argument('--regex_pattern', default= r'\b\w+\b|[.,:\n&!]')
     parser.add_argument('--max_length', type=int, default= 18432)
     parser.add_argument('--learning_rate', type=float,
