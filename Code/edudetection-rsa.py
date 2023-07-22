@@ -252,7 +252,7 @@ class EDUPredictor(nn.Module):
             attention_vector = torch.sum(attention_weights * output_sum[:, start_pos:end_pos, :].permute(0,2,1), dim=1)
             print("attention_vector: ",attention_vector.size())
             # Store the attention vector for the current word
-            attention_vectors[1,i] = attention_vector #(seqlen,hiddim)
+            attention_vectors[0,i] = attention_vector #(seqlen,hiddim)
 
         print("attention_vectors: ",attention_vectors.size())
         # Concatenate the original LSTM output and the attention vectors
