@@ -439,7 +439,7 @@ def main():
         test_labels = torch.tensor(test_labels, dtype=torch.long).to(device)
         print("getting empty embeddings tensor")
         if os.path.exists(os.path.join(args.rst_dir,'embeddings_test.pt')):
-            embeddings = os.path.join(args.rst_dir,'embeddings_test.pt')
+            embeddings = torch.load(os.path.join(args.rst_dir,'embeddings_test.pt'))
         else:
             embeddings = torch.empty((len(test_inputs),args.max_length,args.hidden_dim), dtype=torch.float64).to(device)
             print("init model")
