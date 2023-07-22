@@ -308,6 +308,7 @@ def validation(args,idx2tag,model):
         device = torch.device(f"cuda:{device_idx}")
     outputs = torch.empty(embeddings.size(), dtype=torch.float).to(device)
     embeddings = torch.tensor(embeddings).to(device)[:10]
+    test_labels = test_labels.to(device)
     print("embeddings in val: ",embeddings)
 
     # Evaluation
