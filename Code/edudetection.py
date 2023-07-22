@@ -240,7 +240,7 @@ def validation(args,idx2tag,model, val_embeddings, val_labels):
     if torch.cuda.is_available() and torch.cuda.device_count() >= device_idx + 1:
         device = torch.device(f"cuda:{device_idx}")
     outputs = torch.empty((len(val_labels),args.max_length), dtype=torch.float).to(device)
-    val_embeddings = torch.tensor(val_embeddings).to(device)[:40]
+    val_embeddings = torch.tensor(val_embeddings).to(device)
     val_labels = val_labels.to(device)
     #print("embeddings in val: ",val_embeddings)
 
@@ -281,16 +281,16 @@ def getValData(args, model):
         #print(test_data['Text'].iloc[i])
         val_data['Text'].iloc[i] =  np.array(ast.literal_eval(val_data['Text'].iloc[i]))
         val_data['Text'].iloc[i] = [int(item) for item in val_data['Text'].iloc[i]]
-    test_inputs = torch.cat((torch.tensor(np.array(val_data['Text'].tolist()))[:40], torch.tensor(np.array(val_data['Text'].tolist()))[-40:]), dim=0)
+    test_inputs = torch.cat((torch.tensor(np.array(val_data['Text'].tolist()))[:4], torch.tensor(np.array(val_data['Text'].tolist()))[-4:]), dim=0)
     attention_masks = val_data['Attention Mask' ].tolist()
     for i in range(len(val_data['Attention Mask'])):
         val_data['Attention Mask'].iloc[i] =  np.array(ast.literal_eval(val_data['Attention Mask'].iloc[i]))
         val_data['Attention Mask'].iloc[i] = [int(item) for item in val_data['Attention Mask'].iloc[i]]
-    attention_masks = torch.cat((torch.tensor(np.array(val_data['Attention Mask' ].tolist()))[:40], torch.tensor(np.array(val_data['Attention Mask' ].tolist()))[-40:]), dim=0)
+    attention_masks = torch.cat((torch.tensor(np.array(val_data['Attention Mask' ].tolist()))[:4], torch.tensor(np.array(val_data['Attention Mask' ].tolist()))[-4:]), dim=0)
     
     val_labels = val_data['BIOE'].tolist()
     val_labels = [ast.literal_eval(label_list) for label_list in val_labels]
-    val_labels = torch.cat(((torch.tensor(val_labels, dtype=torch.long).to(device))[:40], torch.tensor(val_labels, dtype=torch.long).to(device))[-40:], dim=0)
+    val_labels = torch.cat(((torch.tensor(val_labels, dtype=torch.long).to(device))[:4], torch.tensor(val_labels, dtype=torch.long).to(device))[-4:], dim=0)
     #print("val_labels: ",val_labels)
     print("getting empty embeddings tensor")
     #print("args.get_embeddings_anyway in val: ", args.get_embeddings_anyway)
@@ -467,7 +467,7 @@ def main():
         model_path = os.path.join(args.model_dir, 'edu_segmentation_model.pt')
         torch.save(model.state_dict(), model_path)
         print(f"Trained model saved to: {model_path}")
-
+    torch.cuda.empty_cache()
     if args.evaluate:
         test_data = pd.read_csv(os.path.join(args.rst_dir, 'preprocessed_data_test.csv'))
         
