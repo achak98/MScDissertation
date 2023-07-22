@@ -303,7 +303,7 @@ def getValData(args, model):
         #print(test_data['Text'].iloc[i])
         val_data['Text'].iloc[i] =  np.array(ast.literal_eval(val_data['Text'].iloc[i]))
         val_data['Text'].iloc[i] = [int(item) for item in val_data['Text'].iloc[i]]
-    test_inputs = torch.tensor(np.array(val_data['Text'].tolist()))[:10]
+    test_inputs = torch.tensor(np.array(val_data['Text'].tolist()))[:40]
 
     attention_masks = val_data['Attention Mask' ].tolist()
     for i in range(len(val_data['Attention Mask'])):
