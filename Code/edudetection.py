@@ -258,33 +258,68 @@ class EDUPredictor(nn.Module):
 
         return torch.tensor(tag_scores), tag_space
 
-def validation(args,idx2tag,model):
+def validation(args,idx2tag,model, val_embeddings, val_labels):
     # Detect device (CPU or CUDA)
+    torch.cuda.empty_cache()
+    device_idx = 1
+    if torch.cuda.is_available() and torch.cuda.device_count() >= device_idx + 1:
+        device = torch.device(f"cuda:{device_idx}")
+    outputs = torch.empty((len(val_labels),args.max_length), dtype=torch.float).to(device)
+    val_embeddings = torch.tensor(val_embeddings).to(device)[:40]
+    val_labels = val_labels.to(device)
+    #print("embeddings in val: ",val_embeddings)
+
+    # Evaluation
+    model.eval()  # Set model to evaluation mode
+    with torch.no_grad():
+        # Predict output for test set
+        val_embeddings = val_embeddings.to(torch.float)
+        loss = 0.0
+        for i, (embedding, test_label) in enumerate(zip(val_embeddings,val_labels)):
+            output, emissions = model(embedding.unsqueeze(0))
+            loss -= model.crf(emissions, test_label.unsqueeze(0))
+            outputs[i] = output.squeeze()
+        val_labels = val_labels.to(device)
+        #outputs, emissions = model(val_embeddings)
+        test_pred_tags = outputs.detach().cpu().numpy().flatten()
+        test_tags = val_labels.detach().cpu().numpy().flatten()
+        scores, accuracy_score = compute_f1_score_for_labels(test_pred_tags, test_tags, labels= [int(key) for key in idx2tag.keys()])
+
+        epoch_f1 = [0.0]*4
+        epoch_pre = [0.0]*4
+        epoch_re = [0.0]*4
+        for i in range (len(epoch_f1)):
+                epoch_f1[i] += scores[i]['F1 Score']
+                epoch_pre[i] += scores[i]['Precision']
+                epoch_re[i] += scores[i]['Recall']
+        return accuracy_score, epoch_pre, epoch_f1, epoch_re
+
+def getValData(args, model):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    test_data = pd.read_csv(os.path.join(args.rst_dir, 'preprocessed_data_test.csv'))
+    val_data = pd.read_csv(os.path.join(args.rst_dir, 'preprocessed_data_test.csv'))
         
-    test_data['Text'] = test_data['Text'].tolist()
-    for i in range(len(test_data['Text'])):
+    val_data['Text'] = val_data['Text'].tolist()
+    for i in range(len(val_data['Text'])):
         #print(test_data['Text'].iloc[i])
-        test_data['Text'].iloc[i] =  np.array(ast.literal_eval(test_data['Text'].iloc[i]))
-        test_data['Text'].iloc[i] = [int(item) for item in test_data['Text'].iloc[i]]
-    test_inputs = torch.tensor(np.array(test_data['Text'].tolist()))[:10]
+        val_data['Text'].iloc[i] =  np.array(ast.literal_eval(val_data['Text'].iloc[i]))
+        val_data['Text'].iloc[i] = [int(item) for item in val_data['Text'].iloc[i]]
+    test_inputs = torch.tensor(np.array(val_data['Text'].tolist()))[:10]
 
-    attention_masks = test_data['Attention Mask' ].tolist()
-    for i in range(len(test_data['Attention Mask'])):
-        test_data['Attention Mask'].iloc[i] =  np.array(ast.literal_eval(test_data['Attention Mask'].iloc[i]))
-        test_data['Attention Mask'].iloc[i] = [int(item) for item in test_data['Attention Mask'].iloc[i]]
-    attention_masks = torch.tensor(np.array(test_data['Attention Mask' ].tolist()))
+    attention_masks = val_data['Attention Mask' ].tolist()
+    for i in range(len(val_data['Attention Mask'])):
+        val_data['Attention Mask'].iloc[i] =  np.array(ast.literal_eval(val_data['Attention Mask'].iloc[i]))
+        val_data['Attention Mask'].iloc[i] = [int(item) for item in val_data['Attention Mask'].iloc[i]]
+    attention_masks = torch.tensor(np.array(val_data['Attention Mask' ].tolist()))
 
-    test_labels = test_data['BIOE'].tolist()
-    test_labels = [ast.literal_eval(label_list) for label_list in test_labels]
-    test_labels = torch.tensor(test_labels, dtype=torch.long).to(device)[:10]
+    val_labels = val_data['BIOE'].tolist()
+    val_labels = [ast.literal_eval(label_list) for label_list in val_labels]
+    val_labels = torch.tensor(val_labels, dtype=torch.long).to(device)[:40]
     print("getting empty embeddings tensor")
     print("args.get_embeddings_anyway in val: ", args.get_embeddings_anyway)
     if (not args.get_embeddings_anyway) and os.path.exists(os.path.join(args.rst_dir,'embeddings_val.pt')):
-        embeddings = torch.load(os.path.join(args.rst_dir,'embeddings_val.pt'))
+        val_embeddings = torch.load(os.path.join(args.rst_dir,'embeddings_val.pt'))
     else:
-        embeddings = torch.empty((len(test_inputs),args.max_length,args.hidden_dim), dtype=torch.float64).to(device)
+        val_embeddings = torch.empty((len(test_inputs),args.max_length,args.hidden_dim), dtype=torch.float64).to(device)
         print("init model")
         with torch.no_grad():
             input_ids = test_inputs.to(device)
@@ -299,42 +334,11 @@ def validation(args,idx2tag,model):
                 attention_mask = attention_masks[i].unsqueeze(0)
                 # Obtain deberta embeddings for the current item
                 outputs = encoder(input_id, attention_mask)
-                embeddings[i] = torch.tensor(outputs.last_hidden_state).squeeze()
-            print("embeddings.size(): ",embeddings.size())
-        torch.save(embeddings, os.path.join(args.rst_dir,'embeddings_test.pt'))
+                val_embeddings[i] = torch.tensor(outputs.last_hidden_state).squeeze()
+            #print("embeddings.size(): ",val_embeddings.size())
+        torch.save(val_embeddings, os.path.join(args.rst_dir,'embeddings_test.pt'))
     torch.cuda.empty_cache()
-    device_idx = 1
-    if torch.cuda.is_available() and torch.cuda.device_count() >= device_idx + 1:
-        device = torch.device(f"cuda:{device_idx}")
-    outputs = torch.empty((len(test_inputs),args.max_length), dtype=torch.float).to(device)
-    embeddings = torch.tensor(embeddings).to(device)[:10]
-    test_labels = test_labels.to(device)
-    print("embeddings in val: ",embeddings)
-
-    # Evaluation
-    model.eval()  # Set model to evaluation mode
-    with torch.no_grad():
-        # Predict output for test set
-        embeddings = embeddings.to(torch.float)
-        loss = 0.0
-        for i, (embedding, test_label) in enumerate(zip(embeddings,test_labels)):
-            output, emissions = model(embedding.unsqueeze(0))
-            loss -= model.crf(emissions, test_label.unsqueeze(0))
-            outputs[i] = output.squeeze()
-        test_labels = test_labels.to(device)
-        #outputs, emissions = model(embeddings)
-        test_pred_tags = outputs.detach().cpu().numpy().flatten()
-        test_tags = test_labels.detach().cpu().numpy().flatten()
-        scores, accuracy_score = compute_f1_score_for_labels(test_pred_tags, test_tags, labels= [int(key) for key in idx2tag.keys()])
-
-        epoch_f1 = [0.0]*4
-        epoch_pre = [0.0]*4
-        epoch_re = [0.0]*4
-        for i in range (len(epoch_f1)):
-                epoch_f1[i] += scores[i]['F1 Score']
-                epoch_pre[i] += scores[i]['Precision']
-                epoch_re[i] += scores[i]['Recall']
-        return accuracy_score, epoch_pre, epoch_f1, epoch_re
+    return val_labels, val_embeddings
 
 def main():
     args = parse_args()
@@ -370,7 +374,7 @@ def main():
             #print(train_data['Text'].iloc[i])
             train_data['Text'].iloc[i] =  np.array(ast.literal_eval(train_data['Text'].iloc[i]))
             train_data['Text'].iloc[i] = [int(item) for item in train_data['Text'].iloc[i]]
-        train_inputs = torch.tensor(np.array(train_data['Text'].tolist()))[:20]
+        train_inputs = torch.tensor(np.array(train_data['Text'].tolist()))
  
         attention_masks = train_data['Attention Mask' ].tolist()
         for i in range(len(train_data['Attention Mask'])):
@@ -380,7 +384,7 @@ def main():
  
         train_labels = train_data['BIOE'].tolist()
         train_labels = [ast.literal_eval(label_list) for label_list in train_labels]
-        train_labels = torch.tensor(train_labels, dtype=torch.long).to(device)[:20]
+        train_labels = torch.tensor(train_labels, dtype=torch.long).to(device)
         print("getting empty embeddings tensor")
         if (not args.get_embeddings_anyway) and os.path.exists(os.path.join(args.rst_dir,'embeddings_train.pt')):
             embeddings = torch.load(os.path.join(args.rst_dir,'embeddings_train.pt'))
@@ -403,6 +407,7 @@ def main():
                 print("embeddings.size(): ",embeddings.size())
             torch.save(embeddings, os.path.join(args.rst_dir,'embeddings_train.pt'))
         torch.cuda.empty_cache()
+        val_embeddings, val_labels = getValData(args, model)
         device_idx = 1
         if torch.cuda.is_available() and torch.cuda.device_count() >= device_idx + 1:
             device = torch.device(f"cuda:{device_idx}")
@@ -418,6 +423,8 @@ def main():
             epoch_loss = 0.0
             epoch_acc = 0.0
             epoch_f1 = [0.0] * 4
+            epoch_pre = [0.0] * 4
+            epoch_re = [0.0] * 4
             model = model.to(device)
             model.train()  # Set model to training mode
 
@@ -448,19 +455,23 @@ def main():
                 epoch_acc += accuracy_score
                 for i in range (len(epoch_f1)):
                     epoch_f1[i] += scores[i]['F1 Score']
+                    epoch_pre[i] += scores[i]['Precision']
+                    epoch_re[i] += scores[i]['Recall']
                 # Update the tqdm progress bar with the current loss value
                 running_f1 = [item/(step+1) for item in epoch_f1]
                 train_loader_tqdm.set_postfix({f"f1 scores for tag B: {running_f1[0]:.4f}, tag I: {running_f1[1]:.4f}, tag O: {running_f1[2]:.4f}, tag E: {running_f1[3]:.4f}, Acc: {epoch_acc/(step+1)}:.4f and Loss": epoch_loss / (step + 1)})
             epoch_f1 = [item/len(train_loader) for item in epoch_f1]
             epoch_acc = epoch_acc/len(train_loader)
             # Update the outer tqdm progress bar with the current epoch loss value
-            val_accuracy_score, val_epoch_pre, val_epoch_f1, val_epoch_re = validation(args,idx2tag,model)
+            val_accuracy_score, val_epoch_pre, val_epoch_f1, val_epoch_re = validation(args,idx2tag,model, val_embeddings, val_labels)
             
             print(f'F1 scores for tag B: {epoch_f1[0]:.4f}, tag I: {epoch_f1[1]:.4f}, tag O: {epoch_f1[2]:.4f}, tag E: {epoch_f1[3]:.4f}')
             tqdm.write(f'Epoch [{epoch+1}/{args.epochs}], Loss: {epoch_loss / len(train_loader):.4f}, f1 scores for tag B: {epoch_f1[0]:.4f}, tag I: {epoch_f1[1]:.4f}, tag O: {epoch_f1[2]:.4f}, tag E: {epoch_f1[3]:.4f}, and Acc: {epoch_acc}:.4f\n \
+                        Precision scores for tag B: {epoch_pre[0]:.4f}, tag I: {epoch_pre[1]:.4f}, tag O: {epoch_pre[2]:.4f}, tag E: {epoch_pre[3]:.4f} \n \
+                        Recall scores for tag B: {epoch_re[0]:.4f}, tag I: {epoch_re[1]:.4f}, tag O: {epoch_re[2]:.4f}, tag E: {epoch_re[3]:.4f} \n \
                         Val Test Accuracy: {val_accuracy_score:.3f}, Val Precision scores for tag B: {val_epoch_pre[0]:.4f}, tag I: {val_epoch_pre[1]:.4f}, tag O: {val_epoch_pre[2]:.4f}, tag E: {val_epoch_pre[3]:.4f} \n \
-                        Val Recall scores for tag B: {val_epoch_f1[0]:.4f}, tag I: {val_epoch_f1[1]:.4f}, tag O: {val_epoch_f1[2]:.4f}, tag E: {val_epoch_f1[3]:.4f} \n \
-                        Val F1 scores for tag B: {val_epoch_re[0]:.4f}, tag I: {val_epoch_re[1]:.4f}, tag O: {val_epoch_re[2]:.4f}, tag E: {val_epoch_re[3]:.4f}')
+                        Val Recall scores for tag B: {val_epoch_re[0]:.4f}, tag I: {val_epoch_re[1]:.4f}, tag O: {val_epoch_re[2]:.4f}, tag E: {val_epoch_re[3]:.4f} \n \
+                        Val F1 scores for tag B: {val_epoch_f1[0]:.4f}, tag I: {val_epoch_f1[1]:.4f}, tag O: {val_epoch_f1[2]:.4f}, tag E: {val_epoch_f1[3]:.4f}')
 
         # Save the trained model
         model_path = os.path.join(args.model_dir, 'edu_segmentation_model.pt')
