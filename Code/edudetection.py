@@ -274,8 +274,7 @@ def getValData(args, model):
     
     val_labels = val_data['BIOE'].tolist()
     val_labels = [ast.literal_eval(label_list) for label_list in val_labels]
-    val_labels = torch.tensor(val_labels, dtype=torch.long).to(device)[:40]
-    val_labels = torch.cat((torch.tensor(val_labels, dtype=torch.long).to(device), torch.tensor(torch.tensor(val_labels, dtype=torch.long).to(device))[-40:]), dim=0)
+    val_labels = torch.cat(((torch.tensor(val_labels, dtype=torch.long).to(device))[:40], torch.tensor(val_labels, dtype=torch.long).to(device))[-40:], dim=0)
     print("getting empty embeddings tensor")
     print("args.get_embeddings_anyway in val: ", args.get_embeddings_anyway)
     if (not args.get_embeddings_anyway) and os.path.exists(os.path.join(args.rst_dir,'embeddings_val.pt')):
