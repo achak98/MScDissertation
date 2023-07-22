@@ -344,8 +344,8 @@ def main():
         train_labels = [ast.literal_eval(label_list) for label_list in train_labels]
         train_labels = torch.tensor(train_labels, dtype=torch.long).to(device)
         print("getting empty embeddings tensor")
-        if os.path.exists(os.path.join(args.rst_dir,'embeddings_train.pt')):
-            embeddings = torch.load('embeddings_train.pt')
+        if os.path.exists(os.path.join(args.rst_dir,'embeddings_test.pt')):
+            embeddings = torch.load(os.path.join(args.rst_dir,'embeddings_test.pt'))
         else:
             embeddings = torch.empty((len(train_inputs),args.max_length,args.hidden_dim), dtype=torch.float64).to(device)
             print("init model")
@@ -363,7 +363,7 @@ def main():
                     outputs = encoder(input_id, attention_mask)
                     embeddings[i] = torch.tensor(outputs.last_hidden_state).squeeze()
                 print("embeddings.size(): ",embeddings.size())
-            torch.save(embeddings, os.path.join(args.rst_dir,'embeddings_train.pt'))
+            torch.save(embeddings, os.path.join(args.rst_dir,'embeddings_test.pt'))
         torch.cuda.empty_cache()
         device_idx = 1
         if torch.cuda.is_available() and torch.cuda.device_count() >= device_idx + 1:
