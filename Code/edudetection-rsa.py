@@ -188,7 +188,7 @@ class EDUPredictor(nn.Module):
         # Attention weight computation layer
         self.attention_weights = nn.Linear(args.hidden_dim * 3, 1)
         # Define BiLSTM 2
-        self.lstm2 = nn.LSTM(args.hidden_dim, args.tagset_size, num_layers=2, bidirectional=True)
+        self.lstm2 = nn.LSTM(args.hidden_dim*2, args.tagset_size, num_layers=2, bidirectional=True)
 
         """self.regressor = nn.Sequential(
             nn.Linear(hidden_dim*2, hidden_dim//2),
@@ -222,7 +222,7 @@ class EDUPredictor(nn.Module):
     def forward(self, embeddings):
  
         lstm_out, _ = self.lstm1(embeddings)
-        print("lstm_out: ", lstm_out.size())
+        #print("lstm_out: ", lstm_out.size())
         # Get the sequence length and batch size
         batch_size, seq_length, hidden_dim = lstm_out.size()
         hidden_dim_size = lstm_out.size(-1)
@@ -243,26 +243,26 @@ class EDUPredictor(nn.Module):
             
             # Compute similarity between the current word and nearby words
             similarity_scores = torch.cat([self.similarity(output_sum[:, i], output_sum[:, j]) for j in range(start_pos, end_pos)], dim=1)
-            print("similarity_scores: ",similarity_scores.size())
+            #print("similarity_scores: ",similarity_scores.size())
             #similarity scores has all s(i,j)s from start pos to end pos of window
             # Apply softmax to obtain attention weights
             attention_weights = torch.nn.functional.softmax(similarity_scores, dim=-1) #this has all alpha(i,j)s
-            print("attention_weights: ",attention_weights.size())
+            #print("attention_weights: ",attention_weights.size())
             # Compute the attention vector as a weighted sum of nearby words
             _sum = torch.zeros_like(output_sum[:, 0, :])
-            print("_sum : ",_sum.size())
-            print("output_sum[:, 0, :]: ", output_sum[:, 0, :].size())
+            #print("_sum : ",_sum.size())
+            #print("output_sum[:, 0, :]: ", output_sum[:, 0, :].size())
             for j in range(attention_weights.size()[1]):
                 _sum += attention_weights[:,j] * output_sum[:, j, :]
             attention_vector = _sum
-            print("attention_vector: ",attention_vector.size())
+            #print("attention_vector: ",attention_vector.size())
             # Store the attention vector for the current word
             attention_vectors[0,i] = attention_vector #(seqlen,hiddim)
 
-        print("attention_vectors: ",attention_vectors.size())
+        #print("attention_vectors: ",attention_vectors.size())
         # Concatenate the original LSTM output and the attention vectors
-        lstm_output_with_attention = torch.cat([lstm_out, attention_vectors], dim=-1)
-        print("lstm_output_with_attention: ", lstm_output_with_attention.size())
+        lstm_output_with_attention = torch.cat([output_sum, attention_vectors], dim=-1)
+        #print("lstm_output_with_attention: ", lstm_output_with_attention.size())
         lstm_out, _ = self.lstm2(lstm_output_with_attention)
         hidden_dim_size = lstm_out.size(-1)
         #print("lstm_out: ",lstm_out.size())
