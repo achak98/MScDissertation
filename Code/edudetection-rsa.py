@@ -223,7 +223,7 @@ class EDUPredictor(nn.Module):
         # Attention weight computation layer
         self.attention_weights = nn.Linear(args.hidden_dim * 3, 1)
         # Define BiLSTM 2
-        self.lstm2 = nn.LSTM(self.hidden_dim, self.tagset_size, num_layers=1, bidirectional=True)
+        self.lstm2 = nn.LSTM(self.hidden_dim*2, self.tagset_size, num_layers=1, bidirectional=True)
         self.dropout2 = nn.Dropout(args.dropout)  
         """self.regressor = nn.Sequential(
             nn.Linear(hidden_dim*2, hidden_dim//2),
