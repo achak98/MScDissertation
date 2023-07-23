@@ -80,6 +80,8 @@ def parse_args():
     parser.add_argument('--max_length', type=int, default= 2048)
     parser.add_argument('--learning_rate', type=float,
                                 default=3e-4, help='learning rate')
+    parser.add_argument('--device', type=int,
+                                default=0, help='learning rate')
     parser.add_argument('--weight_decay', type=float,
                                 default=1e-3, help='weight decay')
     parser.add_argument('--dropout', type=float,
@@ -220,9 +222,8 @@ class EDUPredictor(nn.Module):
         self.dropout1 = nn.Dropout(args.dropout) 
         # Attention weight computation layer
         #self.attention_weights = nn.Linear(args.hidden_dim * 3, 1)
-        self.lstm2lstm = nn.Linear(self.hidden_dim, self.hidden_dim)
         # Define BiLSTM 2
-        self.lstm2 = nn.LSTM(self.hidden_dim, self.hidden_dim, num_layers=1, bidirectional=True)
+        self.lstm2 = nn.LSTM(self.hidden_dim, self.tagset_size, num_layers=1, bidirectional=True)
         self.dropout2 = nn.Dropout(args.dropout)  
         """self.regressor = nn.Sequential(
             nn.Linear(hidden_dim*2, hidden_dim//2),
@@ -232,14 +233,14 @@ class EDUPredictor(nn.Module):
             nn.GELU()
         )"""
         # Define MLP
-        self.hidden2tag = nn.Sequential(
+        """self.hidden2tag = nn.Sequential(
             nn.Linear(self.hidden_dim, self.hidden_dim//16),
             nn.GELU(),
             nn.Dropout(0.3),
             nn.Linear(self.hidden_dim//16, self.tagset_size),
             nn.GELU(),
             nn.Dropout(0.3)
-        )
+        )"""
         #print("tagset_size: ",tagset_size)
         # Define CRF
         self.crf = CRF(self.tagset_size)
@@ -287,7 +288,6 @@ class EDUPredictor(nn.Module):
         lstm_output_with_attention = torch.cat([output_sum, attention_vectors], dim=-1)"""
         #print("lstm_output_with_attention: ", lstm_output_with_attention.size())
         #print(output_sum.size())
-        output_sum = self.lstm2lstm(output_sum)
         #print(output_sum.size())
         lstm_out, _ = self.lstm2(output_sum)
 
@@ -304,7 +304,6 @@ class EDUPredictor(nn.Module):
         # Sum the two halves together along the last dimension
         output_sum = first_half + second_half
         #print(output_sum.size())
-        output_sum = self.hidden2tag(output_sum)
         tag_scores = self.crf.decode(output_sum)
 
         return torch.tensor(tag_scores), output_sum
@@ -312,9 +311,7 @@ class EDUPredictor(nn.Module):
 def validation(args,idx2tag,model, val_embeddings, val_labels):
     # Detect device (CPU or CUDA)
     torch.cuda.empty_cache()
-    device_idx = 1
-    if torch.cuda.is_available() and torch.cuda.device_count() >= device_idx + 1:
-        device = torch.device(f"cuda:{device_idx}")
+    device = f"cuda:{args.device}"
     outputs = torch.empty((len(val_labels),args.max_length), dtype=torch.float).to(device)
     val_embeddings = torch.tensor(val_embeddings).to(device)
     val_labels = val_labels.to(device)
@@ -348,7 +345,7 @@ def validation(args,idx2tag,model, val_embeddings, val_labels):
         return accuracy_score, epoch_pre, epoch_f1, epoch_re, overall_f1
 
 def getValData(args, model):
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device(f"cuda:{args.device}" if torch.cuda.is_available() else "cpu")
     val_data = pd.read_csv(os.path.join(args.rst_dir, 'preprocessed_data_test.csv'))
         
     val_data['Sentence'] = val_data['Sentence'].tolist()
@@ -403,7 +400,7 @@ def main():
     tag2idx = {tag: idx for idx, tag in idx2tag.items()}
 
     # Detect device (CPU or CUDA)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device(f"cuda:{args.device}" if torch.cuda.is_available() else "cpu")
     
     # Initialize the model
     model = EDUPredictor(args).to(device)
@@ -465,9 +462,7 @@ def main():
             torch.save(embeddings, os.path.join(args.rst_dir,'embeddings_train.pt'))"""
         torch.cuda.empty_cache()
         val_embeddings, val_labels = getValData(args, model)
-        device_idx = 1
-        if torch.cuda.is_available() and torch.cuda.device_count() >= device_idx + 1:
-            device = torch.device(f"cuda:{device_idx}")
+
         #embeddings = torch.tensor(embeddings).to(device)
         # Create DataLoader for training data
         #print(train_labels.size())
@@ -631,9 +626,8 @@ def main():
                 print("embeddings.size(): ",embeddings.size())
             torch.save(embeddings, os.path.join(args.rst_dir,'embeddings_test.pt'))
         torch.cuda.empty_cache()
-        device_idx = 1
-        if torch.cuda.is_available() and torch.cuda.device_count() >= device_idx + 1:
-            device = torch.device(f"cuda:{device_idx}")
+
+        device = torch.device(f"cuda:{args.device}")
         embeddings = torch.tensor(embeddings).to(device)
     
         # Load the trained model
