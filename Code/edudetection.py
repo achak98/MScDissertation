@@ -101,6 +101,9 @@ def find_sequence_spans(sents, edus, model, args):
             tokenised_edu = model.tokeniser(edu)["input_ids"]
             tokenised_edu = tokenised_edu[1:-1]
             target_length = len(tokenised_edu)
+            if len(tokenised_edu) == 0 :
+                idx_edu+=1
+                continue
             if tokenised_edu[0] == tokenised_sent[i]:
                 start_index = i
                 idx_edu+=1
