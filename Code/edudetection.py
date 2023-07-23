@@ -411,7 +411,7 @@ def main():
         # Create DataLoader for training data
         #print(train_labels.size())
         #print(embeddings.size())
-        train_dataset = torch.utils.data.TensorDataset(zip(input_ids,attention_masks), train_labels)
+        train_dataset = torch.utils.data.TensorDataset(zip(train_inputs,attention_masks), train_labels)
         train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
         print("starting training")
         # Training loop
