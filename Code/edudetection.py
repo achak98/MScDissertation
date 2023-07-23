@@ -284,14 +284,14 @@ class EDUPredictor(nn.Module):
             # Store the attention vector for the current word
             attention_vectors[:,i] = attention_vector.squeeze(1) #(seqlen,hiddim)
 
-        print("attention_vectors: ",attention_vectors.size())
-        print("output_sum: ",output_sum.size())
+        #print("attention_vectors: ",attention_vectors.size())
+        #print("output_sum: ",output_sum.size())
         # Concatenate the original LSTM output and the attention vectors
         lstm_output_with_attention = torch.cat([output_sum, attention_vectors], dim=-1)
-        print("lstm_output_with_attention: ", lstm_output_with_attention.size())
+        #print("lstm_output_with_attention: ", lstm_output_with_attention.size())
         lstm_out, _ = self.lstm2(lstm_output_with_attention)
 
-        lstm_out, _ = self.lstm2(output_sum)
+        #lstm_out, _ = self.lstm2(output_sum)
         lstm_out = self.dropout2(lstm_out)
         #tag_space = self.hidden2tag(lstm_out)
         #print("size of tag_space: ", tag_space.size())
