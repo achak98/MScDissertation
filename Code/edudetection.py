@@ -276,13 +276,13 @@ class EDUPredictor(nn.Module):
             #print("attention_weights: ",attention_weights.size())
             # Compute the attention vector as a weighted sum of nearby words
             #print("_sum : ",_sum.size())
-            print("output_sum[:, start_pos:end_pos, :].permute(0,2,1: ", output_sum[:, start_pos:end_pos, :].permute(0,2,1).size())
-            print("output_sum[:, start_pos:end_pos, :]: ", output_sum[:, start_pos:end_pos, :].size())
-            print("attention_weights: ", attention_weights.size())
-            attention_vector = torch.sum((output_sum[:, start_pos:end_pos, :].permute(0,2,1) * attention_weights).permute(0,2,1), dim=1)
+            #print("output_sum[:, start_pos:end_pos, :].permute(0,2,1: ", output_sum[:, start_pos:end_pos, :].permute(0,2,1).size())
+            #print("output_sum[:, start_pos:end_pos, :]: ", output_sum[:, start_pos:end_pos, :].size())
+            #print("attention_weights: ", attention_weights.size())
+            attention_vector = torch.sum((attention_weights[:, :, :].permute(2,0,1) * output_sum).permute(1,2,0), dim=1)
             #print("attention_vector: ",attention_vector.size())
             # Store the attention vector for the current word
-            attention_vectors[:,i] = attention_vector #(seqlen,hiddim)
+            attention_vectors[:,i] = attention_vector.squeeze(1) #(seqlen,hiddim)
 
         #print("attention_vectors: ",attention_vectors.size())
         # Concatenate the original LSTM output and the attention vectors
