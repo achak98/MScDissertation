@@ -87,42 +87,37 @@ def parse_args():
     parser.add_argument('--log_path', help='the file to output log')
     return parser.parse_args()
 
-def find_sequence_spans(text, target_sequences, model, args):
+def find_sequence_spans(sents, edus, model, args):
     sequence_spans = []
     idx_edu = 0
-    start_index = None
-    loop = True
-    i = 0
-    while (loop):
-        #target_stuff = re.findall(regex_pattern, target_sequences[idx_edu])
-        #print(f"target_sequences[idx_edu]: {target_sequences[idx_edu]}")
-        target_stuff = model.tokeniser(target_sequences[idx_edu])["input_ids"]
-        target_stuff = target_stuff[1:-1]
-        target_length = len(target_stuff)
-        if len(target_stuff) == 0 :
-            break
-        if text[i] == target_stuff[0]:
-            start_index = i
-            idx_edu += 1
-            potential_end = i + target_length -1
-            #if text[potential_end] != target_stuff[-1]:
-            #print(f"potential_end: {potential_end} and idx_edu: {idx_edu} and text[potential_end-1]: {text[potential_end-1]} aand text[potential_end]: {text[potential_end]} and target_stuff[-1]: {target_stuff[-1]}")
-            #print(f"len(text): {len(text)} and potential_end: {potential_end} and target_length: {target_length} and target_stuff: {target_stuff} and idx_edu: {idx_edu} and len(target_sequences): {len(target_sequences)}")
-            if potential_end > len(text)-1 :
-                if target_stuff[len(text)-1 - i] == text[-1]:
-                    potential_end = len(text)-1 - i
-                else:
-                    break
-            if text[potential_end] == target_stuff[-1]:
-                end_index = potential_end
-                i = end_index
-                sequence_spans.append((start_index, end_index))
+
+    for idx_sents, sent in enumerate(sents):
+        tokenised_sent = model.tokenizer(sent)["input_ids"]
+        loop = True
+        i = 0
+        start_index = None
+        while(loop):
+            edu = edus[idx_edu]
+            tokenised_edu = model.tokenizer(edu)["input_ids"]
+            tokenised_edu = tokenised_edu[1:-1]
+            target_length = len(tokenised_edu)
+            if tokenised_edu[0] == tokenised_sent[i]:
+                start_index = i
+                idx_edu+=1
+                potential_end = i + target_length -1
+                if potential_end > len(tokenised_sent)-1 :
+                    if tokenised_edu[len(tokenised_sent)-1 - i] == tokenised_sent[-1]:
+                        potential_end = len(tokenised_sent)-1 - i
+                    else:
+                        break
+                if tokenised_sent[potential_end] == tokenised_edu[-1]:
+                    end_index = potential_end
+                    i = end_index
+                    sequence_spans.append((start_index, end_index, idx_sents))
             start_index = None
-        #else:
-        #  print(f"i: {i}, text[i]: {text[i]}, target_stuff[0]:{target_stuff[0]}")
-        i+=1
-        if(i>=len(text) or idx_edu >= len(target_sequences)):
-          loop = False
+            i+=1
+            if(i>=len(tokenised_sent) or idx_edu >= len(edus)):
+                loop = False
     return sequence_spans
 
 def preprocess_RST_Discourse_dataset(path_data, tag2idx, args, model):
@@ -138,36 +133,33 @@ def preprocess_RST_Discourse_dataset(path_data, tag2idx, args, model):
         with open(os.path.join(path_data, txt_file), 'r') as txtf, open(os.path.join(path_data, edu_file), 'r') as eduf:
             text = txtf.read()
             edus = eduf.read().split('\n')
-            text = text.split('\n')
-            text = ' '.join(text)
-            text = text.replace("\'", " \' ").replace("\"", " \" ").replace("-", " - ").replace(",", " , ").replace(".", " . ")
+            sents = text.split('\n')
+            text = [sent.replace("\'", " \' ").replace("\"", " \" ").replace("-", " - ").replace(",", " , ").replace(".", " . ") for sent in sents]
             edus = [edu.replace("\'", " \' ").replace("\"", " \" ").replace("-", " - ").replace(",", " , ").replace(".", " . ") for edu in edus]
             edus = [seq.strip() for seq in edus]
 
             #words = re.findall(args.regex_pattern, ' '.join(text))
-            words = model.tokeniser(text, padding="max_length", truncation = True, return_attention_mask=True, max_length = args.max_length)
-            input_ids = words["input_ids"]
-            attn_mask = words["attention_mask"]
-            BIOE_tags = [tag2idx["O"]] * len(input_ids)
+            
             #print(f"txt_file: {txt_file}")
-            sequence_spans = find_sequence_spans(input_ids, edus, model, args)
+            sequence_spans = find_sequence_spans(sents, edus, model, args)
 
-            for span in sequence_spans:
-                if(span[0] == -1 or span[1] == -1):
-                    continue
-                else:
-                    #BIOE_tags[span[0]] = tag2idx['B']
-                    #BIOE_tags[span[1]] = tag2idx['E']
-                    for i in range(span[0], span[1]+1):
-                        BIOE_tags[i] = tag2idx['I']
-            if(len(sequence_spans) != len(edus) - 1):
-                print(f"messed up file: {txt_file}, detected: {len(sequence_spans)}, total: {len(edus)}, length: {len(words['input_ids'])}")
-                messed_up_ones.append(txt_file)
-            #words = words + ['[PAD]'] * (args.max_length - len(words))    #pads to 18432
-            #BIOE_tags = BIOE_tags + [2] * (args.max_length - len(BIOE_tags))    #pads to 18432
-            data.append((input_ids, attn_mask, BIOE_tags))
+            for idx_sents, sent in enumerate(sents):
+                idx_seq_spans = 0
+                loop = True
+                IO_tags = [tag2idx["O"]] * len(sent)
+                while (loop):
+                    span = sequence_spans[idx_seq_spans]
+                    if(span[2] == idx_sents):
+                        IO_tags[span[0]:span[1]+1] = tag2idx['I']*(span[1]-span[0]+1)
+                    idx_seq_spans+=1
+                    if(span[2] != idx_sents):
+                        loop = False
+                tokenised_sent = model.tokenizer(sent)
+                input_ids = tokenised_sent["input_ids"]
+                attn_mask = tokenised_sent["attention_mask"]
+                data.append((input_ids, attn_mask, IO_tags))    
 
-    df = pd.DataFrame(data, columns=['Text', 'Attention Mask', 'BIOE'])
+    df = pd.DataFrame(data, columns=['Sentence', 'Attention Mask', 'IO'])
     print(messed_up_ones)
     return df
 
@@ -281,19 +273,19 @@ def getValData(args, model):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     val_data = pd.read_csv(os.path.join(args.rst_dir, 'preprocessed_data_test.csv'))
         
-    val_data['Text'] = val_data['Text'].tolist()
-    for i in range(len(val_data['Text'])):
-        #print(test_data['Text'].iloc[i])
-        val_data['Text'].iloc[i] =  np.array(ast.literal_eval(val_data['Text'].iloc[i]))
-        val_data['Text'].iloc[i] = [int(item) for item in val_data['Text'].iloc[i]]
-    test_inputs = torch.cat((torch.tensor(np.array(val_data['Text'].tolist()))[:4], torch.tensor(np.array(val_data['Text'].tolist()))[-4:]), dim=0)
+    val_data['Sentence'] = val_data['Sentence'].tolist()
+    for i in range(len(val_data['Sentence'])):
+        #print(test_data['Sentence'].iloc[i])
+        val_data['Sentence'].iloc[i] =  np.array(ast.literal_eval(val_data['Sentence'].iloc[i]))
+        val_data['Sentence'].iloc[i] = [int(item) for item in val_data['Sentence'].iloc[i]]
+    test_inputs = torch.cat((torch.tensor(np.array(val_data['Sentence'].tolist()))[:4], torch.tensor(np.array(val_data['Sentence'].tolist()))[-4:]), dim=0)
     attention_masks = val_data['Attention Mask' ].tolist()
     for i in range(len(val_data['Attention Mask'])):
         val_data['Attention Mask'].iloc[i] =  np.array(ast.literal_eval(val_data['Attention Mask'].iloc[i]))
         val_data['Attention Mask'].iloc[i] = [int(item) for item in val_data['Attention Mask'].iloc[i]]
     attention_masks = torch.cat((torch.tensor(np.array(val_data['Attention Mask' ].tolist()))[:4], torch.tensor(np.array(val_data['Attention Mask' ].tolist()))[-4:]), dim=0)
     
-    val_labels = val_data['BIOE'].tolist()
+    val_labels = val_data['IO'].tolist()
     val_labels = [ast.literal_eval(label_list) for label_list in val_labels]
     val_labels = torch.cat(((torch.tensor(val_labels, dtype=torch.long).to(device))[:4], torch.tensor(val_labels, dtype=torch.long).to(device))[-4:], dim=0)
     #print("val_labels: ",val_labels)
@@ -354,12 +346,12 @@ def main():
          # Convert data to PyTorch tensors and move to the device
         train_data = pd.read_csv(os.path.join(args.rst_dir, 'preprocessed_data_train.csv'))
         
-        train_data['Text'] = train_data['Text'].tolist()
-        for i in range(len(train_data['Text'])):
-            #print(train_data['Text'].iloc[i])
-            train_data['Text'].iloc[i] =  np.array(ast.literal_eval(train_data['Text'].iloc[i]))
-            train_data['Text'].iloc[i] = [int(item) for item in train_data['Text'].iloc[i]]
-        train_inputs = torch.tensor(np.array(train_data['Text'].tolist()))
+        train_data['Sentence'] = train_data['Sentence'].tolist()
+        for i in range(len(train_data['Sentence'])):
+            #print(train_data['Sentence'].iloc[i])
+            train_data['Sentence'].iloc[i] =  np.array(ast.literal_eval(train_data['Sentence'].iloc[i]))
+            train_data['Sentence'].iloc[i] = [int(item) for item in train_data['Sentence'].iloc[i]]
+        train_inputs = torch.tensor(np.array(train_data['Sentence'].tolist()))
  
         attention_masks = train_data['Attention Mask' ].tolist()
         for i in range(len(train_data['Attention Mask'])):
@@ -367,7 +359,7 @@ def main():
             train_data['Attention Mask'].iloc[i] = [int(item) for item in train_data['Attention Mask'].iloc[i]]
         attention_masks = torch.tensor(np.array(train_data['Attention Mask' ].tolist()))
  
-        train_labels = train_data['BIOE'].tolist()
+        train_labels = train_data['IO'].tolist()
         train_labels = [ast.literal_eval(label_list) for label_list in train_labels]
         train_labels = torch.tensor(train_labels, dtype=torch.long).to(device)
 
@@ -509,12 +501,12 @@ def main():
     if args.evaluate:
         test_data = pd.read_csv(os.path.join(args.rst_dir, 'preprocessed_data_test.csv'))
         
-        test_data['Text'] = test_data['Text'].tolist()
-        for i in range(len(test_data['Text'])):
-            #print(test_data['Text'].iloc[i])
-            test_data['Text'].iloc[i] =  np.array(ast.literal_eval(test_data['Text'].iloc[i]))
-            test_data['Text'].iloc[i] = [int(item) for item in test_data['Text'].iloc[i]]
-        test_inputs = torch.tensor(np.array(test_data['Text'].tolist()))
+        test_data['Sentence'] = test_data['Sentence'].tolist()
+        for i in range(len(test_data['Sentence'])):
+            #print(test_data['Sentence'].iloc[i])
+            test_data['Sentence'].iloc[i] =  np.array(ast.literal_eval(test_data['Sentence'].iloc[i]))
+            test_data['Sentence'].iloc[i] = [int(item) for item in test_data['Sentence'].iloc[i]]
+        test_inputs = torch.tensor(np.array(test_data['Sentence'].tolist()))
  
         attention_masks = test_data['Attention Mask' ].tolist()
         for i in range(len(test_data['Attention Mask'])):
@@ -522,7 +514,7 @@ def main():
             test_data['Attention Mask'].iloc[i] = [int(item) for item in test_data['Attention Mask'].iloc[i]]
         attention_masks = torch.tensor(np.array(test_data['Attention Mask' ].tolist()))
  
-        test_labels = test_data['BIOE'].tolist()
+        test_labels = test_data['IO'].tolist()
         test_labels = [ast.literal_eval(label_list) for label_list in test_labels]
         test_labels = torch.tensor(test_labels, dtype=torch.long).to(device)
         print("getting empty embeddings tensor")
@@ -660,7 +652,7 @@ def main():
             seg_pred = model.crf.decode(seg_tag_scores)
 
         #TODO: FIGURE OUT HOW TO SAVE THE DATA
-        seg_df = pd.DataFrame(data, columns=['Text', 'BIOE'])
+        seg_df = pd.DataFrame(data, columns=['Sentence', 'IO'])
         seg_df.to_csv('preprocessed_data_test.csv', index=False)
 if __name__ == '__main__':
     main()
