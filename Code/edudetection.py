@@ -67,11 +67,11 @@ def parse_args():
     parser.add_argument('--batch_size', type=int,
                                 default=1, help='batch size')
     parser.add_argument('--epochs', type=int,
-                                default=30, help='train epochs')
+                                default=10, help='train epochs')
     parser.add_argument('--seed', type=int,
                                 default=42, help='the random seed')
     parser.add_argument('--tagset_size', type=int,
-                                default=4, help='number of tags in the tagset')
+                                default=2, help='number of tags in the tagset')
     parser.add_argument('--hidden_dim', type=int,
                                 default=768, help='hidden size')
     parser.add_argument('--max_grad_norm', type=float,
@@ -156,9 +156,9 @@ def preprocess_RST_Discourse_dataset(path_data, tag2idx, args, model):
                 if(span[0] == -1 or span[1] == -1):
                     continue
                 else:
-                    BIOE_tags[span[0]] = tag2idx['B']
-                    BIOE_tags[span[1]] = tag2idx['E']
-                    for i in range(span[0]+1, span[1]):
+                    #BIOE_tags[span[0]] = tag2idx['B']
+                    #BIOE_tags[span[1]] = tag2idx['E']
+                    for i in range(span[0], span[1]+1):
                         BIOE_tags[i] = tag2idx['I']
             if(len(sequence_spans) != len(edus) - 1):
                 print(f"messed up file: {txt_file}, detected: {len(sequence_spans)}, total: {len(edus)}, length: {len(words['input_ids'])}")
@@ -217,9 +217,14 @@ class EDUPredictor(nn.Module):
     def forward(self, embeddings):
  
         lstm_out, _ = self.lstm1(embeddings)
- 
-        lstm_out, _ = self.lstm2(lstm_out)
+        lstm_out = self.dropout1(lstm_out)
+        hidden_dim_size = lstm_out.size(-1)
+        first_half = lstm_out[:, :, : hidden_dim_size// 2]
+        second_half = lstm_out[:, :, hidden_dim_size // 2:]
+        output_sum = first_half + second_half
 
+        lstm_out, _ = self.lstm2(output_sum)
+        lstm_out = self.dropout2(lstm_out)
         #tag_space = self.hidden2tag(lstm_out)
         #print("size of tag_space: ", tag_space.size())
         hidden_dim_size = lstm_out.size(-1)
@@ -324,7 +329,7 @@ def main():
     args = parse_args()
 
     # Define the mapping from index to tag
-    idx2tag = {0: 'B', 1: 'I', 2: 'O', 3: 'E'}
+    idx2tag = {0: 'I', 1: 'O'} #    , 2: 'O', 3: 'E'}
     tag2idx = {tag: idx for idx, tag in idx2tag.items()}
 
     # Detect device (CPU or CUDA)
