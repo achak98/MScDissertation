@@ -156,9 +156,12 @@ def preprocess_RST_Discourse_dataset(path_data, tag2idx, args, model):
             sequence_spans = find_sequence_spans(sents, edus, model, args)
             #print("sequence_spans: ", sequence_spans)
             for idx_sents, sent in enumerate(sents):
+                tokenised_sent = model.tokeniser(sent)
+                input_ids = tokenised_sent["input_ids"]
+                attn_mask = tokenised_sent["attention_mask"]
                 idx_seq_spans = 0
                 loop = True
-                IO_tags = [tag2idx["O"]] * len(sent)
+                IO_tags = [tag2idx["O"]] * len(input_ids)
                 while (loop):
                     span = sequence_spans[idx_seq_spans]
                     if(span[2] == idx_sents):
@@ -167,11 +170,12 @@ def preprocess_RST_Discourse_dataset(path_data, tag2idx, args, model):
                     idx_seq_spans+=1
                     if(idx_seq_spans >= len(sequence_spans) or span[2] != idx_sents):
                         loop = False
-                tokenised_sent = model.tokeniser(sent)
-                input_ids = tokenised_sent["input_ids"]
-                attn_mask = tokenised_sent["attention_mask"]
+                
                 data.append((input_ids, attn_mask, IO_tags))    
-    print(f"total to be found: {len(edus)}, found: {len(sequence_spans)}")
+    #print(f"total to be found: {len(edus)}, found: {len(sequence_spans)}")
+    if(len(edus)-1 != len(sequence_spans)):
+        print(f"messed up file: {txt_file}, detected: {len(sequence_spans)}, total: {len(edus)-1}")
+        messed_up_ones.append(txt_file)
     df = pd.DataFrame(data, columns=['Sentence', 'Attention Mask', 'IO'])
     print(messed_up_ones)
     return df
