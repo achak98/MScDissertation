@@ -219,9 +219,10 @@ class EDUPredictor(nn.Module):
         self.lstm1 = nn.LSTM(self.hidden_dim, self.hidden_dim, num_layers=1, bidirectional=True)
         self.dropout1 = nn.Dropout(args.dropout) 
         # Attention weight computation layer
-        self.attention_weights = nn.Linear(args.hidden_dim * 3, 1)
+        #self.attention_weights = nn.Linear(args.hidden_dim * 3, 1)
+        self.lstm2lstm = nn.Linear(self.hidden_dim, self.hidden_dim)
         # Define BiLSTM 2
-        self.lstm2 = nn.LSTM(self.hidden_dim, self.tagset_size, num_layers=1, bidirectional=True)
+        self.lstm2 = nn.LSTM(self.hidden_dim, self.hidden_dim, num_layers=1, bidirectional=True)
         self.dropout2 = nn.Dropout(args.dropout)  
         """self.regressor = nn.Sequential(
             nn.Linear(hidden_dim*2, hidden_dim//2),
@@ -232,16 +233,12 @@ class EDUPredictor(nn.Module):
         )"""
         # Define MLP
         self.hidden2tag = nn.Sequential(
-            nn.Linear(self.hidden_dim*2, self.hidden_dim//2),
+            nn.Linear(self.hidden_dim*2, self.hidden_dim//16),
             nn.GELU(),
             nn.Dropout(0.3),
-            nn.Linear(self.hidden_dim//2, self.hidden_dim // 16),
+            nn.Linear(self.hidden_dim//16, self.tagset_size),
             nn.GELU(),
-            nn.Dropout(0.3),
-            nn.Linear(self.hidden_dim // 16, self.hidden_dim // 64),
-            nn.GELU(),
-            nn.Dropout(0.3),
-            nn.Linear(self.hidden_dim // 64, self.tagset_size)
+            nn.Dropout(0.3)
         )
         #print("tagset_size: ",tagset_size)
         # Define CRF
@@ -289,6 +286,7 @@ class EDUPredictor(nn.Module):
         # Concatenate the original LSTM output and the attention vectors
         lstm_output_with_attention = torch.cat([output_sum, attention_vectors], dim=-1)"""
         #print("lstm_output_with_attention: ", lstm_output_with_attention.size())
+        output_sum = self.lstm2lstm(output_sum)
         lstm_out, _ = self.lstm2(output_sum)
 
         #lstm_out, _ = self.lstm2(output_sum)
@@ -302,7 +300,7 @@ class EDUPredictor(nn.Module):
         #print("first_half: ", first_half.size())
         # Sum the two halves together along the last dimension
         output_sum = first_half + second_half
-
+        output_sum = self.hidden2tag(output_sum)
         tag_scores = self.crf.decode(output_sum)
 
         return torch.tensor(tag_scores), output_sum
