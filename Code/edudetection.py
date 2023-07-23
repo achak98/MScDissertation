@@ -233,7 +233,7 @@ class EDUPredictor(nn.Module):
         )"""
         # Define MLP
         self.hidden2tag = nn.Sequential(
-            nn.Linear(self.hidden_dim*2, self.hidden_dim//16),
+            nn.Linear(self.hidden_dim, self.hidden_dim//16),
             nn.GELU(),
             nn.Dropout(0.3),
             nn.Linear(self.hidden_dim//16, self.tagset_size),
@@ -286,14 +286,14 @@ class EDUPredictor(nn.Module):
         # Concatenate the original LSTM output and the attention vectors
         lstm_output_with_attention = torch.cat([output_sum, attention_vectors], dim=-1)"""
         #print("lstm_output_with_attention: ", lstm_output_with_attention.size())
-        print(output_sum.size())
+        #print(output_sum.size())
         output_sum = self.lstm2lstm(output_sum)
-        print(output_sum.size())
+        #print(output_sum.size())
         lstm_out, _ = self.lstm2(output_sum)
 
         #lstm_out, _ = self.lstm2(output_sum)
         lstm_out = self.dropout2(lstm_out)
-        print(lstm_out.size())
+        #print(lstm_out.size())
         #tag_space = self.hidden2tag(lstm_out)
         #print("size of tag_space: ", tag_space.size())
         hidden_dim_size = lstm_out.size(-1)
@@ -303,7 +303,7 @@ class EDUPredictor(nn.Module):
         #print("first_half: ", first_half.size())
         # Sum the two halves together along the last dimension
         output_sum = first_half + second_half
-        print(output_sum.size())
+        #print(output_sum.size())
         output_sum = self.hidden2tag(output_sum)
         tag_scores = self.crf.decode(output_sum)
 
