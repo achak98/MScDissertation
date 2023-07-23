@@ -380,7 +380,7 @@ def main():
         train_labels = [ast.literal_eval(label_list) for label_list in train_labels]
         train_labels = torch.tensor(train_labels, dtype=torch.long).to(device)
 
-        if (not args.get_embeddings_anyway) and os.path.exists(os.path.join(args.rst_dir,'embeddings_train.pt')):
+        """if (not args.get_embeddings_anyway) and os.path.exists(os.path.join(args.rst_dir,'embeddings_train.pt')):
             embeddings = torch.load(os.path.join(args.rst_dir,'embeddings_train.pt'))
             print(f"train embeddings loaded from {os.path.join(args.rst_dir,'embeddings_train.pt')}")
         else:
@@ -401,17 +401,17 @@ def main():
                     outputs = encoder(input_id, attention_mask)
                     embeddings[i] = torch.tensor(outputs.last_hidden_state).squeeze()
                 #print("embeddings.size(): ",embeddings.size())
-            torch.save(embeddings, os.path.join(args.rst_dir,'embeddings_train.pt'))
+            torch.save(embeddings, os.path.join(args.rst_dir,'embeddings_train.pt'))"""
         torch.cuda.empty_cache()
         val_embeddings, val_labels = getValData(args, model)
         device_idx = 1
         if torch.cuda.is_available() and torch.cuda.device_count() >= device_idx + 1:
             device = torch.device(f"cuda:{device_idx}")
-        embeddings = torch.tensor(embeddings).to(device)
+        #embeddings = torch.tensor(embeddings).to(device)
         # Create DataLoader for training data
         #print(train_labels.size())
         #print(embeddings.size())
-        train_dataset = torch.utils.data.TensorDataset(embeddings, train_labels)
+        train_dataset = torch.utils.data.TensorDataset(zip(input_ids,attention_masks), train_labels)
         train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
         print("starting training")
         # Training loop
@@ -423,11 +423,18 @@ def main():
             epoch_re = [0.0] * 2
             epoch_overall_f1 = 0.0
             model = model.to(device)
+            encoder = AutoModel.from_pretrained(model.transformer_architecture, config=model.config)
+            encoder = encoder.to(device)
             model.train()  # Set model to training mode
 
             # Create a tqdm progress bar for the inner loop (train_loader)
             train_loader_tqdm = tqdm(enumerate(train_loader), total=len(train_loader), desc='Batches')
-            for step, (embeddings,labels) in train_loader_tqdm:
+            for step, ((input_id,attention_mask),labels) in train_loader_tqdm:
+                input_id = input_id.to(device)
+                attention_mask = attention_mask.to(device) 
+                input_id = input_ids[i].unsqueeze(0)
+                attention_mask = attention_masks[i].unsqueeze(0)
+                embeddings = encoder(input_id, attention_mask).last_hidden_state.squeeze()
                 inputs = embeddings.to(torch.float) #.to(device)
                 labels = labels.to(device)
                 #print(f"type of inputs tensor: {inputs.dtype}, and type of labels tensor: {labels.dtype}") 
