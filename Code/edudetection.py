@@ -23,6 +23,26 @@ import warnings
 warnings.warn = warn
 warnings.filterwarnings('ignore') 
 
+def manual_batching(tensor, batch_size):
+    num_samples = tensor.size(0)
+    num_batches = (num_samples + batch_size - 1) // batch_size
+
+    # Create a list to store the batches
+    batches = []
+
+    for i in range(num_batches):
+        # Calculate the start and end indices for the current batch
+        start_idx = i * batch_size
+        end_idx = min((i + 1) * batch_size, num_samples)
+
+        # Extract the current batch from the tensor
+        batch = tensor[start_idx:end_idx]
+
+        # Append the batch to the list
+        batches.append(batch)
+
+    return batches
+
 def compute_f1_score_for_labels(y_true, y_pred, labels):
     # y_true: Ground truth labels (list of lists)
     # y_pred: Predicted labels (list of lists)
@@ -411,8 +431,11 @@ def main():
         # Create DataLoader for training data
         #print(train_labels.size())
         #print(embeddings.size())
-        train_dataset = torch.utils.data.TensorDataset(zip(train_inputs,attention_masks), train_labels)
-        train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
+        
+        train_inputs = manual_batching(train_inputs, args.batch_size)
+        attention_masks = manual_batching(attention_masks, args.batch_size)
+        train_labels = manual_batching(train_labels, args.batch_size)
+
         print("starting training")
         # Training loop
         for epoch in tqdm(range(args.epochs), desc='Epochs'):
@@ -428,8 +451,8 @@ def main():
             model.train()  # Set model to training mode
 
             # Create a tqdm progress bar for the inner loop (train_loader)
-            train_loader_tqdm = tqdm(enumerate(train_loader), total=len(train_loader), desc='Batches')
-            for step, ((input_id,attention_mask),labels) in train_loader_tqdm:
+            train_loader_tqdm = tqdm(enumerate(train_inputs), total=len(train_inputs), desc='Batches')
+            for step, (input_id,attention_mask,labels) in zip(train_loader_tqdm, attention_masks, train_labels):
                 input_id = input_id.to(device)
                 attention_mask = attention_mask.to(device) 
                 input_id = input_ids[i].unsqueeze(0)
