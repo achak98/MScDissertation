@@ -456,10 +456,12 @@ def main():
                 input_id = input_id.to(device)
                 print("input_id: ",input_id.size())
                 attention_mask = attention_mask.to(device) 
-                embeddings = encoder(input_id, attention_mask).last_hidden_state.squeeze()
-                print("embeddings: ",embeddings.size())
+                embeddings = encoder(input_id, attention_mask).last_hidden_state
+                
                 inputs = embeddings.to(torch.float) #.to(device)
                 labels = labels.to(device)
+                print("inputs: ",inputs.size())
+                print("labels: ",labels.size())
                 #print(f"type of inputs tensor: {inputs.dtype}, and type of labels tensor: {labels.dtype}") 
 
                 optimizer.zero_grad()  # Zero the gradients
