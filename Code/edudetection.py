@@ -454,6 +454,7 @@ def main():
             train_loader_tqdm = tqdm(train_inputs, total=len(train_inputs), desc='Batches')
             for step, (input_id,attention_mask,labels) in enumerate(zip(train_loader_tqdm, attention_masks, train_labels)):
                 input_id = input_id.to(device)
+                print("input_id: ",input_id.size())
                 attention_mask = attention_mask.to(device) 
                 input_id = input_id.unsqueeze(0)
                 attention_mask = attention_mask.unsqueeze(0)
