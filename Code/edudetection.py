@@ -92,9 +92,9 @@ def find_sequence_spans(sents, edus, model, args):
     idx_edu = 0
 
     for idx_sents, sent in enumerate(sents):
-        print("sent: ", sent)
+        #print("sent: ", sent)
         tokenised_sent = model.tokeniser(sent)["input_ids"]
-        print("tokenised_sent : ",tokenised_sent)
+        #print("tokenised_sent : ",tokenised_sent)
         loop = True
         i = 0
         start_index = None
@@ -103,17 +103,17 @@ def find_sequence_spans(sents, edus, model, args):
                 loop = False
                 break
             edu = edus[idx_edu]
-            print("edu: ", edu)
+            #print("edu: ", edu)
             tokenised_edu = model.tokeniser(edu)["input_ids"]
             tokenised_edu = tokenised_edu[1:-1]
-            print("tokenised_edu : ",tokenised_edu)
+            #print("tokenised_edu : ",tokenised_edu)
             target_length = len(tokenised_edu)
-            print("target_length : ",target_length)
+            #print("target_length : ",target_length)
             if target_length == 0 :
                 idx_edu+=1
             else:
                 if tokenised_edu[0] == tokenised_sent[i]:
-                    print("first matched")
+                    #print("first matched")
                     start_index = i
                     idx_edu+=1
                     potential_end = i + target_length -1
@@ -123,7 +123,7 @@ def find_sequence_spans(sents, edus, model, args):
                         else:
                             break
                     if tokenised_sent[potential_end] == tokenised_edu[-1]:
-                        print("last matched")
+                        #print("last matched")
                         end_index = potential_end
                         i = end_index
                         sequence_spans.append((start_index, end_index, idx_sents))
@@ -154,7 +154,7 @@ def preprocess_RST_Discourse_dataset(path_data, tag2idx, args, model):
             
             #print(f"txt_file: {txt_file}")
             sequence_spans = find_sequence_spans(sents, edus, model, args)
-            print("sequence_spans: ", sequence_spans)
+            #print("sequence_spans: ", sequence_spans)
             for idx_sents, sent in enumerate(sents):
                 idx_seq_spans = 0
                 loop = True
