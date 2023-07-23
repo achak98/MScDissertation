@@ -92,7 +92,9 @@ def find_sequence_spans(sents, edus, model, args):
     idx_edu = 0
 
     for idx_sents, sent in enumerate(sents):
+        print("sent: ", sent)
         tokenised_sent = model.tokeniser(sent)["input_ids"]
+        print("tokenised_sent : ",tokenised_sent)
         loop = True
         i = 0
         start_index = None
@@ -101,13 +103,17 @@ def find_sequence_spans(sents, edus, model, args):
                 loop = False
                 break
             edu = edus[idx_edu]
+            print("edu: ", edu)
             tokenised_edu = model.tokeniser(edu)["input_ids"]
+            print("tokenised_edu : ",tokenised_edu)
             tokenised_edu = tokenised_edu[1:-1]
             target_length = len(tokenised_edu)
-            if len(tokenised_edu) == 0 :
+            print("target_length : ",target_length)
+            if target_length == 0 :
                 idx_edu+=1
             else:
                 if tokenised_edu[0] == tokenised_sent[i]:
+                    print("first matched")
                     start_index = i
                     idx_edu+=1
                     potential_end = i + target_length -1
@@ -117,6 +123,7 @@ def find_sequence_spans(sents, edus, model, args):
                         else:
                             break
                     if tokenised_sent[potential_end] == tokenised_edu[-1]:
+                        print("last matched")
                         end_index = potential_end
                         i = end_index
                         sequence_spans.append((start_index, end_index, idx_sents))
