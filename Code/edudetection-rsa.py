@@ -221,7 +221,7 @@ class EDUPredictor(nn.Module):
         self.lstm1 = nn.LSTM(self.hidden_dim, self.hidden_dim, num_layers=1, bidirectional=True)
         self.dropout1 = nn.Dropout(args.dropout) 
         # Attention weight computation layer
-        #self.attention_weights = nn.Linear(args.hidden_dim * 3, 1)
+        self.attention_weights = nn.Linear(args.hidden_dim * 3, 1)
         # Define BiLSTM 2
         self.lstm2 = nn.LSTM(self.hidden_dim, self.tagset_size, num_layers=1, bidirectional=True)
         self.dropout2 = nn.Dropout(args.dropout)  
