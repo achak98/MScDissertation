@@ -451,8 +451,8 @@ def main():
             model.train()  # Set model to training mode
 
             # Create a tqdm progress bar for the inner loop (train_loader)
-            train_loader_tqdm = tqdm(enumerate(train_inputs), total=len(train_inputs), desc='Batches')
-            for step, (input_id,attention_mask,labels) in zip(train_loader_tqdm, attention_masks, train_labels):
+            train_loader_tqdm = tqdm(train_inputs, total=len(train_inputs), desc='Batches')
+            for step, (input_id,attention_mask,labels) in enumerate(zip(train_loader_tqdm, attention_masks, train_labels)):
                 input_id = input_id.to(device)
                 attention_mask = attention_mask.to(device) 
                 input_id = input_ids[i].unsqueeze(0)
