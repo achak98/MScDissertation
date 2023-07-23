@@ -103,22 +103,22 @@ def find_sequence_spans(sents, edus, model, args):
             target_length = len(tokenised_edu)
             if len(tokenised_edu) == 0 :
                 idx_edu+=1
-                continue
-            if tokenised_edu[0] == tokenised_sent[i]:
-                start_index = i
-                idx_edu+=1
-                potential_end = i + target_length -1
-                if potential_end > len(tokenised_sent)-1 :
-                    if tokenised_edu[len(tokenised_sent)-1 - i] == tokenised_sent[-1]:
-                        potential_end = len(tokenised_sent)-1 - i
-                    else:
-                        break
-                if tokenised_sent[potential_end] == tokenised_edu[-1]:
-                    end_index = potential_end
-                    i = end_index
-                    sequence_spans.append((start_index, end_index, idx_sents))
-            start_index = None
-            i+=1
+            else:
+                if tokenised_edu[0] == tokenised_sent[i]:
+                    start_index = i
+                    idx_edu+=1
+                    potential_end = i + target_length -1
+                    if potential_end > len(tokenised_sent)-1 :
+                        if tokenised_edu[len(tokenised_sent)-1 - i] == tokenised_sent[-1]:
+                            potential_end = len(tokenised_sent)-1 - i
+                        else:
+                            break
+                    if tokenised_sent[potential_end] == tokenised_edu[-1]:
+                        end_index = potential_end
+                        i = end_index
+                        sequence_spans.append((start_index, end_index, idx_sents))
+                start_index = None
+                i+=1
             if(i>=len(tokenised_sent) or idx_edu >= len(edus)):
                 loop = False
     return sequence_spans
