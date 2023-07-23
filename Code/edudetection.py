@@ -454,14 +454,14 @@ def main():
             train_loader_tqdm = tqdm(train_inputs, total=len(train_inputs), desc='Batches')
             for step, (input_id,attention_mask,labels) in enumerate(zip(train_loader_tqdm, attention_masks, train_labels)):
                 input_id = input_id.to(device)
-                print("input_id: ",input_id.size())
+                #print("input_id: ",input_id.size())
                 attention_mask = attention_mask.to(device) 
                 embeddings = encoder(input_id, attention_mask).last_hidden_state
                 
                 inputs = embeddings.to(torch.float) #.to(device)
                 labels = labels.to(device)
-                print("inputs: ",inputs.size())
-                print("labels: ",labels.size())
+                #print("inputs: ",inputs.size())
+                #print("labels: ",labels.size())
                 #print(f"type of inputs tensor: {inputs.dtype}, and type of labels tensor: {labels.dtype}") 
 
                 optimizer.zero_grad()  # Zero the gradients
