@@ -84,6 +84,8 @@ def parse_args():
                                 default=1e-3, help='weight decay')
     parser.add_argument('--dropout', type=float,
                                 default=0.2, help='weight decay')
+    parser.add_argument('--window_size', type=int,
+                                default=5, help='die ya whoreses')
     parser.add_argument('--batch_size', type=int,
                                 default=1, help='batch size')
     parser.add_argument('--epochs', type=int,
