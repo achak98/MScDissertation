@@ -23,6 +23,26 @@ import warnings
 warnings.warn = warn
 warnings.filterwarnings('ignore') 
 
+def manual_batching(tensor, batch_size):
+    num_samples = tensor.size(0)
+    num_batches = (num_samples + batch_size - 1) // batch_size
+
+    # Create a list to store the batches
+    batches = []
+
+    for i in range(num_batches):
+        # Calculate the start and end indices for the current batch
+        start_idx = i * batch_size
+        end_idx = min((i + 1) * batch_size, num_samples)
+
+        # Extract the current batch from the tensor
+        batch = tensor[start_idx:end_idx]
+
+        # Append the batch to the list
+        batches.append(batch)
+
+    return batches
+
 def compute_f1_score_for_labels(y_true, y_pred, labels):
     # y_true: Ground truth labels (list of lists)
     # y_pred: Predicted labels (list of lists)
@@ -33,7 +53,7 @@ def compute_f1_score_for_labels(y_true, y_pred, labels):
 
     # Compute precision, recall, and F1 score for each label
     precision, recall, f1_score_for_label, support = precision_recall_fscore_support(y_true, y_pred, labels=labels)
-    overall_f1 = (f1_score_for_label[0]*support[0] + f1_score_for_label[1]*support[1] + f1_score_for_label[2]*support[2] + f1_score_for_label[3]*support[3])/(support[0]+support[1]+support[2]+support[3])
+    overall_f1 = (f1_score_for_label[0]*support[0] + f1_score_for_label[1]*support[1])/(support[0]+support[1]) #+ f1_score_for_label[2]*support[2] + f1_score_for_label[3]*support[3])/(support[0]+support[1]+support[2]+support[3])
     correct = sum(1 for true_label, pred_label in zip(y_true, y_pred) if true_label == pred_label)
     total = len(y_true)
     accuracy = correct / total * 100.0
@@ -47,7 +67,7 @@ def compute_f1_score_for_labels(y_true, y_pred, labels):
         }
 
     return label_scores, accuracy, overall_f1
-
+    
 def parse_args():
     parser = argparse.ArgumentParser('EDU segmentation toolkit 1.0')
     parser.add_argument('--prepare', action='store_true',
@@ -60,6 +80,8 @@ def parse_args():
     parser.add_argument('--max_length', type=int, default= 2048)
     parser.add_argument('--learning_rate', type=float,
                                 default=3e-4, help='learning rate')
+    parser.add_argument('--device', type=int,
+                                default=0, help='learning rate')
     parser.add_argument('--weight_decay', type=float,
                                 default=1e-3, help='weight decay')
     parser.add_argument('--dropout', type=float,
@@ -69,11 +91,11 @@ def parse_args():
     parser.add_argument('--batch_size', type=int,
                                 default=1, help='batch size')
     parser.add_argument('--epochs', type=int,
-                                default=30, help='train epochs')
+                                default=10, help='train epochs')
     parser.add_argument('--seed', type=int,
                                 default=42, help='the random seed')
     parser.add_argument('--tagset_size', type=int,
-                                default=4, help='number of tags in the tagset')
+                                default=2, help='number of tags in the tagset')
     parser.add_argument('--hidden_dim', type=int,
                                 default=768, help='hidden size')
     parser.add_argument('--max_grad_norm', type=float,
@@ -89,42 +111,49 @@ def parse_args():
     parser.add_argument('--log_path', help='the file to output log')
     return parser.parse_args()
 
-def find_sequence_spans(text, target_sequences, model, args):
+def find_sequence_spans(sents, edus, model, args):
     sequence_spans = []
     idx_edu = 0
-    start_index = None
-    loop = True
-    i = 0
-    while (loop):
-        #target_stuff = re.findall(regex_pattern, target_sequences[idx_edu])
-        #print(f"target_sequences[idx_edu]: {target_sequences[idx_edu]}")
-        target_stuff = model.tokeniser(target_sequences[idx_edu])["input_ids"]
-        target_stuff = target_stuff[1:-1]
-        target_length = len(target_stuff)
-        if len(target_stuff) == 0 :
-            break
-        if text[i] == target_stuff[0]:
-            start_index = i
-            idx_edu += 1
-            potential_end = i + target_length -1
-            #if text[potential_end] != target_stuff[-1]:
-            #print(f"potential_end: {potential_end} and idx_edu: {idx_edu} and text[potential_end-1]: {text[potential_end-1]} aand text[potential_end]: {text[potential_end]} and target_stuff[-1]: {target_stuff[-1]}")
-            #print(f"len(text): {len(text)} and potential_end: {potential_end} and target_length: {target_length} and target_stuff: {target_stuff} and idx_edu: {idx_edu} and len(target_sequences): {len(target_sequences)}")
-            if potential_end > len(text)-1 :
-                if target_stuff[len(text)-1 - i] == text[-1]:
-                    potential_end = len(text)-1 - i
-                else:
-                    break
-            if text[potential_end] == target_stuff[-1]:
-                end_index = potential_end
-                i = end_index
-                sequence_spans.append((start_index, end_index))
-            start_index = None
-        #else:
-        #  print(f"i: {i}, text[i]: {text[i]}, target_stuff[0]:{target_stuff[0]}")
-        i+=1
-        if(i>=len(text) or idx_edu >= len(target_sequences)):
-          loop = False
+
+    for idx_sents, sent in enumerate(sents):
+        #print("sent: ", sent)
+        tokenised_sent = model.tokeniser(sent, padding="max_length", truncation = True, return_attention_mask=True, max_length = args.max_length)["input_ids"]
+        #print("tokenised_sent : ",tokenised_sent)
+        loop = True
+        i = 0
+        start_index = None
+        while(loop):
+            if(i>=len(tokenised_sent) or idx_edu >= len(edus)):
+                loop = False
+                break
+            edu = edus[idx_edu]
+            #print("edu: ", edu)
+            tokenised_edu = model.tokeniser(edu, padding="max_length", truncation = True, return_attention_mask=True, max_length = args.max_length)["input_ids"]
+            tokenised_edu = tokenised_edu[1:-1]
+            #print("tokenised_edu : ",tokenised_edu)
+            target_length = len(tokenised_edu)
+            #print("target_length : ",target_length)
+            if target_length == 0 :
+                idx_edu+=1
+            else:
+                if tokenised_edu[0] == tokenised_sent[i]:
+                    #print("first matched")
+                    start_index = i
+                    idx_edu+=1
+                    potential_end = i + target_length -1
+                    if potential_end > len(tokenised_sent)-1 :
+                        if tokenised_edu[len(tokenised_sent)-1 - i] == tokenised_sent[-1]:
+                            potential_end = len(tokenised_sent)-1 - i
+                        else:
+                            break
+                    if tokenised_sent[potential_end] == tokenised_edu[-1]:
+                        #print("last matched")
+                        end_index = potential_end
+                        i = end_index
+                        sequence_spans.append((start_index, end_index, idx_sents))
+                start_index = None
+                i+=1
+            
     return sequence_spans
 
 def preprocess_RST_Discourse_dataset(path_data, tag2idx, args, model):
@@ -140,36 +169,38 @@ def preprocess_RST_Discourse_dataset(path_data, tag2idx, args, model):
         with open(os.path.join(path_data, txt_file), 'r') as txtf, open(os.path.join(path_data, edu_file), 'r') as eduf:
             text = txtf.read()
             edus = eduf.read().split('\n')
-            text = text.split('\n')
-            text = ' '.join(text)
-            text = text.replace("\'", " \' ").replace("\"", " \" ").replace("-", " - ").replace(",", " , ").replace(".", " . ")
+            sents = text.split('\n')
+            sents = [sent.replace("\'", " \' ").replace("\"", " \" ").replace("-", " - ").replace(",", " , ").replace(".", " . ") for sent in sents]
             edus = [edu.replace("\'", " \' ").replace("\"", " \" ").replace("-", " - ").replace(",", " , ").replace(".", " . ") for edu in edus]
             edus = [seq.strip() for seq in edus]
 
             #words = re.findall(args.regex_pattern, ' '.join(text))
-            words = model.tokeniser(text, padding="max_length", truncation = True, return_attention_mask=True, max_length = args.max_length)
-            input_ids = words["input_ids"]
-            attn_mask = words["attention_mask"]
-            BIOE_tags = [tag2idx["O"]] * len(input_ids)
+            
             #print(f"txt_file: {txt_file}")
-            sequence_spans = find_sequence_spans(input_ids, edus, model, args)
-
-            for span in sequence_spans:
-                if(span[0] == -1 or span[1] == -1):
-                    continue
-                else:
-                    BIOE_tags[span[0]] = tag2idx['B']
-                    BIOE_tags[span[1]] = tag2idx['E']
-                    for i in range(span[0]+1, span[1]):
-                        BIOE_tags[i] = tag2idx['I']
-            if(len(sequence_spans) != len(edus) - 1):
-                print(f"messed up file: {txt_file}, detected: {len(sequence_spans)}, total: {len(edus)}, length: {len(words['input_ids'])}")
-                messed_up_ones.append(txt_file)
-            #words = words + ['[PAD]'] * (args.max_length - len(words))    #pads to 18432
-            #BIOE_tags = BIOE_tags + [2] * (args.max_length - len(BIOE_tags))    #pads to 18432
-            data.append((input_ids, attn_mask, BIOE_tags))
-
-    df = pd.DataFrame(data, columns=['Text', 'Attention Mask', 'BIOE'])
+            sequence_spans = find_sequence_spans(sents, edus, model, args)
+            #print("sequence_spans: ", sequence_spans)
+            for idx_sents, sent in enumerate(sents):
+                tokenised_sent = model.tokeniser(sent, padding="max_length", truncation = True, return_attention_mask=True, max_length = args.max_length)
+                input_ids = tokenised_sent["input_ids"]
+                attn_mask = tokenised_sent["attention_mask"]
+                idx_seq_spans = 0
+                loop = True
+                IO_tags = [tag2idx["O"]] * len(input_ids)
+                while (loop):
+                    span = sequence_spans[idx_seq_spans]
+                    if(span[2] == idx_sents):
+                        for i in range(span[0],span[1]+1):
+                            IO_tags[i] = tag2idx['I']
+                    idx_seq_spans+=1
+                    if(idx_seq_spans >= len(sequence_spans) or span[2] != idx_sents):
+                        loop = False
+                
+                data.append((input_ids, attn_mask, IO_tags))    
+    #print(f"total to be found: {len(edus)}, found: {len(sequence_spans)}")
+    if(len(edus)-1 != len(sequence_spans)):
+        print(f"messed up file: {txt_file}, detected: {len(sequence_spans)}, total: {len(edus)-1}")
+        messed_up_ones.append(txt_file)
+    df = pd.DataFrame(data, columns=['Sentence', 'Attention Mask', 'IO'])
     print(messed_up_ones)
     return df
 
@@ -178,18 +209,22 @@ class EDUPredictor(nn.Module):
         super(EDUPredictor, self).__init__()
 
         self.hidden_dim = args.hidden_dim
+        self.tagset_size = args.tagset_size
+        self.max_length = args.max_length
+        self.window_size = args.window_size
         self.transformer_architecture = 'microsoft/deberta-v3-base' #'microsoft/deberta-v3-small' mlcorelib/debertav2-base-uncased microsoft/deberta-v2-xlarge
         self.config = AutoConfig.from_pretrained(self.transformer_architecture, output_hidden_states=True)
-        self.config.max_position_embeddings = args.max_length
+        self.config.max_position_embeddings = self.max_length
         self.tokeniser = AutoTokenizer.from_pretrained(self.transformer_architecture, max_length=self.config.max_position_embeddings, padding="max_length", return_attention_mask=True)
-        self.window_size = args.window_size
-        # Define BiLSTM 1
-        self.lstm1 = nn.LSTM(args.hidden_dim, args.hidden_dim, num_layers=1, bidirectional=True)
-        # Attention weight computation layer
-        self.attention_weights = nn.Linear(args.hidden_dim * 3, 1)
-        # Define BiLSTM 2
-        self.lstm2 = nn.LSTM(args.hidden_dim*2, args.tagset_size, num_layers=1, bidirectional=True)
 
+        # Define BiLSTM 1
+        self.lstm1 = nn.LSTM(self.hidden_dim, self.hidden_dim, num_layers=1, bidirectional=True)
+        self.dropout1 = nn.Dropout(args.dropout) 
+        # Attention weight computation layer
+        #self.attention_weights = nn.Linear(args.hidden_dim * 3, 1)
+        # Define BiLSTM 2
+        self.lstm2 = nn.LSTM(self.hidden_dim, self.tagset_size, num_layers=1, bidirectional=True)
+        self.dropout2 = nn.Dropout(args.dropout)  
         """self.regressor = nn.Sequential(
             nn.Linear(hidden_dim*2, hidden_dim//2),
             nn.GELU(),
@@ -197,45 +232,34 @@ class EDUPredictor(nn.Module):
             nn.Linear( hidden_dim//2,  hidden_dim),
             nn.GELU()
         )"""
-        """ # Define MLP
-        self.hidden2tag = nn.Sequential(
-            nn.Linear(hidden_dim*2, hidden_dim//2),
+        # Define MLP
+        """self.hidden2tag = nn.Sequential(
+            nn.Linear(self.hidden_dim, self.hidden_dim//16),
             nn.GELU(),
             nn.Dropout(0.3),
-            nn.Linear(hidden_dim//2, hidden_dim // 16),
+            nn.Linear(self.hidden_dim//16, self.tagset_size),
             nn.GELU(),
-            nn.Dropout(0.3),
-            nn.Linear(hidden_dim // 16, hidden_dim // 64),
-            nn.GELU(),
-            nn.Dropout(0.3),
-            nn.Linear(hidden_dim // 64, tagset_size)
+            nn.Dropout(0.3)
         )"""
         #print("tagset_size: ",tagset_size)
         # Define CRF
-        self.crf = CRF(args.tagset_size)
+        self.crf = CRF(self.tagset_size)
     
     def similarity(self, hi, hj):
         # Concatenate the hidden representations
         h_concat = torch.cat([hi, hj, hi * hj], dim=-1)
         return self.attention_weights(h_concat)
-
     def forward(self, embeddings):
  
         lstm_out, _ = self.lstm1(embeddings)
-        #print("lstm_out: ", lstm_out.size())
-        # Get the sequence length and batch size
-        batch_size, seq_length, hidden_dim = lstm_out.size()
+        lstm_out = self.dropout1(lstm_out)
         hidden_dim_size = lstm_out.size(-1)
-        #print("lstm_out: ",lstm_out.size())
+        batch_size, seq_length, hidden_dim = lstm_out.size()
         first_half = lstm_out[:, :, : hidden_dim_size// 2]
         second_half = lstm_out[:, :, hidden_dim_size // 2:]
-        #print("first_half: ", first_half.size())
-        # Sum the two halves together along the last dimension
         output_sum = first_half + second_half
         # Initialize attention vector tensor
         attention_vectors = torch.zeros_like(output_sum)
-
-        # Compute attention vector for each word in the sequence
         for i in range(seq_length):
             # Define the start and end positions of the window
             start_pos = max(0, i - self.window_size)
@@ -250,38 +274,44 @@ class EDUPredictor(nn.Module):
             #print("attention_weights: ",attention_weights.size())
             # Compute the attention vector as a weighted sum of nearby words
             #print("_sum : ",_sum.size())
-            #print("output_sum[:, 0, :]: ", output_sum[:, 0, :].size())
-            attention_vector = torch.sum((output_sum[:, start_pos:end_pos, :].permute(0,2,1) * attention_weights).permute(0,2,1), dim=1)
+            #print("output_sum[:, start_pos:end_pos, :].permute(0,2,1: ", output_sum[:, start_pos:end_pos, :].permute(0,2,1).size())
+            #print("output_sum[:, start_pos:end_pos, :]: ", output_sum[:, start_pos:end_pos, :].size())
+            #print("attention_weights: ", attention_weights.size())
+            attention_vector = torch.sum((output_sum[:, start_pos:end_pos, :].permute(2,0,1) * attention_weights).permute(1,2,0), dim=1)
             #print("attention_vector: ",attention_vector.size())
             # Store the attention vector for the current word
-            attention_vectors[0,i] = attention_vector #(seqlen,hiddim)
+            attention_vectors[:,i] = attention_vector.squeeze(1) #(seqlen,hiddim)
 
         #print("attention_vectors: ",attention_vectors.size())
+        #print("output_sum: ",output_sum.size())
         # Concatenate the original LSTM output and the attention vectors
         lstm_output_with_attention = torch.cat([output_sum, attention_vectors], dim=-1)
         #print("lstm_output_with_attention: ", lstm_output_with_attention.size())
+        #print(output_sum.size())
+        #print(output_sum.size())
         lstm_out, _ = self.lstm2(lstm_output_with_attention)
+
+        #lstm_out, _ = self.lstm2(output_sum)
+        lstm_out = self.dropout2(lstm_out)
+        #print(lstm_out.size())
+        #tag_space = self.hidden2tag(lstm_out)
+        #print("size of tag_space: ", tag_space.size())
         hidden_dim_size = lstm_out.size(-1)
-        #print("lstm_out: ",lstm_out.size())
         first_half = lstm_out[:, :, : hidden_dim_size// 2]
         second_half = lstm_out[:, :, hidden_dim_size // 2:]
+        
         #print("first_half: ", first_half.size())
         # Sum the two halves together along the last dimension
         output_sum = first_half + second_half
-        #rint("output_sum: ",output_sum.size())
-        #tag_space = self.hidden2tag(lstm_out)
-        #print("size of tag_space: ", tag_space.size())
+        #print(output_sum.size())
         tag_scores = self.crf.decode(output_sum)
 
         return torch.tensor(tag_scores), output_sum
 
-
 def validation(args,idx2tag,model, val_embeddings, val_labels):
     # Detect device (CPU or CUDA)
     torch.cuda.empty_cache()
-    device_idx = 1
-    if torch.cuda.is_available() and torch.cuda.device_count() >= device_idx + 1:
-        device = torch.device(f"cuda:{device_idx}")
+    device = f"cuda:{args.device}"
     outputs = torch.empty((len(val_labels),args.max_length), dtype=torch.float).to(device)
     val_embeddings = torch.tensor(val_embeddings).to(device)
     val_labels = val_labels.to(device)
@@ -305,9 +335,9 @@ def validation(args,idx2tag,model, val_embeddings, val_labels):
         #print("test_pred_tags: ",test_pred_tags)
         #print("test_tags: ",test_tags)
         scores, accuracy_score, overall_f1 = compute_f1_score_for_labels(test_pred_tags, test_tags, labels= [int(key) for key in idx2tag.keys()])
-        epoch_f1 = [0.0]*4
-        epoch_pre = [0.0]*4
-        epoch_re = [0.0]*4
+        epoch_f1 = [0.0]*2
+        epoch_pre = [0.0]*2
+        epoch_re = [0.0]*2
         for i in range (len(epoch_f1)):
                 epoch_f1[i] += scores[i]['F1 Score']
                 epoch_pre[i] += scores[i]['Precision']
@@ -315,22 +345,22 @@ def validation(args,idx2tag,model, val_embeddings, val_labels):
         return accuracy_score, epoch_pre, epoch_f1, epoch_re, overall_f1
 
 def getValData(args, model):
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device(f"cuda:{args.device}" if torch.cuda.is_available() else "cpu")
     val_data = pd.read_csv(os.path.join(args.rst_dir, 'preprocessed_data_test.csv'))
         
-    val_data['Text'] = val_data['Text'].tolist()
-    for i in range(len(val_data['Text'])):
-        #print(test_data['Text'].iloc[i])
-        val_data['Text'].iloc[i] =  np.array(ast.literal_eval(val_data['Text'].iloc[i]))
-        val_data['Text'].iloc[i] = [int(item) for item in val_data['Text'].iloc[i]]
-    test_inputs = torch.cat((torch.tensor(np.array(val_data['Text'].tolist()))[:4], torch.tensor(np.array(val_data['Text'].tolist()))[-4:]), dim=0)
+    val_data['Sentence'] = val_data['Sentence'].tolist()
+    for i in range(len(val_data['Sentence'])):
+        #print(test_data['Sentence'].iloc[i])
+        val_data['Sentence'].iloc[i] =  np.array(ast.literal_eval(val_data['Sentence'].iloc[i]))
+        val_data['Sentence'].iloc[i] = [int(item) for item in val_data['Sentence'].iloc[i]]
+    test_inputs = torch.cat((torch.tensor(np.array(val_data['Sentence'].tolist()))[:4], torch.tensor(np.array(val_data['Sentence'].tolist()))[-4:]), dim=0)
     attention_masks = val_data['Attention Mask' ].tolist()
     for i in range(len(val_data['Attention Mask'])):
         val_data['Attention Mask'].iloc[i] =  np.array(ast.literal_eval(val_data['Attention Mask'].iloc[i]))
         val_data['Attention Mask'].iloc[i] = [int(item) for item in val_data['Attention Mask'].iloc[i]]
     attention_masks = torch.cat((torch.tensor(np.array(val_data['Attention Mask' ].tolist()))[:4], torch.tensor(np.array(val_data['Attention Mask' ].tolist()))[-4:]), dim=0)
     
-    val_labels = val_data['BIOE'].tolist()
+    val_labels = val_data['IO'].tolist()
     val_labels = [ast.literal_eval(label_list) for label_list in val_labels]
     val_labels = torch.cat(((torch.tensor(val_labels, dtype=torch.long).to(device))[:4], torch.tensor(val_labels, dtype=torch.long).to(device))[-4:], dim=0)
     #print("val_labels: ",val_labels)
@@ -366,11 +396,11 @@ def main():
     args = parse_args()
 
     # Define the mapping from index to tag
-    idx2tag = {0: 'B', 1: 'I', 2: 'O', 3: 'E'}
+    idx2tag = {0: 'I', 1: 'O'} #    , 2: 'O', 3: 'E'}
     tag2idx = {tag: idx for idx, tag in idx2tag.items()}
 
     # Detect device (CPU or CUDA)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device(f"cuda:{args.device}" if torch.cuda.is_available() else "cpu")
     
     # Initialize the model
     model = EDUPredictor(args).to(device)
@@ -391,12 +421,12 @@ def main():
          # Convert data to PyTorch tensors and move to the device
         train_data = pd.read_csv(os.path.join(args.rst_dir, 'preprocessed_data_train.csv'))
         
-        train_data['Text'] = train_data['Text'].tolist()
-        for i in range(len(train_data['Text'])):
-            #print(train_data['Text'].iloc[i])
-            train_data['Text'].iloc[i] =  np.array(ast.literal_eval(train_data['Text'].iloc[i]))
-            train_data['Text'].iloc[i] = [int(item) for item in train_data['Text'].iloc[i]]
-        train_inputs = torch.tensor(np.array(train_data['Text'].tolist()))
+        train_data['Sentence'] = train_data['Sentence'].tolist()
+        for i in range(len(train_data['Sentence'])):
+            #print(train_data['Sentence'].iloc[i])
+            train_data['Sentence'].iloc[i] =  np.array(ast.literal_eval(train_data['Sentence'].iloc[i]))
+            train_data['Sentence'].iloc[i] = [int(item) for item in train_data['Sentence'].iloc[i]]
+        train_inputs = torch.tensor(np.array(train_data['Sentence'].tolist()))
  
         attention_masks = train_data['Attention Mask' ].tolist()
         for i in range(len(train_data['Attention Mask'])):
@@ -404,11 +434,11 @@ def main():
             train_data['Attention Mask'].iloc[i] = [int(item) for item in train_data['Attention Mask'].iloc[i]]
         attention_masks = torch.tensor(np.array(train_data['Attention Mask' ].tolist()))
  
-        train_labels = train_data['BIOE'].tolist()
+        train_labels = train_data['IO'].tolist()
         train_labels = [ast.literal_eval(label_list) for label_list in train_labels]
         train_labels = torch.tensor(train_labels, dtype=torch.long).to(device)
 
-        if (not args.get_embeddings_anyway) and os.path.exists(os.path.join(args.rst_dir,'embeddings_train.pt')):
+        """if (not args.get_embeddings_anyway) and os.path.exists(os.path.join(args.rst_dir,'embeddings_train.pt')):
             embeddings = torch.load(os.path.join(args.rst_dir,'embeddings_train.pt'))
             print(f"train embeddings loaded from {os.path.join(args.rst_dir,'embeddings_train.pt')}")
         else:
@@ -429,35 +459,45 @@ def main():
                     outputs = encoder(input_id, attention_mask)
                     embeddings[i] = torch.tensor(outputs.last_hidden_state).squeeze()
                 #print("embeddings.size(): ",embeddings.size())
-            torch.save(embeddings, os.path.join(args.rst_dir,'embeddings_train.pt'))
+            torch.save(embeddings, os.path.join(args.rst_dir,'embeddings_train.pt'))"""
         torch.cuda.empty_cache()
         val_embeddings, val_labels = getValData(args, model)
-        device_idx = 1
-        if torch.cuda.is_available() and torch.cuda.device_count() >= device_idx + 1:
-            device = torch.device(f"cuda:{device_idx}")
-        embeddings = torch.tensor(embeddings).to(device)
+
+        #embeddings = torch.tensor(embeddings).to(device)
         # Create DataLoader for training data
         #print(train_labels.size())
         #print(embeddings.size())
-        train_dataset = torch.utils.data.TensorDataset(embeddings, train_labels)
-        train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
+        
+        train_inputs = manual_batching(train_inputs, args.batch_size)
+        attention_masks = manual_batching(attention_masks, args.batch_size)
+        train_labels = manual_batching(train_labels, args.batch_size)
+
         print("starting training")
         # Training loop
         for epoch in tqdm(range(args.epochs), desc='Epochs'):
             epoch_loss = 0.0
             epoch_acc = 0.0
-            epoch_f1 = [0.0] * 4
-            epoch_pre = [0.0] * 4
-            epoch_re = [0.0] * 4
+            epoch_f1 = [0.0] * 2
+            epoch_pre = [0.0] * 2
+            epoch_re = [0.0] * 2
             epoch_overall_f1 = 0.0
             model = model.to(device)
+            encoder = AutoModel.from_pretrained(model.transformer_architecture, config=model.config)
+            encoder = encoder.to(device)
             model.train()  # Set model to training mode
 
             # Create a tqdm progress bar for the inner loop (train_loader)
-            train_loader_tqdm = tqdm(enumerate(train_loader), total=len(train_loader), desc='Batches')
-            for step, (embeddings,labels) in train_loader_tqdm:
+            train_loader_tqdm = tqdm(train_inputs, total=len(train_inputs), desc='Batches')
+            for step, (input_id,attention_mask,labels) in enumerate(zip(train_loader_tqdm, attention_masks, train_labels)):
+                input_id = input_id.to(device)
+                #print("input_id: ",input_id.size())
+                attention_mask = attention_mask.to(device) 
+                embeddings = encoder(input_id, attention_mask).last_hidden_state
+                
                 inputs = embeddings.to(torch.float) #.to(device)
                 labels = labels.to(device)
+                #print("inputs: ",inputs.size())
+                #print("labels: ",labels.size())
                 #print(f"type of inputs tensor: {inputs.dtype}, and type of labels tensor: {labels.dtype}") 
 
                 optimizer.zero_grad()  # Zero the gradients
@@ -487,17 +527,32 @@ def main():
                     epoch_re[i] += scores[i]['Recall']
                 # Update the tqdm progress bar with the current loss value
                 running_f1 = [item/(step+1) for item in epoch_f1]
-                train_loader_tqdm.set_postfix({f"f1 scores for tag B: {running_f1[0]:.3f}, tag I: {running_f1[1]:.3f}, tag O: {running_f1[2]:.3f}, tag E: {running_f1[3]:.3f}, Acc: {(epoch_acc/(step+1)):.3f} and Loss": epoch_loss / (step + 1)})
-            epoch_f1 = [item/len(train_loader) for item in epoch_f1]
-            epoch_pre = [item/len(train_loader) for item in epoch_pre]
-            epoch_re = [item/len(train_loader) for item in epoch_re]
-            epoch_acc = epoch_acc/len(train_loader)
-            epoch_overall_f1 = epoch_overall_f1/len(train_loader)
+                train_loader_tqdm.set_postfix ({f"f1 scores for tag I: {running_f1[0]:.3f}, tag O: {running_f1[1]:.3f}, Acc: {(epoch_acc/(step+1)):.3f} and Loss": epoch_loss / (step + 1)})#({f"f1 scores for tag B: {running_f1[0]:.3f}, tag I: {running_f1[1]:.3f}, tag O: {running_f1[2]:.3f}, tag E: {running_f1[3]:.3f}, Acc: {(epoch_acc/(step+1)):.3f} and Loss": epoch_loss / (step + 1)})
+            epoch_f1 = [item/len(train_inputs) for item in epoch_f1]
+            epoch_pre = [item/len(train_inputs) for item in epoch_pre]
+            epoch_re = [item/len(train_inputs) for item in epoch_re]
+            epoch_acc = epoch_acc/len(train_inputs)
+            epoch_overall_f1 = epoch_overall_f1/len(train_inputs)
             # Update the outer tqdm progress bar with the current epoch loss value
             val_accuracy_score, val_epoch_pre, val_epoch_f1, val_epoch_re, val_overall_f1 = validation(args,idx2tag,model, val_embeddings, val_labels)
             
             #print(f'F1 scores for tag B: {epoch_f1[0]:.3f}, tag I: {epoch_f1[1]:.3f}, tag O: {epoch_f1[2]:.3f}, tag E: {epoch_f1[3]:.3f}')
             tqdm.write(f'-------------------------------------------------------------------------------------------------------------------------------------\n \
+                        Epoch [{epoch+1}/{args.epochs}], Loss: {epoch_loss / len(train_inputs):.3f}\n \
+                        Acc: {epoch_acc:.3f} and Test Acc: {val_accuracy_score:.3f}\n \
+                        Overall F1: {overall_f1:.3f} Val Overall F1: {val_overall_f1:.3f} \n\
+                        -------------------------------------------------------------------------------------------------------------------------------------\n \
+                        for tag I: \n\
+                        Train F1: {epoch_f1[0]:.3f}, Val F1: {val_epoch_f1[0]:.3f} \n \
+                        Train Precision: {epoch_pre[0]:.3f}, Val Precision: {val_epoch_pre[0]:.3f} \n \
+                        Train Recall: {epoch_re[0]:.3f}, Val Recall: {val_epoch_re[0]:.3f} \n \
+                        -------------------------------------------------------------------------------------------------------------------------------------\n \
+                        for tag O: \n\
+                        Train F1: {epoch_f1[1]:.3f}, Val F1: {val_epoch_f1[1]:.3f} \n \
+                        Train Precision: {epoch_pre[1]:.3f}, Val Precision: {val_epoch_pre[1]:.3f} \n \
+                        Train Recall: {epoch_re[1]:.3f}, Val Recall: {val_epoch_re[1]:.3f} \n \
+                        -------------------------------------------------------------------------------------------------------------------------------------')
+            """tqdm.write(f'-------------------------------------------------------------------------------------------------------------------------------------\n \
                         Epoch [{epoch+1}/{args.epochs}], Loss: {epoch_loss / len(train_loader):.3f}\n \
                         Acc: {epoch_acc:.3f} and Test Acc: {val_accuracy_score:.3f}\n \
                         Overall F1: {overall_f1:.3f} Val Overall F1: {val_overall_f1:.3f} \n\
@@ -521,7 +576,7 @@ def main():
                         Train F1: {epoch_f1[3]:.3f}, Val F1: {val_epoch_f1[3]:.3f} \n \
                         Train Precision: {epoch_pre[3]:.3f}, Val Precision: {val_epoch_pre[3]:.3f} \n \
                         Train Recall: {epoch_re[3]:.3f}, Val Recall: {val_epoch_re[3]:.3f} \n \
-                        -------------------------------------------------------------------------------------------------------------------------------------')
+                        -------------------------------------------------------------------------------------------------------------------------------------')"""
 
         # Save the trained model
         model_path = os.path.join(args.model_dir, 'edu_segmentation_model.pt')
@@ -531,12 +586,12 @@ def main():
     if args.evaluate:
         test_data = pd.read_csv(os.path.join(args.rst_dir, 'preprocessed_data_test.csv'))
         
-        test_data['Text'] = test_data['Text'].tolist()
-        for i in range(len(test_data['Text'])):
-            #print(test_data['Text'].iloc[i])
-            test_data['Text'].iloc[i] =  np.array(ast.literal_eval(test_data['Text'].iloc[i]))
-            test_data['Text'].iloc[i] = [int(item) for item in test_data['Text'].iloc[i]]
-        test_inputs = torch.tensor(np.array(test_data['Text'].tolist()))
+        test_data['Sentence'] = test_data['Sentence'].tolist()
+        for i in range(len(test_data['Sentence'])):
+            #print(test_data['Sentence'].iloc[i])
+            test_data['Sentence'].iloc[i] =  np.array(ast.literal_eval(test_data['Sentence'].iloc[i]))
+            test_data['Sentence'].iloc[i] = [int(item) for item in test_data['Sentence'].iloc[i]]
+        test_inputs = torch.tensor(np.array(test_data['Sentence'].tolist()))
  
         attention_masks = test_data['Attention Mask' ].tolist()
         for i in range(len(test_data['Attention Mask'])):
@@ -544,7 +599,7 @@ def main():
             test_data['Attention Mask'].iloc[i] = [int(item) for item in test_data['Attention Mask'].iloc[i]]
         attention_masks = torch.tensor(np.array(test_data['Attention Mask' ].tolist()))
  
-        test_labels = test_data['BIOE'].tolist()
+        test_labels = test_data['IO'].tolist()
         test_labels = [ast.literal_eval(label_list) for label_list in test_labels]
         test_labels = torch.tensor(test_labels, dtype=torch.long).to(device)
         print("getting empty embeddings tensor")
@@ -571,9 +626,8 @@ def main():
                 print("embeddings.size(): ",embeddings.size())
             torch.save(embeddings, os.path.join(args.rst_dir,'embeddings_test.pt'))
         torch.cuda.empty_cache()
-        device_idx = 1
-        if torch.cuda.is_available() and torch.cuda.device_count() >= device_idx + 1:
-            device = torch.device(f"cuda:{device_idx}")
+
+        device = torch.device(f"cuda:{args.device}")
         embeddings = torch.tensor(embeddings).to(device)
     
         # Load the trained model
@@ -607,14 +661,27 @@ def main():
             #precision = precision_score(test_tags, test_pred_tags)
             #recall = recall_score(test_tags, test_pred_tags)
             #f1 = f1_score(test_tags, test_pred_tags)
-            epoch_f1 = [0.0]*4
-            epoch_pre = [0.0]*4
-            epoch_re = [0.0]*4
+            epoch_f1 = [0.0]*2
+            epoch_pre = [0.0]*2
+            epoch_re = [0.0]*2
             for i in range (len(epoch_f1)):
                     epoch_f1[i] += scores[i]['F1 Score']
                     epoch_pre[i] += scores[i]['Precision']
                     epoch_re[i] += scores[i]['Recall']
             print(f'-------------------------------------------------------------------------------------------------------------------------------------\n \
+                Acc: {accuracy_score:.3f} Overall F1: {test_overall_f1:.3f} \n\
+                -------------------------------------------------------------------------------------------------------------------------------------\n \
+                for tag I: \n\
+                Test F1: {epoch_f1[0]:.3f}\n \
+                Test Precision: {epoch_pre[0]:.3f}\n \
+                Test Recall: {epoch_re[0]:.3f}\n \
+                -------------------------------------------------------------------------------------------------------------------------------------\n \
+                for tag O: \n\
+                Test F1: {epoch_f1[1]:.3f}\n \
+                Test Precision: {epoch_pre[1]:.3f}\n \
+                Test Recall: {epoch_re[1]:.3f}\n \
+                -------------------------------------------------------------------------------------------------------------------------------------')
+            """print(f'-------------------------------------------------------------------------------------------------------------------------------------\n \
                         Acc: {accuracy_score:.3f} Overall F1: {test_overall_f1:.3f} \n\
                         -------------------------------------------------------------------------------------------------------------------------------------\n \
                         for tag B: \n\
@@ -636,10 +703,11 @@ def main():
                         Test F1: {epoch_f1[3]:.3f}\n \
                         Test Precision: {epoch_pre[3]:.3f}\n \
                         Test Recall: {epoch_re[3]:.3f}\n \
-                        -------------------------------------------------------------------------------------------------------------------------------------')
+                        -------------------------------------------------------------------------------------------------------------------------------------')"""
 
             with open(os.path.join(args.result_dir, "edu_results.txt"), 'w') as file:
-                file.write(f'Loss: {loss.item():.3f}, f1 scores for tag B: {epoch_f1[0]:.3f}, tag I: {epoch_f1[1]:.3f}, tag O: {epoch_f1[2]:.3f}, tag E: {epoch_f1[3]:.3f}, and Acc: {accuracy_score}:.3f')
+                file.write(f'Loss: {loss.item():.3f}, f1 scores for tag I: {epoch_f1[0]:.3f}, tag O: {epoch_f1[1]:.3f}, and Acc: {accuracy_score}:.3f')
+                #file.write(f'Loss: {loss.item():.3f}, f1 scores for tag B: {epoch_f1[0]:.3f}, tag I: {epoch_f1[1]:.3f}, tag O: {epoch_f1[2]:.3f}, tag E: {epoch_f1[3]:.3f}, and Acc: {accuracy_score}:.3f')
 
             # Generate confusion matrix
             confusion_matrix = multilabel_confusion_matrix(test_tags, test_pred_tags)
@@ -668,7 +736,7 @@ def main():
             seg_pred = model.crf.decode(seg_tag_scores)
 
         #TODO: FIGURE OUT HOW TO SAVE THE DATA
-        seg_df = pd.DataFrame(data, columns=['Text', 'BIOE'])
+        seg_df = pd.DataFrame(data, columns=['Sentence', 'IO'])
         seg_df.to_csv('preprocessed_data_test.csv', index=False)
 if __name__ == '__main__':
     main()
