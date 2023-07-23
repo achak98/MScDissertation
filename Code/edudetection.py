@@ -105,8 +105,8 @@ def find_sequence_spans(sents, edus, model, args):
             edu = edus[idx_edu]
             print("edu: ", edu)
             tokenised_edu = model.tokeniser(edu)["input_ids"]
-            print("tokenised_edu : ",tokenised_edu)
             tokenised_edu = tokenised_edu[1:-1]
+            print("tokenised_edu : ",tokenised_edu)
             target_length = len(tokenised_edu)
             print("target_length : ",target_length)
             if target_length == 0 :
@@ -146,7 +146,7 @@ def preprocess_RST_Discourse_dataset(path_data, tag2idx, args, model):
             text = txtf.read()
             edus = eduf.read().split('\n')
             sents = text.split('\n')
-            text = [sent.replace("\'", " \' ").replace("\"", " \" ").replace("-", " - ").replace(",", " , ").replace(".", " . ") for sent in sents]
+            sents = [sent.replace("\'", " \' ").replace("\"", " \" ").replace("-", " - ").replace(",", " , ").replace(".", " . ") for sent in sents]
             edus = [edu.replace("\'", " \' ").replace("\"", " \" ").replace("-", " - ").replace(",", " , ").replace(".", " . ") for edu in edus]
             edus = [seq.strip() for seq in edus]
 
