@@ -67,7 +67,7 @@ def compute_f1_score_for_labels(y_true, y_pred, labels):
         }
 
     return label_scores, accuracy, overall_f1
-
+    
 def parse_args():
     parser = argparse.ArgumentParser('EDU segmentation toolkit 1.0')
     parser.add_argument('--prepare', action='store_true',
@@ -209,6 +209,7 @@ class EDUPredictor(nn.Module):
         self.hidden_dim = args.hidden_dim
         self.tagset_size = args.tagset_size
         self.max_length = args.max_length
+        self.window_size = args.window_size
         self.transformer_architecture = 'microsoft/deberta-v3-base' #'microsoft/deberta-v3-small' mlcorelib/debertav2-base-uncased microsoft/deberta-v2-xlarge
         self.config = AutoConfig.from_pretrained(self.transformer_architecture, output_hidden_states=True)
         self.config.max_position_embeddings = self.max_length
@@ -245,7 +246,11 @@ class EDUPredictor(nn.Module):
         #print("tagset_size: ",tagset_size)
         # Define CRF
         self.crf = CRF(self.tagset_size)
-
+    
+    def similarity(self, hi, hj):
+        # Concatenate the hidden representations
+        h_concat = torch.cat([hi, hj, hi * hj], dim=-1)
+        return self.attention_weights(h_concat)
     def forward(self, embeddings):
  
         lstm_out, _ = self.lstm1(embeddings)
