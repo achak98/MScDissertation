@@ -261,7 +261,7 @@ class EDUPredictor(nn.Module):
         second_half = lstm_out[:, :, hidden_dim_size // 2:]
         output_sum = first_half + second_half
         # Initialize attention vector tensor
-        attention_vectors = torch.zeros_like(output_sum)
+        """attention_vectors = torch.zeros_like(output_sum)
         for i in range(seq_length):
             # Define the start and end positions of the window
             start_pos = max(0, i - self.window_size)
@@ -287,9 +287,9 @@ class EDUPredictor(nn.Module):
         #print("attention_vectors: ",attention_vectors.size())
         #print("output_sum: ",output_sum.size())
         # Concatenate the original LSTM output and the attention vectors
-        lstm_output_with_attention = torch.cat([output_sum, attention_vectors], dim=-1)
+        lstm_output_with_attention = torch.cat([output_sum, attention_vectors], dim=-1)"""
         #print("lstm_output_with_attention: ", lstm_output_with_attention.size())
-        lstm_out, _ = self.lstm2(lstm_output_with_attention)
+        lstm_out, _ = self.lstm2(output_sum)
 
         #lstm_out, _ = self.lstm2(output_sum)
         lstm_out = self.dropout2(lstm_out)
