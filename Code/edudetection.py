@@ -455,8 +455,8 @@ def main():
             for step, (input_id,attention_mask,labels) in enumerate(zip(train_loader_tqdm, attention_masks, train_labels)):
                 input_id = input_id.to(device)
                 attention_mask = attention_mask.to(device) 
-                input_id = input_ids[i].unsqueeze(0)
-                attention_mask = attention_masks[i].unsqueeze(0)
+                input_id = input_id.unsqueeze(0)
+                attention_mask = attention_mask.unsqueeze(0)
                 embeddings = encoder(input_id, attention_mask).last_hidden_state.squeeze()
                 inputs = embeddings.to(torch.float) #.to(device)
                 labels = labels.to(device)
