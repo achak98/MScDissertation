@@ -93,7 +93,7 @@ def find_sequence_spans(sents, edus, model, args):
 
     for idx_sents, sent in enumerate(sents):
         #print("sent: ", sent)
-        tokenised_sent = model.tokeniser(sent)["input_ids"]
+        tokenised_sent = model.tokeniser(sent, padding="max_length", truncation = True, return_attention_mask=True, max_length = args.max_length)["input_ids"]
         #print("tokenised_sent : ",tokenised_sent)
         loop = True
         i = 0
@@ -104,7 +104,7 @@ def find_sequence_spans(sents, edus, model, args):
                 break
             edu = edus[idx_edu]
             #print("edu: ", edu)
-            tokenised_edu = model.tokeniser(edu)["input_ids"]
+            tokenised_edu = model.tokeniser(edu, padding="max_length", truncation = True, return_attention_mask=True, max_length = args.max_length)["input_ids"]
             tokenised_edu = tokenised_edu[1:-1]
             #print("tokenised_edu : ",tokenised_edu)
             target_length = len(tokenised_edu)
@@ -156,7 +156,7 @@ def preprocess_RST_Discourse_dataset(path_data, tag2idx, args, model):
             sequence_spans = find_sequence_spans(sents, edus, model, args)
             #print("sequence_spans: ", sequence_spans)
             for idx_sents, sent in enumerate(sents):
-                tokenised_sent = model.tokeniser(sent)
+                tokenised_sent = model.tokeniser(sent, padding="max_length", truncation = True, return_attention_mask=True, max_length = args.max_length)
                 input_ids = tokenised_sent["input_ids"]
                 attn_mask = tokenised_sent["attention_mask"]
                 idx_seq_spans = 0
