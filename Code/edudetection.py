@@ -162,7 +162,8 @@ def preprocess_RST_Discourse_dataset(path_data, tag2idx, args, model):
                 while (loop):
                     span = sequence_spans[idx_seq_spans]
                     if(span[2] == idx_sents):
-                        IO_tags[span[0]:span[1]+1] = tag2idx['I']*(span[1]-span[0]+1)
+                        for i in range(span[0],span[1]+1):
+                            IO_tags[i] = tag2idx['I']
                     idx_seq_spans+=1
                     if(idx_seq_spans >= len(sequence_spans) or span[2] != idx_sents):
                         loop = False
@@ -170,7 +171,7 @@ def preprocess_RST_Discourse_dataset(path_data, tag2idx, args, model):
                 input_ids = tokenised_sent["input_ids"]
                 attn_mask = tokenised_sent["attention_mask"]
                 data.append((input_ids, attn_mask, IO_tags))    
-
+    print(f"total to be found: {len(edus)}, found: {len(sequence_spans)}")
     df = pd.DataFrame(data, columns=['Sentence', 'Attention Mask', 'IO'])
     print(messed_up_ones)
     return df
