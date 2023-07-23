@@ -147,7 +147,7 @@ def preprocess_RST_Discourse_dataset(path_data, tag2idx, args, model):
             
             #print(f"txt_file: {txt_file}")
             sequence_spans = find_sequence_spans(sents, edus, model, args)
-
+            print("sequence_spans: ", sequence_spans)
             for idx_sents, sent in enumerate(sents):
                 idx_seq_spans = 0
                 loop = True
@@ -157,7 +157,7 @@ def preprocess_RST_Discourse_dataset(path_data, tag2idx, args, model):
                     if(span[2] == idx_sents):
                         IO_tags[span[0]:span[1]+1] = tag2idx['I']*(span[1]-span[0]+1)
                     idx_seq_spans+=1
-                    if(span[2] != idx_sents):
+                    if(idx_seq_spans >= len(sequence_spans) or span[2] != idx_sents):
                         loop = False
                 tokenised_sent = model.tokeniser(sent)
                 input_ids = tokenised_sent["input_ids"]
