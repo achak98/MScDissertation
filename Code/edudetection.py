@@ -528,14 +528,14 @@ def main():
             val_epoch_f1 = [0.0]*2
             val_epoch_re = [0.0]*2
             for step, (input_id,attention_mask,labels) in enumerate(zip(val_inputs,val_attention_masks,val_labels)):
-                input_id = input_id.to(device).squeeze(0)
+                input_id = input_id.to(device).unsqueeze(0)
                 #print("input_id: ",input_id.size())
-                attention_mask = attention_mask.to(device).squeeze(0) 
+                attention_mask = attention_mask.to(device).unsqueeze(0) 
                 with torch.no_grad():
                     embeddings = encoder(input_id, attention_mask).last_hidden_state
                 
                 inputs = embeddings.to(torch.float) #.to(device)
-                labels = labels.to(device).squeeze(0)
+                labels = labels.to(device).unsqueeze(0)
                 #print("inputs: ",inputs.size())
                 #print("labels: ",labels.size())
                 #print(f"type of inputs tensor: {inputs.dtype}, and type of labels tensor: {labels.dtype}") 
