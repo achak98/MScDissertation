@@ -385,9 +385,9 @@ def main():
                 # Compute the loss
                 loss = -F.log_softmax(tag_logits, dim=1).mean()
                 softmaxed = F.softmax(tag_logits, dim=1)
-                print("softmaxed.size(): ",softmaxed.size())
+                #print("softmaxed.size(): ",softmaxed.size())
                 softmaxed = softmaxed.permute(0,2,3,1) #(0312)
-                print("softmaxed.size(): ",softmaxed.size())
+                #print("softmaxed.size(): ",softmaxed.size())
                 tags_pred = torch.argmax(softmaxed, dim=-1)
                 scores, accuracy_score, overall_f1 = compute_f1_score_for_labels(tags_pred.detach().to(torch.long).cpu().numpy().flatten(), labels.detach().cpu().numpy().flatten(), labels= [int(key) for key in idx2tag.keys()])
                 # Backward propagation
