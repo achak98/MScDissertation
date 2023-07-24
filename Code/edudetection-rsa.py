@@ -182,7 +182,6 @@ def preprocess_RST_Discourse_dataset(path_data, tag2idx, args, model):
             for idx_sents, sent in enumerate(sents):
                 if(len(sent)==0):
                   continue
-                print(len(sent))
                 tokenised_sent = model.tokeniser(sent, padding="max_length", return_attention_mask=True, max_length = 2048)
                 input_ids = tokenised_sent["input_ids"]
                 attn_mask = tokenised_sent["attention_mask"]
