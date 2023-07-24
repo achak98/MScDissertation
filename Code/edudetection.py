@@ -85,13 +85,13 @@ def parse_args():
     parser.add_argument('--weight_decay', type=float,
                                 default=1e-3, help='weight decay')
     parser.add_argument('--dropout', type=float,
-                                default=0.2, help='weight decay')
+                                default=0.1, help='weight decay')
     parser.add_argument('--window_size', type=int,
                                 default=5, help='die ya whoreses')
     parser.add_argument('--batch_size', type=int,
                                 default=1, help='batch size')
     parser.add_argument('--epochs', type=int,
-                                default=10, help='train epochs')
+                                default=50, help='train epochs')
     parser.add_argument('--seed', type=int,
                                 default=42, help='the random seed')
     parser.add_argument('--tagset_size', type=int,
@@ -99,7 +99,7 @@ def parse_args():
     parser.add_argument('--hidden_dim', type=int,
                                 default=768, help='hidden size')
     parser.add_argument('--max_grad_norm', type=float,
-                                default=3.0, help='gradient norm')
+                                default=2.0, help='gradient norm')
     parser.add_argument('--rst_dir', default='../Data/rst/',
                                help='the path of the rst data directory')
     parser.add_argument('--seg_data_path',
@@ -520,7 +520,7 @@ def main():
                 loss.backward()
 
                 # Gradient clipping
-                nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
+                #nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
 
                 # Optimization step
                 optimizer.step()
