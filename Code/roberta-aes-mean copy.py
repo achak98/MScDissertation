@@ -79,7 +79,7 @@ def mean_encoding(essay_list, model, tokenizer):
     with torch.no_grad():
       model_output = model(**encoded_input)
     tokens_embeddings = np.matrix(model_output[0].squeeze().cpu())
-    embeddings.append(np.squeeze(np.asarray(tokens_embeddings)))
+    embeddings.append(np.squeeze(np.asarray(tokens_embeddings.mean(0))))
 
   return np.matrix(embeddings)
 
@@ -106,17 +106,7 @@ class MLP(torch.nn.Module):
   def __init__(self, input_size):
     super(MLP, self).__init__()
     
-    self.layers1 = torch.nn.Sequential(
-      torch.nn.Linear(input_size, 768),
-      torch.nn.ReLU(),
-      torch.nn.Dropout(0.3),
-      torch.nn.Linear(256, 96),
-      torch.nn.ReLU(),
-      torch.nn.Dropout(0.3),
-      torch.nn.Linear(96, 1)
-    ) 
-
-    self.layers2 = torch.nn.Sequential(
+    self.layers = torch.nn.Sequential(
       torch.nn.Linear(input_size, 256),
       torch.nn.ReLU(),
       torch.nn.Dropout(0.3),
@@ -127,9 +117,7 @@ class MLP(torch.nn.Module):
     ) 
 
   def forward(self, x):
-    x = self.layers1(x)
-    x = x.squeeze()
-    return self.layers2(x)
+    return self.layers(x)
 
 
 def training_step(model, cost_function, optimizer, train_loader):
