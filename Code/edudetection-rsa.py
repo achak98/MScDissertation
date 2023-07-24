@@ -180,6 +180,9 @@ def preprocess_RST_Discourse_dataset(path_data, tag2idx, args, model):
             sequence_spans = find_sequence_spans(sents, edus, model, args)
             #print("sequence_spans: ", sequence_spans)
             for idx_sents, sent in enumerate(sents):
+                if(len(sent)==0):
+                  continue
+                print(len(sent))
                 tokenised_sent = model.tokeniser(sent, padding="max_length", return_attention_mask=True, max_length = 2048)
                 input_ids = tokenised_sent["input_ids"]
                 attn_mask = tokenised_sent["attention_mask"]
@@ -195,8 +198,6 @@ def preprocess_RST_Discourse_dataset(path_data, tag2idx, args, model):
                         for i in range(span[0],span[1]+1):
                             IO_tags[i] = tag2idx['I']
                     idx_seq_spans+=1
-                    
-
                 data.append((input_ids[:args.max_length], attn_mask[:args.max_length], IO_tags[:args.max_length]))
     print(f"total to be found: {len(edus)}, found: {len(sequence_spans)}")
     if(len(edus)-1 != len(sequence_spans)):
