@@ -527,7 +527,7 @@ def main():
             val_epoch_pre = [0.0]*2
             val_epoch_f1 = [0.0]*2
             val_epoch_re = [0.0]*2
-            for step, (input_id,attention_mask,labels) in enumerate(val_inputs,val_attention_masks,val_labels):
+            for step, (input_id,attention_mask,labels) in enumerate(zip(val_inputs,val_attention_masks,val_labels)):
                 input_id = input_id.to(device).squeeze(0)
                 #print("input_id: ",input_id.size())
                 attention_mask = attention_mask.to(device).squeeze(0) 
