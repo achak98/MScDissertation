@@ -250,8 +250,8 @@ class EDUPredictor(nn.Module):
         lstm_out = self.dropout1(lstm_out)
         tag_space = self.fc(lstm_out)
         tag_space = self.dropout2(tag_space)
-        tag_scores = tag_scores.permute(0,2,1)
-        tag_scores = self.crf.decode(tag_space)
+        tag_scores = tag_space.permute(0,2,1)
+        tag_scores = self.crf.decode(tag_scores)
 
         return tag_scores
 
