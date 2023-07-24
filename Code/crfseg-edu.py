@@ -238,7 +238,7 @@ class EDUPredictor(nn.Module):
         self.fc = nn.Linear(self.hidden_dim*2, self.tagset_size)
         #print("tagset_size: ",tagset_size)
         # Define CRF
-        self.crf = CRF(self.tagset_size, returns='logits')
+        self.crf = CRF(self.max_length, returns='logits')
     
     def similarity(self, hi, hj):
         # Concatenate the hidden representations
@@ -251,6 +251,9 @@ class EDUPredictor(nn.Module):
         tag_space = self.fc(lstm_out)
         tag_space = self.dropout2(tag_space)
         #tag_scores = tag_space.permute(0,2,1)
+        print("tag_space: ",tag_space.size())
+        tag_scores = tag_space.permute(0,2,1)
+        print("tag_scores: ",tag_scores.size())
         tag_scores = self.crf(tag_space)
 
         return tag_scores
