@@ -228,6 +228,7 @@ class EDUPredictor(nn.Module):
         # Define BiLSTM 1
         self.lstm1 = nn.LSTM(args.embedding_dim, self.hidden_dim, num_layers=1, bidirectional=True)
         self.dropout1 = nn.Dropout(args.dropout) 
+        self.lstm2 = nn.LSTM(args.embedding_dim, self.hidden_dim, num_layers=1, bidirectional=True)
         self.dropout2 = nn.Dropout(args.dropout)
         # Attention weight computation layer
         """self.attention_weights = nn.Linear(args.hidden_dim * 3, 1)
@@ -235,10 +236,16 @@ class EDUPredictor(nn.Module):
         self.lstm2 = nn.LSTM(self.hidden_dim, self.tagset_size, num_layers=1, bidirectional=True)
         self.dropout3 = nn.Dropout(args.dropout)  
         """
-        self.fc = nn.Linear(self.hidden_dim*2, self.tagset_size)
+        self.fc1 = nn.Sequential(nn.Linear(self.hidden_dim*2, self.hidden_dim//4),
+        nn.GELU(),
+        nn.Dropout(0.3),
+        nn.Linear(self.hidden_dim//4, self.hidden_dim//16),
+        nn.GELU(),
+        nn.Dropout(0.3)
+        )
         #print("tagset_size: ",tagset_size)
         # Define CRF
-        self.crf = CRF(self.tagset_size, returns='logits')
+        self.crf = CRF(self.hidden_dim//16, returns='logits')
     
     def similarity(self, hi, hj):
         # Concatenate the hidden representations
@@ -246,12 +253,15 @@ class EDUPredictor(nn.Module):
         return self.attention_weights(h_concat)
     def forward(self, embeddings):
  
-        lstm_out, _ = self.lstm1(embeddings)
-        lstm_out = self.dropout1(lstm_out)
-        tag_space = self.fc(lstm_out)
+        lstm_out1, _ = self.lstm1(embeddings)
+        lstm_out1 = self.dropout1(lstm_out1)
+        lstm_out2, _ = self.lstm2(embeddings)
+        lstm_out2 = self.dropout2(lstm_out2)
+        tag_space1 = self.fc1(lstm_out2).unsqueeze(-1)
+        tag_space2 = self.fc2(lstm_out2).unsqueeze(-1) # batch, seq, classes -> b, s, c, 1   
+        tag_space = torch.cat([tag_space1,tag_space2],dim=-1).permute(0,3,1,2) #b,seq,spatial?,2 -> b, 2, seq, spatial?
         tag_space = self.dropout2(tag_space)
-        tag_scores = tag_space.permute(0,2,1).unsqueeze(-1)
-        tag_scores = self.crf(tag_scores)
+        tag_scores = self.crf(tag_space)
 
         return tag_scores
 
@@ -367,7 +377,9 @@ def main():
                 # Compute the loss
                 loss = -F.log_softmax(tag_logits, dim=1).mean()
                 softmaxed = F.softmax(tag_logits, dim=1)
-                softmaxed = softmaxed.squeeze().permute(0,2,1)
+                print("softmaxed.size(): ",softmaxed.size())
+                softmaxed = softmaxed.permute(0,2,3,1) #(0312)
+                print("softmaxed.size(): ",softmaxed.size())
                 tags_pred = torch.argmax(softmaxed, dim=-1)
                 scores, accuracy_score, overall_f1 = compute_f1_score_for_labels(tags_pred.detach().to(torch.long).cpu().numpy().flatten(), labels.detach().cpu().numpy().flatten(), labels= [int(key) for key in idx2tag.keys()])
                 # Backward propagation
@@ -423,7 +435,7 @@ def main():
                 val_loss = -F.log_softmax(tag_logits, dim=1).mean()
                 softmaxed = F.softmax(tag_logits, dim=1)
                 print("softmaxed: ",softmaxed.size())
-                softmaxed = softmaxed.squeeze().unsqueeze(0).permute(0,2,1)
+                softmaxed = softmaxed.squeeze().unsqueeze(0).permute(0,2,3,1)
                 tags_pred = torch.argmax(softmaxed, dim=-1)
                 scores, val_accuracy_score_one, val_overall_f1_one = compute_f1_score_for_labels(tags_pred.detach().to(torch.long).cpu().numpy().flatten(), labels.detach().cpu().numpy().flatten(), labels= [int(key) for key in idx2tag.keys()])
                 val_accuracy_score += val_accuracy_score_one
