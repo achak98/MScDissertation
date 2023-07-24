@@ -116,9 +116,7 @@ def find_sequence_spans(sents, edus, model, args):
     idx_edu = 0
 
     for idx_sents, sent in enumerate(sents):
-        #print("sent: ", sent)
         tokenised_sent = model.tokeniser(sent)["input_ids"]
-        #print("tokenised_sent : ",tokenised_sent)
         loop = True
         i = 0
         start_index = None
@@ -127,17 +125,13 @@ def find_sequence_spans(sents, edus, model, args):
                 loop = False
                 break
             edu = edus[idx_edu]
-            #print("edu: ", edu)
             tokenised_edu = model.tokeniser(edu)["input_ids"]
             tokenised_edu = tokenised_edu[1:-1]
-            #print("tokenised_edu : ",tokenised_edu)
             target_length = len(tokenised_edu)
-            #print("target_length : ",target_length)
             if target_length == 0 :
                 idx_edu+=1
             else:
                 if tokenised_edu[0] == tokenised_sent[i]:
-                    #print("first matched")
                     start_index = i
                     idx_edu+=1
                     potential_end = i + target_length -1
@@ -147,7 +141,6 @@ def find_sequence_spans(sents, edus, model, args):
                         else:
                             break
                     if tokenised_sent[potential_end] == tokenised_edu[-1]:
-                        #print("last matched")
                         end_index = potential_end
                         i = end_index
                         sequence_spans.append((start_index, end_index, idx_sents))
@@ -173,19 +166,19 @@ def preprocess_RST_Discourse_dataset(path_data, tag2idx, args, model):
             sents = [sent.replace("\'", " \' ").replace("\"", " \" ").replace("-", " - ").replace(",", " , ").replace(".", " . ") for sent in sents]
             edus = [edu.replace("\'", " \' ").replace("\"", " \" ").replace("-", " - ").replace(",", " , ").replace(".", " . ") for edu in edus]
             edus = [seq.strip() for seq in edus]
-
-            #words = re.findall(args.regex_pattern, ' '.join(text))
-
-            #print(f"txt_file: {txt_file}")
             sequence_spans = find_sequence_spans(sents, edus, model, args)
-            #print("sequence_spans: ", sequence_spans)
+            idx_seq_spans = 0
+            avg_len = 0
+            cnt = 0
             for idx_sents, sent in enumerate(sents):
                 if(len(sent)==0):
                   continue
+                avg_len+= len(sent)
+                cnt+=1
                 tokenised_sent = model.tokeniser(sent, padding="max_length", return_attention_mask=True, max_length = 2048)
                 input_ids = tokenised_sent["input_ids"]
                 attn_mask = tokenised_sent["attention_mask"]
-                idx_seq_spans = 0
+                
                 loop = True
                 IO_tags = [tag2idx["O"]] * len(input_ids)
                 while (loop):
@@ -198,10 +191,9 @@ def preprocess_RST_Discourse_dataset(path_data, tag2idx, args, model):
                             IO_tags[i] = tag2idx['I']
                     idx_seq_spans+=1
                 data.append((input_ids[:args.max_length], attn_mask[:args.max_length], IO_tags[:args.max_length]))
-    print(f"total to be found: {len(edus)}, found: {len(sequence_spans)}")
-    if(len(edus)-1 != len(sequence_spans)):
-        print(f"messed up file: {txt_file}, detected: {len(sequence_spans)}, total: {len(edus)-1}")
-        messed_up_ones.append(txt_file)
+        if(len(edus)-1 != len(sequence_spans)):
+            print(f"messed up file: {txt_file}, detected: {len(sequence_spans)}, total: {len(edus)-1}")
+            messed_up_ones.append(txt_file)
     df = pd.DataFrame(data, columns=['Sentence', 'Attention Mask', 'IO'])
     print(messed_up_ones)
     return df
