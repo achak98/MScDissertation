@@ -31,7 +31,7 @@ dataset = pd.DataFrame(
 
 transformer_architecture = 'microsoft/deberta-v3-base' #'microsoft/deberta-v3-small' mlcorelib/debertav2-base-uncased microsoft/deberta-v2-xlarge
 config = AutoConfig.from_pretrained(transformer_architecture, output_hidden_states=True)
-config.max_position_embeddings = 2058
+config.max_position_embeddings = 2048
 tokenizer = AutoTokenizer.from_pretrained(transformer_architecture, max_length=config.max_position_embeddings, padding="max_length", return_attention_mask=True)
 
 #tokenizer = AutoTokenizer.from_pretrained("roberta-base")
@@ -70,7 +70,7 @@ def get_id2emb(ids):
 
 id2emb = get_id2emb(dataset["essay_id"])
 
-roberta = AutoModel.from_pretrained(transformer_architecture)
+roberta = AutoModel.from_pretrained(transformer_architecture).to(device)
 
 
 
