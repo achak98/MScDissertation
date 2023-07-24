@@ -31,8 +31,8 @@ dataset = pd.DataFrame(
 
 transformer_architecture = 'microsoft/deberta-v3-base' #'microsoft/deberta-v3-small' mlcorelib/debertav2-base-uncased microsoft/deberta-v2-xlarge
 config = AutoConfig.from_pretrained(transformer_architecture, output_hidden_states=True)
-config.max_position_embeddings = 2058
-tokenizer = AutoTokenizer.from_pretrained(transformer_architecture, max_length=config.max_position_embeddings, padding="max_length", return_attention_mask=True)
+config.max_position_embeddings = 2048
+tokenizer = AutoTokenizer.from_pretrained(transformer_architecture, truncation = True, max_length=config.max_position_embeddings, padding="max_length", return_attention_mask=True)
 
 length_dict = {}
 
@@ -78,7 +78,7 @@ def mean_encoding(essay_list, model, tokenizer):
 
   embeddings = []
   for essay in tqdm(essay_list):
-    encoded_input = tokenizer(essay, padding=True, truncation=True, return_tensors='pt').to(device)
+    encoded_input = tokenizer(essay, truncation = True, max_length=config.max_position_embeddings, padding="max_length", return_attention_mask=True, return_tensors='pt').to(device)
     with torch.no_grad():
       model_output = model(**encoded_input)
     tokens_embeddings = np.matrix(model_output[0].squeeze().cpu())
