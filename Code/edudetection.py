@@ -490,7 +490,8 @@ def main():
             encoder = AutoModel.from_pretrained(model.transformer_architecture, config=model.config)
             encoder = encoder.to(device)
             model.train()  # Set model to training mode
-
+            for param in encoder.parameters():
+                param.requires_grad = False
             # Create a tqdm progress bar for the inner loop (train_loader)
             train_loader_tqdm = tqdm(train_inputs, total=len(train_inputs), desc='Batches')
             for step, (input_id,attention_mask,labels) in enumerate(zip(train_loader_tqdm, attention_masks, train_labels)):
