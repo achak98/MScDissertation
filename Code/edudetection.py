@@ -227,12 +227,20 @@ class EDUPredictor(nn.Module):
         # Define BiLSTM 1
         self.lstm1 = nn.LSTM(args.embedding_dim, self.hidden_dim, num_layers=1, bidirectional=True)
         self.dropout1 = nn.Dropout(args.dropout) 
+        self.fc1 = nn.Sequential(nn.Linear(self.hidden_dim*2, self.hidden_dim//8),
+        nn.GELU(),
+        nn.Dropout(0.1),
+        nn.Linear(self.hidden_dim//8, self.tagset_size),
+        nn.GELU(),
+        nn.Dropout(0.1)
+        )
+
         # Attention weight computation layer
-        self.attention_weights = nn.Linear(args.hidden_dim * 3, 1)
-        self.dropout2 = nn.Dropout(args.dropout) 
+        #self.attention_weights = nn.Linear(args.hidden_dim * 3, 1)
+        #self.dropout2 = nn.Dropout(args.dropout) 
         # Define BiLSTM 2
-        self.lstm2 = nn.LSTM(self.hidden_dim, self.tagset_size, num_layers=1, bidirectional=True)
-        self.dropout3 = nn.Dropout(args.dropout)  
+        #self.lstm2 = nn.LSTM(self.hidden_dim, self.tagset_size, num_layers=1, bidirectional=True)
+       # self.dropout3 = nn.Dropout(args.dropout)  
 
         #print("tagset_size: ",tagset_size)
         # Define CRF
@@ -246,7 +254,8 @@ class EDUPredictor(nn.Module):
  
         lstm_out, _ = self.lstm1(embeddings)
         lstm_out = self.dropout1(lstm_out)
-        hidden_dim_size = lstm_out.size(-1)
+        output_sum = self.fc1(lstm_out)
+        """hidden_dim_size = lstm_out.size(-1)
         batch_size, seq_length, hidden_dim = lstm_out.size()
         first_half = lstm_out[:, :, : hidden_dim_size// 2]
         second_half = lstm_out[:, :, hidden_dim_size // 2:]
@@ -278,7 +287,7 @@ class EDUPredictor(nn.Module):
         first_half = lstm_out[:, :, : hidden_dim_size// 2]
         second_half = lstm_out[:, :, hidden_dim_size // 2:]
 
-        output_sum = first_half + second_half
+        output_sum = first_half + second_half"""
 
         tag_scores = self.crf.decode(output_sum)
 
