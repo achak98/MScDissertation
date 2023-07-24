@@ -137,7 +137,7 @@ def segment(args):
         model.sess.run(model.ema_backup_op)
         model.sess.run(model.ema_assign_op)
 
-    spacy_nlp = spacy.load('en', disable=['parser', 'ner', 'textcat'])
+    spacy_nlp = spacy.load('en_core_web_sm', disable=['parser', 'ner', 'textcat'])
     for file in args.input_files:
         logger.info('Segmenting {}...'.format(file))
         raw_sents = []
