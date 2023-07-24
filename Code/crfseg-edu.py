@@ -252,7 +252,7 @@ class EDUPredictor(nn.Module):
         tag_space = self.dropout2(tag_space)
         #tag_scores = tag_space.permute(0,2,1)
         print("tag_space: ",tag_space.size())
-        tag_scores = tag_space.permute(0,2,1)
+        tag_scores = tag_space.permute(0,2,1).unsqueeze(-1)
         print("tag_scores: ",tag_scores.size())
         batch_size, n_classes, *spatial = tag_scores.shape
         print(len(spatial))
