@@ -254,7 +254,9 @@ class EDUPredictor(nn.Module):
         print("tag_space: ",tag_space.size())
         tag_scores = tag_space.permute(0,2,1)
         print("tag_scores: ",tag_scores.size())
-        tag_scores = self.crf(tag_space)
+        batch_size, n_classes, *spatial = tag_scores.shape
+        print(len(spatial))
+        tag_scores = self.crf(tag_scores)
 
         return tag_scores
 
