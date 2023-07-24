@@ -117,7 +117,7 @@ def find_sequence_spans(sents, edus, model, args):
 
     for idx_sents, sent in enumerate(sents):
         #print("sent: ", sent)
-        tokenised_sent = model.tokeniser(sent, padding="max_length", truncation = True, return_attention_mask=True, max_length = args.max_length)["input_ids"]
+        tokenised_sent = model.tokeniser(sent)["input_ids"]
         #print("tokenised_sent : ",tokenised_sent)
         loop = True
         i = 0
@@ -128,7 +128,7 @@ def find_sequence_spans(sents, edus, model, args):
                 break
             edu = edus[idx_edu]
             #print("edu: ", edu)
-            tokenised_edu = model.tokeniser(edu, padding="max_length", truncation = True, return_attention_mask=True, max_length = args.max_length)["input_ids"]
+            tokenised_edu = model.tokeniser(edu)["input_ids"]
             tokenised_edu = tokenised_edu[1:-1]
             #print("tokenised_edu : ",tokenised_edu)
             target_length = len(tokenised_edu)
@@ -153,7 +153,7 @@ def find_sequence_spans(sents, edus, model, args):
                         sequence_spans.append((start_index, end_index, idx_sents))
                 start_index = None
                 i+=1
-            
+
     return sequence_spans
 
 def preprocess_RST_Discourse_dataset(path_data, tag2idx, args, model):
@@ -175,28 +175,30 @@ def preprocess_RST_Discourse_dataset(path_data, tag2idx, args, model):
             edus = [seq.strip() for seq in edus]
 
             #words = re.findall(args.regex_pattern, ' '.join(text))
-            
+
             #print(f"txt_file: {txt_file}")
             sequence_spans = find_sequence_spans(sents, edus, model, args)
             #print("sequence_spans: ", sequence_spans)
             for idx_sents, sent in enumerate(sents):
-                tokenised_sent = model.tokeniser(sent, padding="max_length", truncation = True, return_attention_mask=True, max_length = args.max_length)
+                tokenised_sent = model.tokeniser(sent, padding="max_length", return_attention_mask=True, max_length = 2048)
                 input_ids = tokenised_sent["input_ids"]
                 attn_mask = tokenised_sent["attention_mask"]
                 idx_seq_spans = 0
                 loop = True
                 IO_tags = [tag2idx["O"]] * len(input_ids)
                 while (loop):
+                    if(idx_seq_spans >= len(sequence_spans) or sequence_spans[idx_seq_spans][2] != idx_sents):
+                        loop = False
+                        break
                     span = sequence_spans[idx_seq_spans]
                     if(span[2] == idx_sents):
                         for i in range(span[0],span[1]+1):
                             IO_tags[i] = tag2idx['I']
                     idx_seq_spans+=1
-                    if(idx_seq_spans >= len(sequence_spans) or span[2] != idx_sents):
-                        loop = False
-                
-                data.append((input_ids, attn_mask, IO_tags))    
-    #print(f"total to be found: {len(edus)}, found: {len(sequence_spans)}")
+                    
+
+                data.append((input_ids[:args.max_length], attn_mask[:args.max_length], IO_tags[:args.max_length]))
+    print(f"total to be found: {len(edus)}, found: {len(sequence_spans)}")
     if(len(edus)-1 != len(sequence_spans)):
         print(f"messed up file: {txt_file}, detected: {len(sequence_spans)}, total: {len(edus)-1}")
         messed_up_ones.append(txt_file)
