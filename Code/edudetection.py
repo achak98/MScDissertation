@@ -512,7 +512,7 @@ def main():
 
                 scores, accuracy_score, overall_f1 = compute_f1_score_for_labels(tag_scores.detach().to(torch.long).cpu().numpy().flatten(), labels.detach().cpu().numpy().flatten(), labels= [int(key) for key in idx2tag.keys()])
                 # Compute the loss
-                loss = -model.crf(emissions, labels)
+                loss = -model.crf(emissions, labels, mask = attention_mask, reduction = 'token_mean')
 
                 # Backward propagation
                 loss.backward()
