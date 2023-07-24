@@ -79,11 +79,11 @@ def parse_args():
     parser.add_argument('--regex_pattern', default= r'\b\w+\b|[.,:\n&!]')
     parser.add_argument('--max_length', type=int, default= 2048)
     parser.add_argument('--learning_rate', type=float,
-                                default=3e-4, help='learning rate')
+                                default=1e-4, help='learning rate')
     parser.add_argument('--device', type=int,
                                 default=0, help='learning rate')
     parser.add_argument('--weight_decay', type=float,
-                                default=1e-3, help='weight decay')
+                                default=1e-4, help='weight decay')
     parser.add_argument('--dropout', type=float,
                                 default=0.1, help='weight decay')
     parser.add_argument('--window_size', type=int,
@@ -97,9 +97,9 @@ def parse_args():
     parser.add_argument('--tagset_size', type=int,
                                 default=2, help='number of tags in the tagset')
     parser.add_argument('--hidden_dim', type=int,
-                                default=768, help='hidden size')
+                                default=200, help='hidden size')
     parser.add_argument('--max_grad_norm', type=float,
-                                default=2.0, help='gradient norm')
+                                default=5.0, help='gradient norm')
     parser.add_argument('--rst_dir', default='../Data/rst/',
                                help='the path of the rst data directory')
     parser.add_argument('--seg_data_path',
@@ -442,29 +442,6 @@ def main():
         train_labels = train_data['IO'].tolist()
         train_labels = [ast.literal_eval(label_list) for label_list in train_labels]
         train_labels = torch.tensor(train_labels, dtype=torch.long).to(device)
-
-        """if (not args.get_embeddings_anyway) and os.path.exists(os.path.join(args.rst_dir,'embeddings_train.pt')):
-            embeddings = torch.load(os.path.join(args.rst_dir,'embeddings_train.pt'))
-            print(f"train embeddings loaded from {os.path.join(args.rst_dir,'embeddings_train.pt')}")
-        else:
-            print(f"getting train embeddings...")
-            embeddings = torch.empty((len(train_inputs),args.max_length,args.hidden_dim), dtype=torch.float64).to(device)
-            print("init model")
-            with torch.no_grad():
-                input_ids = train_inputs.to(device)
-                print("input_ids shape: ",input_ids.size())
-                attention_masks = attention_masks.to(device) 
-                encoder = AutoModel.from_pretrained(model.transformer_architecture, config=model.config)
-                encoder = encoder.to(device)
-                print("starting tqdm")
-                for i in tqdm(range(len(input_ids))):
-                    input_id = input_ids[i].unsqueeze(0)
-                    attention_mask = attention_masks[i].unsqueeze(0)
-                    # Obtain deberta embeddings for the current item
-                    outputs = encoder(input_id, attention_mask)
-                    embeddings[i] = torch.tensor(outputs.last_hidden_state).squeeze()
-                #print("embeddings.size(): ",embeddings.size())
-            torch.save(embeddings, os.path.join(args.rst_dir,'embeddings_train.pt'))"""
         torch.cuda.empty_cache()
         val_embeddings, val_labels = getValData(args, model)
 
@@ -520,7 +497,7 @@ def main():
                 loss.backward()
 
                 # Gradient clipping
-                #nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
+                nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
 
                 # Optimization step
                 optimizer.step()
@@ -559,31 +536,7 @@ def main():
                         Train Precision: {epoch_pre[1]:.3f}, Val Precision: {val_epoch_pre[1]:.3f} \n \
                         Train Recall: {epoch_re[1]:.3f}, Val Recall: {val_epoch_re[1]:.3f} \n \
                         -------------------------------------------------------------------------------------------------------------------------------------')
-            """tqdm.write(f'-------------------------------------------------------------------------------------------------------------------------------------\n \
-                        Epoch [{epoch+1}/{args.epochs}], Loss: {epoch_loss / len(train_loader):.3f}\n \
-                        Acc: {epoch_acc:.3f} and Test Acc: {val_accuracy_score:.3f}\n \
-                        Overall F1: {overall_f1:.3f} Val Overall F1: {val_overall_f1:.3f} \n\
-                        -------------------------------------------------------------------------------------------------------------------------------------\n \
-                        for tag B: \n\
-                        Train F1: {epoch_f1[0]:.3f}, Val F1: {val_epoch_f1[0]:.3f} \n \
-                        Train Precision: {epoch_pre[0]:.3f}, Val Precision: {val_epoch_pre[0]:.3f} \n \
-                        Train Recall: {epoch_re[0]:.3f}, Val Recall: {val_epoch_re[0]:.3f} \n \
-                        -------------------------------------------------------------------------------------------------------------------------------------\n \
-                        for tag I: \n\
-                        Train F1: {epoch_f1[1]:.3f}, Val F1: {val_epoch_f1[1]:.3f} \n \
-                        Train Precision: {epoch_pre[1]:.3f}, Val Precision: {val_epoch_pre[1]:.3f} \n \
-                        Train Recall: {epoch_re[1]:.3f}, Val Recall: {val_epoch_re[1]:.3f} \n \
-                        -------------------------------------------------------------------------------------------------------------------------------------\n \
-                        for tag O: \n\
-                        Train F1: {epoch_f1[2]:.3f}, Val F1: {val_epoch_f1[2]:.3f} \n \
-                        Train Precision: {epoch_pre[2]:.3f}, Val Precision: {val_epoch_pre[2]:.3f} \n \
-                        Train Recall: {epoch_re[2]:.3f}, Val Recall: {val_epoch_re[2]:.3f} \n \
-                        -------------------------------------------------------------------------------------------------------------------------------------\n \
-                        for tag E: \n\
-                        Train F1: {epoch_f1[3]:.3f}, Val F1: {val_epoch_f1[3]:.3f} \n \
-                        Train Precision: {epoch_pre[3]:.3f}, Val Precision: {val_epoch_pre[3]:.3f} \n \
-                        Train Recall: {epoch_re[3]:.3f}, Val Recall: {val_epoch_re[3]:.3f} \n \
-                        -------------------------------------------------------------------------------------------------------------------------------------')"""
+            
 
         # Save the trained model
         model_path = os.path.join(args.model_dir, 'edu_segmentation_model.pt')
