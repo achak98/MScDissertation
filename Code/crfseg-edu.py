@@ -244,10 +244,10 @@ class EDUPredictor(nn.Module):
         nn.GELU(),
         nn.Dropout(0.1)
         )
-        self.fc2 = nn.Sequential(nn.Linear(self.hidden_dim*2, self.hidden_dim//4),
+        self.fc2 = nn.Sequential(nn.Linear(self.hidden_dim*2, self.hidden_dim//8),
         nn.GELU(),
         nn.Dropout(0.1),
-        nn.Linear(self.hidden_dim//4, self.hidden_dim//16),
+        nn.Linear(self.hidden_dim//8, 1),
         nn.GELU(),
         nn.Dropout(0.1)
         )
