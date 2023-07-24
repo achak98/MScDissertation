@@ -584,7 +584,7 @@ def main():
                         -------------------------------------------------------------------------------------------------------------------------------------')"""
 
         # Save the trained model
-        model_path = os.path.join(args.model_dir, 'edu_segmentation_model.pt')
+        model_path = os.path.join(args.model_dir, 'edu_segmentation_model_rsa.pt')
         torch.save(model.state_dict(), model_path)
         print(f"Trained model saved to: {model_path}")
     torch.cuda.empty_cache()
@@ -636,7 +636,7 @@ def main():
         embeddings = torch.tensor(embeddings).to(device)
     
         # Load the trained model
-        model_path = os.path.join(args.model_dir, 'edu_segmentation_model.pt')
+        model_path = os.path.join(args.model_dir, 'edu_segmentation_model_rsa.pt')
         model.load_state_dict(torch.load(model_path))
         model = model.to(device)
         print(f"Loaded trained model from: {model_path}")
