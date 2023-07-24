@@ -5,7 +5,7 @@ from sklearn.model_selection import KFold
 from sklearn.metrics import cohen_kappa_score as kappa
 import torch
 from torch.utils.data import DataLoader, TensorDataset
-from transformers import RobertaTokenizer, RobertaModel
+from transformers import AutoTokenizer, AutoModel, AutoConfig
 from matplotlib import pyplot as plt
 from tqdm.auto import tqdm
 
@@ -29,7 +29,12 @@ dataset = pd.DataFrame(
     }
 )
 
-tokenizer = RobertaTokenizer.from_pretrained("roberta-base")
+transformer_architecture = 'microsoft/deberta-v3-base' #'microsoft/deberta-v3-small' mlcorelib/debertav2-base-uncased microsoft/deberta-v2-xlarge
+config = AutoConfig.from_pretrained(transformer_architecture, output_hidden_states=True)
+config.max_position_embeddings = 2058
+tokenizer = AutoTokenizer.from_pretrained(transformer_architecture, max_length=config.max_position_embeddings, padding="max_length", return_attention_mask=True)
+
+#tokenizer = AutoTokenizer.from_pretrained("roberta-base")
 
 length_dict = {}
 
@@ -65,7 +70,7 @@ def get_id2emb(ids):
 
 id2emb = get_id2emb(dataset["essay_id"])
 
-roberta = RobertaModel.from_pretrained("roberta-base").to(device)
+roberta = AutoModel.from_pretrained(transformer_architecture)
 
 
 
