@@ -237,10 +237,10 @@ class EDUPredictor(nn.Module):
         self.lstm2 = nn.LSTM(self.hidden_dim, self.tagset_size, num_layers=1, bidirectional=True)
         self.dropout3 = nn.Dropout(args.dropout)  
         """
-        self.fc1 = nn.Sequential(nn.Linear(self.hidden_dim*2, self.hidden_dim//4),
+        self.fc1 = nn.Sequential(nn.Linear(self.hidden_dim*2, self.hidden_dim//8),
         nn.GELU(),
         nn.Dropout(0.1),
-        nn.Linear(self.hidden_dim//4, self.hidden_dim//16),
+        nn.Linear(self.hidden_dim//8, 1),
         nn.GELU(),
         nn.Dropout(0.1)
         )
