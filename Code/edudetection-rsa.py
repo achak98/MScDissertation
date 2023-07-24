@@ -132,15 +132,25 @@ def find_sequence_spans(sents, edus, model, args):
                 idx_edu+=1
             else:
                 if tokenised_edu[0] == tokenised_sent[i]:
+                    broken = False
                     start_index = i
                     idx_edu+=1
                     potential_end = i + target_length -1
                     if potential_end > len(tokenised_sent)-1 :
-                        if tokenised_edu[len(tokenised_sent)-1 - i] == tokenised_sent[-1]:
-                            potential_end = len(tokenised_sent)-1 - i
+                        """print(f"sent: {sent} edu: {edu} \n \
+                              tokenised sent: {tokenised_sent} \n \
+                              tokenised edu: {tokenised_edu} \n \
+                              tonkenised_edu_corres_word: {tokenised_edu[len(tokenised_sent)-2 - i]}\n \
+                              tonkenised_edu_corres_word in if: {tokenised_edu[len(tokenised_sent)-2 - i]}\n \
+                              tokenised_sent_last_word in if: {tokenised_edu[len(tokenised_sent)-2 - i]}\n \
+                              tokenised_sent_last_word: {tokenised_sent[-2]}")"""
+                        if tokenised_edu[len(tokenised_sent)-2 - i] == tokenised_sent[-2]:
+                            potential_end = len(tokenised_sent)-2 - i
+                            broken = True
                         else:
                             break
-                    if tokenised_sent[potential_end] == tokenised_edu[-1]:
+                    if tokenised_sent[potential_end] == tokenised_edu[-1] or broken:
+                        #print("end matched")
                         end_index = potential_end
                         i = end_index
                         sequence_spans.append((start_index, end_index, idx_sents))
@@ -163,9 +173,10 @@ def preprocess_RST_Discourse_dataset(path_data, tag2idx, args, model):
             text = txtf.read()
             edus = eduf.read().split('\n')
             sents = text.split('\n')
-            sents = [sent.replace("\'", " \' ").replace("\"", " \" ").replace("-", " - ").replace(",", " , ").replace(".", " . ") for sent in sents]
-            edus = [edu.replace("\'", " \' ").replace("\"", " \" ").replace("-", " - ").replace(",", " , ").replace(".", " . ") for edu in edus]
+            sents = [sent.replace("'", " ' ").replace("(", " ( ").replace(")", " )' ").replace("\"", " \" ").replace("-", " - ").replace(",", " , ").replace(".", " . ") for sent in sents]
+            edus = [edu.replace("'", " ' ").replace("\"", " \" ").replace("(", " ( ").replace(")", " )' ").replace("-", " - ").replace(",", " , ").replace(".", " . ") for edu in edus]
             edus = [seq.strip() for seq in edus]
+            
             sequence_spans = find_sequence_spans(sents, edus, model, args)
             idx_seq_spans = 0
             avg_len = 0
