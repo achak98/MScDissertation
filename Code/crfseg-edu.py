@@ -253,7 +253,7 @@ class EDUPredictor(nn.Module):
         )
         #print("tagset_size: ",tagset_size)
         # Define CRF
-        self.crf = CRF(self.hidden_dim//16, returns='logits')
+        self.crf = CRF(self.tagset_size, returns='logits')
     
     def similarity(self, hi, hj):
         # Concatenate the hidden representations
