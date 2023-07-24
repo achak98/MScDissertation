@@ -230,6 +230,7 @@ class EDUPredictor(nn.Module):
         self.dropout1 = nn.Dropout(args.dropout) 
         self.lstm2 = nn.LSTM(args.embedding_dim, self.hidden_dim, num_layers=1, bidirectional=True)
         self.dropout2 = nn.Dropout(args.dropout)
+        self.dropout3 = nn.Dropout(args.dropout)
         # Attention weight computation layer
         """self.attention_weights = nn.Linear(args.hidden_dim * 3, 1)
         # Define BiLSTM 2
@@ -238,10 +239,17 @@ class EDUPredictor(nn.Module):
         """
         self.fc1 = nn.Sequential(nn.Linear(self.hidden_dim*2, self.hidden_dim//4),
         nn.GELU(),
-        nn.Dropout(0.3),
+        nn.Dropout(0.1),
         nn.Linear(self.hidden_dim//4, self.hidden_dim//16),
         nn.GELU(),
-        nn.Dropout(0.3)
+        nn.Dropout(0.1)
+        )
+        self.fc2 = nn.Sequential(nn.Linear(self.hidden_dim*2, self.hidden_dim//4),
+        nn.GELU(),
+        nn.Dropout(0.1),
+        nn.Linear(self.hidden_dim//4, self.hidden_dim//16),
+        nn.GELU(),
+        nn.Dropout(0.1)
         )
         #print("tagset_size: ",tagset_size)
         # Define CRF
@@ -260,7 +268,7 @@ class EDUPredictor(nn.Module):
         tag_space1 = self.fc1(lstm_out2).unsqueeze(-1)
         tag_space2 = self.fc2(lstm_out2).unsqueeze(-1) # batch, seq, classes -> b, s, c, 1   
         tag_space = torch.cat([tag_space1,tag_space2],dim=-1).permute(0,3,1,2) #b,seq,spatial?,2 -> b, 2, seq, spatial?
-        tag_space = self.dropout2(tag_space)
+        tag_space = self.dropout3(tag_space)
         tag_scores = self.crf(tag_space)
 
         return tag_scores
