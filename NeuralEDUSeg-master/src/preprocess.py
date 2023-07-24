@@ -10,7 +10,7 @@ import logging
 
 
 logger = logging.getLogger('SegEDU')
-spacy_nlp = None
+spacy_nlp = spacy.load('en_core_web_sm', disable=['parser', 'ner', 'textcat'])
 
 
 def preprocess_one_doc(sent_file, edu_file):
@@ -29,7 +29,7 @@ def preprocess_one_doc(sent_file, edu_file):
 
     global spacy_nlp
     if not spacy_nlp:
-        spacy.load('en_core_web_sm', disable=['parser', 'ner', 'textcat'])
+        pass
 
     sents = []
     for sent in spacy_nlp.pipe(raw_sents, batch_size=1000, n_threads=5):
