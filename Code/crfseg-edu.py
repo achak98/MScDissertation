@@ -376,7 +376,7 @@ def main():
                 print("tag_scores: ", tag_logits.size())
                 
                 # Compute the loss
-                loss = -F.log_softmax(tag_logits, dim=1)
+                loss = -F.log_softmax(tag_logits, dim=1).mean()
                 print("loss: ", loss)
                 softmaxed = F.softmax(tag_logits, dim=1)
                 print("softmaxed: ", softmaxed.size())
