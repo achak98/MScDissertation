@@ -365,24 +365,14 @@ def main():
                 
                 inputs = embeddings.to(torch.float) #.to(device)
                 labels = labels.to(device)
-                #print("inputs: ",inputs.size())
-                #print("labels: ",labels.size())
-                #print(f"type of inputs tensor: {inputs.dtype}, and type of labels tensor: {labels.dtype}") 
-
                 optimizer.zero_grad()  # Zero the gradients
-                #print("inputs in train: ",inputs.size())
                 # Forward propagation
                 tag_logits = model(inputs)
-                print("tag_scores: ", tag_logits.size())
                 
                 # Compute the loss
                 loss = -F.log_softmax(tag_logits, dim=1).mean()
-                print("loss: ", loss)
                 softmaxed = F.softmax(tag_logits, dim=1)
-                print("softmaxed: ", softmaxed.size())
                 softmaxed = softmaxed.squeeze().permute(0,2,1)
-                print("softmaxed permuted: ", softmaxed)
-                print("softmaxed permuted: ", softmaxed.size())
                 tags_pred = torch.argmax(softmaxed, dim=-1)
                 scores, accuracy_score, overall_f1 = compute_f1_score_for_labels(tags_pred.detach().to(torch.long).cpu().numpy().flatten(), labels.detach().cpu().numpy().flatten(), labels= [int(key) for key in idx2tag.keys()])
                 # Backward propagation
@@ -432,9 +422,14 @@ def main():
 
                 #print("inputs in train: ",inputs.size())
                 # Forward propagation
-                tag_scores, emissions = model(inputs)
-
-                scores, val_accuracy_score_one, val_overall_f1_one = compute_f1_score_for_labels(tag_scores.detach().to(torch.long).cpu().numpy().flatten(), labels.detach().cpu().numpy().flatten(), labels= [int(key) for key in idx2tag.keys()])
+                tag_logits = model(inputs)
+                
+                # Compute the loss
+                val_loss = -F.log_softmax(tag_logits, dim=1).mean()
+                softmaxed = F.softmax(tag_logits, dim=1)
+                softmaxed = softmaxed.squeeze().permute(0,2,1)
+                tags_pred = torch.argmax(softmaxed, dim=-1)
+                scores, val_accuracy_score_one, val_overall_f1_one = compute_f1_score_for_labels(tags_pred.detach().to(torch.long).cpu().numpy().flatten(), labels.detach().cpu().numpy().flatten(), labels= [int(key) for key in idx2tag.keys()])
                 val_accuracy_score += val_accuracy_score_one
                 val_overall_f1 += val_overall_f1_one
                 for i in range (len(epoch_f1)):
@@ -449,8 +444,8 @@ def main():
             
             #print(f'F1 scores for tag B: {epoch_f1[0]:.3f}, tag I: {epoch_f1[1]:.3f}, tag O: {epoch_f1[2]:.3f}, tag E: {epoch_f1[3]:.3f}')
             tqdm.write(f'-------------------------------------------------------------------------------------------------------------------------------------\n \
-                        Epoch [{epoch+1}/{args.epochs}], Loss: {epoch_loss / len(train_inputs):.3f}\n \
-                        Acc: {epoch_acc:.3f} and Test Acc: {val_accuracy_score:.3f}\n \
+                        Epoch [{epoch+1}/{args.epochs}], Loss: {epoch_loss / len(train_inputs):.3f} Val Loss: {val_loss:.3f}\n \
+                        Acc: {epoch_acc:.3f} and Val Acc: {val_accuracy_score:.3f}\n \
                         Overall F1: {overall_f1:.3f} Val Overall F1: {val_overall_f1:.3f} \n\
                         -------------------------------------------------------------------------------------------------------------------------------------\n \
                         for tag I: \n\
