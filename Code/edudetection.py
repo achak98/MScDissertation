@@ -85,7 +85,7 @@ def parse_args():
     parser.add_argument('--weight_decay', type=float,
                                 default=1e-4, help='weight decay')
     parser.add_argument('--dropout', type=float,
-                                default=0.5, help='weight decay')
+                                default=0.2, help='weight decay')
     parser.add_argument('--window_size', type=int,
                                 default=5, help='die ya whoreses')
     parser.add_argument('--embedding_dim', type=int,
@@ -99,7 +99,7 @@ def parse_args():
     parser.add_argument('--tagset_size', type=int,
                                 default=2, help='number of tags in the tagset')
     parser.add_argument('--hidden_dim', type=int,
-                                default=50, help='hidden size')
+                                default=200, help='hidden size')
     parser.add_argument('--max_grad_norm', type=float,
                                 default=1.0, help='gradient norm')
     parser.add_argument('--rst_dir', default='../Data/rst/',
@@ -228,26 +228,12 @@ class EDUPredictor(nn.Module):
         self.lstm1 = nn.LSTM(args.embedding_dim, self.hidden_dim, num_layers=1, bidirectional=True)
         self.dropout1 = nn.Dropout(args.dropout) 
         # Attention weight computation layer
-        #self.attention_weights = nn.Linear(args.hidden_dim * 3, 1)
+        self.attention_weights = nn.Linear(args.hidden_dim * 3, 1)
+        self.dropout2 = nn.Dropout(args.dropout) 
         # Define BiLSTM 2
         self.lstm2 = nn.LSTM(self.hidden_dim, self.tagset_size, num_layers=1, bidirectional=True)
-        self.dropout2 = nn.Dropout(args.dropout)  
-        """self.regressor = nn.Sequential(
-            nn.Linear(hidden_dim*2, hidden_dim//2),
-            nn.GELU(),
-            nn.Dropout(0.3),
-            nn.Linear( hidden_dim//2,  hidden_dim),
-            nn.GELU()
-        )"""
-        # Define MLP
-        """self.hidden2tag = nn.Sequential(
-            nn.Linear(self.hidden_dim, self.hidden_dim//16),
-            nn.GELU(),
-            nn.Dropout(0.3),
-            nn.Linear(self.hidden_dim//16, self.tagset_size),
-            nn.GELU(),
-            nn.Dropout(0.3)
-        )"""
+        self.dropout3 = nn.Dropout(args.dropout)  
+
         #print("tagset_size: ",tagset_size)
         # Define CRF
         self.crf = CRF(self.tagset_size, batch_first=True)
@@ -266,7 +252,7 @@ class EDUPredictor(nn.Module):
         second_half = lstm_out[:, :, hidden_dim_size // 2:]
         output_sum = first_half + second_half
         # Initialize attention vector tensor
-        """attention_vectors = torch.zeros_like(output_sum)
+        attention_vectors = torch.zeros_like(output_sum)
         for i in range(seq_length):
             # Define the start and end positions of the window
             start_pos = max(0, i - self.window_size)
@@ -274,43 +260,26 @@ class EDUPredictor(nn.Module):
             
             # Compute similarity between the current word and nearby words
             similarity_scores = torch.cat([self.similarity(output_sum[:, i], output_sum[:, j]) for j in range(start_pos, end_pos)], dim=1)
-            #print("similarity_scores: ",similarity_scores.size())
-            #similarity scores has all s(i,j)s from start pos to end pos of window
-            # Apply softmax to obtain attention weights
+
             attention_weights = torch.nn.functional.softmax(similarity_scores, dim=-1) #this has all alpha(i,j)s
-            #print("attention_weights: ",attention_weights.size())
-            # Compute the attention vector as a weighted sum of nearby words
-            #print("_sum : ",_sum.size())
-            #print("output_sum[:, start_pos:end_pos, :].permute(0,2,1: ", output_sum[:, start_pos:end_pos, :].permute(0,2,1).size())
-            #print("output_sum[:, start_pos:end_pos, :]: ", output_sum[:, start_pos:end_pos, :].size())
-            #print("attention_weights: ", attention_weights.size())
+
             attention_vector = torch.sum((output_sum[:, start_pos:end_pos, :].permute(2,0,1) * attention_weights).permute(1,2,0), dim=1)
-            #print("attention_vector: ",attention_vector.size())
-            # Store the attention vector for the current word
+
             attention_vectors[:,i] = attention_vector.squeeze(1) #(seqlen,hiddim)
 
-        #print("attention_vectors: ",attention_vectors.size())
-        #print("output_sum: ",output_sum.size())
-        # Concatenate the original LSTM output and the attention vectors
-        lstm_output_with_attention = torch.cat([output_sum, attention_vectors], dim=-1)"""
-        #print("lstm_output_with_attention: ", lstm_output_with_attention.size())
-        #print(output_sum.size())
-        #print(output_sum.size())
-        lstm_out, _ = self.lstm2(output_sum)
 
-        #lstm_out, _ = self.lstm2(output_sum)
-        lstm_out = self.dropout2(lstm_out)
-        #print(lstm_out.size())
-        #tag_space = self.hidden2tag(lstm_out)
-        #print("size of tag_space: ", tag_space.size())
+        lstm_output_with_attention = torch.cat([output_sum, attention_vectors], dim=-1)
+        lstm_output_with_attention = self.dropout2(lstm_output_with_attention)
+
+        lstm_out, _ = self.lstm2(output_sum)
+        lstm_out = self.dropout3(lstm_out)
+
         hidden_dim_size = lstm_out.size(-1)
         first_half = lstm_out[:, :, : hidden_dim_size// 2]
         second_half = lstm_out[:, :, hidden_dim_size // 2:]
-        
-        #print("first_half: ", first_half.size())
-        # Sum the two halves together along the last dimension
+
         output_sum = first_half + second_half
-        #print(output_sum.size())
+
         tag_scores = self.crf.decode(output_sum)
 
         return torch.tensor(tag_scores), output_sum
