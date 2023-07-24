@@ -422,7 +422,8 @@ def main():
                 # Compute the loss
                 val_loss = -F.log_softmax(tag_logits, dim=1).mean()
                 softmaxed = F.softmax(tag_logits, dim=1)
-                softmaxed = softmaxed.squeeze().permute(0,2,1)
+                print("softmaxed: ",softmaxed.size())
+                softmaxed = softmaxed.squeeze().unsqueeze(0).permute(0,2,1)
                 tags_pred = torch.argmax(softmaxed, dim=-1)
                 scores, val_accuracy_score_one, val_overall_f1_one = compute_f1_score_for_labels(tags_pred.detach().to(torch.long).cpu().numpy().flatten(), labels.detach().cpu().numpy().flatten(), labels= [int(key) for key in idx2tag.keys()])
                 val_accuracy_score += val_accuracy_score_one
