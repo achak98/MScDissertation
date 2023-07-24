@@ -227,10 +227,10 @@ class EDUPredictor(nn.Module):
 
         # Define BiLSTM 1
         self.lstm1 = nn.LSTM(args.embedding_dim, self.hidden_dim, num_layers=1, bidirectional=True)
-        """self.dropout1 = nn.Dropout(args.dropout) 
+        self.dropout1 = nn.Dropout(args.dropout) 
+        self.dropout2 = nn.Dropout(args.dropout)
         # Attention weight computation layer
-        self.attention_weights = nn.Linear(args.hidden_dim * 3, 1)
-        self.dropout2 = nn.Dropout(args.dropout) 
+        """self.attention_weights = nn.Linear(args.hidden_dim * 3, 1)
         # Define BiLSTM 2
         self.lstm2 = nn.LSTM(self.hidden_dim, self.tagset_size, num_layers=1, bidirectional=True)
         self.dropout3 = nn.Dropout(args.dropout)  
@@ -249,6 +249,7 @@ class EDUPredictor(nn.Module):
         lstm_out, _ = self.lstm1(embeddings)
         lstm_out = self.dropout1(lstm_out)
         tag_space = self.fc(lstm_out)
+        tag_space = self.dropout2(tag_space)
         tag_scores = tag_scores.permute(0,2,1)
         tag_scores = self.crf.decode(tag_space)
 
