@@ -360,12 +360,12 @@ def getValData(args, model):
         #print(test_data['Sentence'].iloc[i])
         val_data['Sentence'].iloc[i] =  np.array(ast.literal_eval(val_data['Sentence'].iloc[i]))
         val_data['Sentence'].iloc[i] = [int(item) for item in val_data['Sentence'].iloc[i]]
-    test_inputs = torch.cat((torch.tensor(np.array(val_data['Sentence'].tolist()))[:4], torch.tensor(np.array(val_data['Sentence'].tolist()))[-4:]), dim=0)
+    val_inputs = torch.cat((torch.tensor(np.array(val_data['Sentence'].tolist()))[:4], torch.tensor(np.array(val_data['Sentence'].tolist()))[-4:]), dim=0)
     attention_masks = val_data['Attention Mask' ].tolist()
     for i in range(len(val_data['Attention Mask'])):
         val_data['Attention Mask'].iloc[i] =  np.array(ast.literal_eval(val_data['Attention Mask'].iloc[i]))
         val_data['Attention Mask'].iloc[i] = [int(item) for item in val_data['Attention Mask'].iloc[i]]
-    attention_masks = torch.cat((torch.tensor(np.array(val_data['Attention Mask' ].tolist()))[:4], torch.tensor(np.array(val_data['Attention Mask' ].tolist()))[-4:]), dim=0)
+    val_attention_masks = torch.cat((torch.tensor(np.array(val_data['Attention Mask' ].tolist()))[:4], torch.tensor(np.array(val_data['Attention Mask' ].tolist()))[-4:]), dim=0)
     
     val_labels = val_data['IO'].tolist()
     val_labels = [ast.literal_eval(label_list) for label_list in val_labels]
@@ -373,7 +373,7 @@ def getValData(args, model):
     #print("val_labels: ",val_labels)
     print("getting empty embeddings tensor")
     #print("args.get_embeddings_anyway in val: ", args.get_embeddings_anyway)
-    if (not args.get_embeddings_anyway) and os.path.exists(os.path.join(args.rst_dir,'embeddings_val.pt')):
+    """ if (not args.get_embeddings_anyway) and os.path.exists(os.path.join(args.rst_dir,'embeddings_val.pt')):
         val_embeddings = torch.load(os.path.join(args.rst_dir,'embeddings_val.pt'))
         print(f"val embeddings loaded from {os.path.join(args.rst_dir,'embeddings_val.pt')}")
     else:
@@ -395,9 +395,9 @@ def getValData(args, model):
                 outputs = encoder(input_id, attention_mask)
                 val_embeddings[i] = torch.tensor(outputs.last_hidden_state).squeeze()
             #print("embeddings.size(): ",val_embeddings.size())
-        torch.save(val_embeddings, os.path.join(args.rst_dir,'embeddings_val.pt'))
+        torch.save(val_embeddings, os.path.join(args.rst_dir,'embeddings_val.pt'))"""
     torch.cuda.empty_cache()
-    return val_embeddings,val_labels
+    return val_inputs,val_attention_masks,val_labels
 
 def main():
     args = parse_args()
@@ -445,7 +445,7 @@ def main():
         train_labels = [ast.literal_eval(label_list) for label_list in train_labels]
         train_labels = torch.tensor(train_labels, dtype=torch.long).to(device)
         torch.cuda.empty_cache()
-        val_embeddings, val_labels = getValData(args, model)
+        val_inputs,val_attention_masks,val_labels = getValData(args, model)
 
         #embeddings = torch.tensor(embeddings).to(device)
         # Create DataLoader for training data
@@ -514,13 +514,48 @@ def main():
                 # Update the tqdm progress bar with the current loss value
                 running_f1 = [item/(step+1) for item in epoch_f1]
                 train_loader_tqdm.set_postfix ({f"f1 scores for tag I: {running_f1[0]:.3f}, tag O: {running_f1[1]:.3f}, Acc: {(epoch_acc/(step+1)):.3f} and Loss": epoch_loss / (step + 1)})#({f"f1 scores for tag B: {running_f1[0]:.3f}, tag I: {running_f1[1]:.3f}, tag O: {running_f1[2]:.3f}, tag E: {running_f1[3]:.3f}, Acc: {(epoch_acc/(step+1)):.3f} and Loss": epoch_loss / (step + 1)})
+            
             epoch_f1 = [item/len(train_inputs) for item in epoch_f1]
             epoch_pre = [item/len(train_inputs) for item in epoch_pre]
             epoch_re = [item/len(train_inputs) for item in epoch_re]
             epoch_acc = epoch_acc/len(train_inputs)
             epoch_overall_f1 = epoch_overall_f1/len(train_inputs)
             # Update the outer tqdm progress bar with the current epoch loss value
-            val_accuracy_score, val_epoch_pre, val_epoch_f1, val_epoch_re, val_overall_f1 = validation(args,idx2tag,model, val_embeddings, val_labels)
+            model.eval()
+            val_accuracy_score = 0.0
+            val_overall_f1 = 0.0
+            val_epoch_pre = [0.0]*2
+            val_epoch_f1 = [0.0]*2
+            val_epoch_re = [0.0]*2
+            for step, (input_id,attention_mask,labels) in enumerate(val_inputs,val_attention_masks,val_labels):
+                input_id = input_id.to(device).squeeze(0)
+                #print("input_id: ",input_id.size())
+                attention_mask = attention_mask.to(device).squeeze(0) 
+                with torch.no_grad():
+                    embeddings = encoder(input_id, attention_mask).last_hidden_state
+                
+                inputs = embeddings.to(torch.float) #.to(device)
+                labels = labels.to(device).squeeze(0)
+                #print("inputs: ",inputs.size())
+                #print("labels: ",labels.size())
+                #print(f"type of inputs tensor: {inputs.dtype}, and type of labels tensor: {labels.dtype}") 
+
+                #print("inputs in train: ",inputs.size())
+                # Forward propagation
+                tag_scores, emissions = model(inputs)
+
+                scores, val_accuracy_score_one, val_overall_f1_one = compute_f1_score_for_labels(tag_scores.detach().to(torch.long).cpu().numpy().flatten(), labels.detach().cpu().numpy().flatten(), labels= [int(key) for key in idx2tag.keys()])
+                val_accuracy_score += val_accuracy_score_one
+                val_overall_f1 += val_overall_f1_one
+                for i in range (len(epoch_f1)):
+                    val_epoch_pre [i] += scores[i]['Precision']
+                    val_epoch_f1 [i] += scores[i]['F1 Score']
+                    val_epoch_re [i] += scores[i]['Recall']
+                val_accuracy_score/=len(val_inputs)
+                val_overall_f1/=len(val_inputs)
+                val_epoch_f1 = [item/len(val_inputs) for item in val_epoch_f1]
+                val_epoch_pre = [item/len(val_inputs) for item in val_epoch_pre]
+                val_epoch_re = [item/len(val_inputs) for item in val_epoch_re]
             
             #print(f'F1 scores for tag B: {epoch_f1[0]:.3f}, tag I: {epoch_f1[1]:.3f}, tag O: {epoch_f1[2]:.3f}, tag E: {epoch_f1[3]:.3f}')
             tqdm.write(f'-------------------------------------------------------------------------------------------------------------------------------------\n \
