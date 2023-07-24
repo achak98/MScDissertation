@@ -196,7 +196,7 @@ epochs = 20
 lr = 3e-4
 
 # cross-validation folds
-kf = KFold(n_splits=5, random_state=2022, shuffle=True)
+kf = KFold(n_splits=10, random_state=2022, shuffle=True)
 
 # dicts with train_df, test_df and predictions for each model
 train_df_dict = {}
