@@ -372,16 +372,19 @@ def main():
                 optimizer.zero_grad()  # Zero the gradients
                 #print("inputs in train: ",inputs.size())
                 # Forward propagation
-                tag_scores = model(inputs)
-                print("tag_scores: ", tag_scores.size())
+                tag_logits = model(inputs)
+                print("tag_scores: ", tag_logits.size())
                 
                 # Compute the loss
-                loss = -F.log_softmax(tag_scores, dim=1)
+                loss = -F.log_softmax(tag_logits, dim=1)
                 print("loss: ", loss)
-                softmaxed = F.softmax(tag_scores, dim=1)
+                softmaxed = F.softmax(tag_logits, dim=1)
                 print("softmaxed: ", softmaxed.size())
+                softmaxed = softmaxed.squeeze().permute(0,2,1)
+                print("softmaxed permuted: ", softmaxed)
                 print("softmaxed permuted: ", softmaxed.size())
-                scores, accuracy_score, overall_f1 = compute_f1_score_for_labels(tag_scores.detach().to(torch.long).cpu().numpy().flatten(), labels.detach().cpu().numpy().flatten(), labels= [int(key) for key in idx2tag.keys()])
+                tags_pred = torch.argmax(softmaxed, dim=-1)
+                scores, accuracy_score, overall_f1 = compute_f1_score_for_labels(tags_pred.detach().to(torch.long).cpu().numpy().flatten(), labels.detach().cpu().numpy().flatten(), labels= [int(key) for key in idx2tag.keys()])
                 # Backward propagation
                 loss.backward()
 
