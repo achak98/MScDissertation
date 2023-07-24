@@ -250,46 +250,10 @@ class EDUPredictor(nn.Module):
         lstm_out = self.dropout1(lstm_out)
         tag_space = self.fc(lstm_out)
         tag_space = self.dropout2(tag_space)
-        tag_scores = tag_space.permute(0,2,1)
+        #tag_scores = tag_space.permute(0,2,1)
         tag_scores = self.crf(tag_scores)
 
         return tag_scores
-
-def validation(args,idx2tag,model, val_embeddings, val_labels):
-    # Detect device (CPU or CUDA)
-    torch.cuda.empty_cache()
-    device = f"cuda:{args.device}"
-    outputs = torch.empty((len(val_labels),args.max_length), dtype=torch.float).to(device)
-    val_embeddings = torch.tensor(val_embeddings).to(device)
-    val_labels = val_labels.to(device)
-    #print("embeddings in val: ",val_embeddings)
-
-    # Evaluation
-    model.eval()  # Set model to evaluation mode
-    with torch.no_grad():
-        # Predict output for test set
-        val_embeddings = val_embeddings.to(torch.float)
-        for i, (embedding, test_label) in enumerate(zip(val_embeddings,val_labels)):
-            #print("embedding in val: ",embedding.size())
-            #print("unsq embedding in val: ",embedding.unsqueeze(0).size())
-            output = model(embedding.unsqueeze(0))
-            outputs[i] = output.squeeze()
-        val_labels = val_labels.to(device)
-        #outputs, emissions = model(val_embeddings)
-        test_pred_tags = outputs.detach().to(torch.long).cpu().numpy().flatten()
-        test_tags = val_labels.detach().cpu().numpy().flatten()
-        #print("idx2tag.keys(): ",idx2tag.keys())
-        #print("test_pred_tags: ",test_pred_tags)
-        #print("test_tags: ",test_tags)
-        scores, accuracy_score, overall_f1 = compute_f1_score_for_labels(test_pred_tags, test_tags, labels= [int(key) for key in idx2tag.keys()])
-        epoch_f1 = [0.0]*2
-        epoch_pre = [0.0]*2
-        epoch_re = [0.0]*2
-        for i in range (len(epoch_f1)):
-                epoch_f1[i] += scores[i]['F1 Score']
-                epoch_pre[i] += scores[i]['Precision']
-                epoch_re[i] += scores[i]['Recall']
-        return accuracy_score, epoch_pre, epoch_f1, epoch_re, overall_f1
 
 def getValData(args, model):
     device = torch.device(f"cuda:{args.device}" if torch.cuda.is_available() else "cpu")
@@ -310,32 +274,6 @@ def getValData(args, model):
     val_labels = val_data['IO'].tolist()
     val_labels = [ast.literal_eval(label_list) for label_list in val_labels]
     val_labels = torch.cat(((torch.tensor(val_labels, dtype=torch.long).to(device))[:4], torch.tensor(val_labels, dtype=torch.long).to(device))[-4:], dim=0)
-    #print("val_labels: ",val_labels)
-    print("getting empty embeddings tensor")
-    #print("args.get_embeddings_anyway in val: ", args.get_embeddings_anyway)
-    """ if (not args.get_embeddings_anyway) and os.path.exists(os.path.join(args.rst_dir,'embeddings_val.pt')):
-        val_embeddings = torch.load(os.path.join(args.rst_dir,'embeddings_val.pt'))
-        print(f"val embeddings loaded from {os.path.join(args.rst_dir,'embeddings_val.pt')}")
-    else:
-        print(f"getting val embeddings...")
-        val_embeddings = torch.empty((len(test_inputs),args.max_length,args.embedding_dim), dtype=torch.float64).to(device)
-        print("init model")
-        with torch.no_grad():
-            input_ids = test_inputs.to(device)
-            #print("input_ids in val: ",input_ids)
-            #print("input_ids shape: ",input_ids.size())
-            attention_masks = attention_masks.to(device) 
-            encoder = AutoModel.from_pretrained(model.transformer_architecture, config=model.config)
-            encoder = encoder.to(device)
-            print("starting tqdm")
-            for i in tqdm(range(len(input_ids))):
-                input_id = input_ids[i].unsqueeze(0)
-                attention_mask = attention_masks[i].unsqueeze(0)
-                # Obtain deberta embeddings for the current item
-                outputs = encoder(input_id, attention_mask)
-                val_embeddings[i] = torch.tensor(outputs.last_hidden_state).squeeze()
-            #print("embeddings.size(): ",val_embeddings.size())
-        torch.save(val_embeddings, os.path.join(args.rst_dir,'embeddings_val.pt'))"""
     torch.cuda.empty_cache()
     return val_inputs,val_attention_masks,val_labels
 
@@ -437,7 +375,6 @@ def main():
                 print("loss: ", loss)
                 softmaxed = F.softmax(tag_scores, dim=1)
                 print("softmaxed: ", softmaxed.size())
-                softmaxed = softmaxed.permute(0,2,1)
                 print("softmaxed permuted: ", softmaxed.size())
                 scores, accuracy_score, overall_f1 = compute_f1_score_for_labels(tag_scores.detach().to(torch.long).cpu().numpy().flatten(), labels.detach().cpu().numpy().flatten(), labels= [int(key) for key in idx2tag.keys()])
                 # Backward propagation
