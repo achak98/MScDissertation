@@ -88,6 +88,8 @@ def parse_args():
                                 default=0.1, help='weight decay')
     parser.add_argument('--window_size', type=int,
                                 default=5, help='die ya whoreses')
+    parser.add_argument('--embedding_dim', type=int,
+                                default=768, help='die ya whoreses')
     parser.add_argument('--batch_size', type=int,
                                 default=1, help='batch size')
     parser.add_argument('--epochs', type=int,
@@ -223,7 +225,7 @@ class EDUPredictor(nn.Module):
         self.tokeniser = AutoTokenizer.from_pretrained(self.transformer_architecture, max_length=self.config.max_position_embeddings, padding="max_length", return_attention_mask=True)
 
         # Define BiLSTM 1
-        self.lstm1 = nn.LSTM(768, self.hidden_dim, num_layers=1, bidirectional=True)
+        self.lstm1 = nn.LSTM(args.embedding_dim, self.hidden_dim, num_layers=1, bidirectional=True)
         self.dropout1 = nn.Dropout(args.dropout) 
         # Attention weight computation layer
         #self.attention_weights = nn.Linear(args.hidden_dim * 3, 1)
@@ -376,7 +378,7 @@ def getValData(args, model):
         print(f"val embeddings loaded from {os.path.join(args.rst_dir,'embeddings_val.pt')}")
     else:
         print(f"getting val embeddings...")
-        val_embeddings = torch.empty((len(test_inputs),args.max_length,args.hidden_dim), dtype=torch.float64).to(device)
+        val_embeddings = torch.empty((len(test_inputs),args.max_length,args.embedding_dim), dtype=torch.float64).to(device)
         print("init model")
         with torch.no_grad():
             input_ids = test_inputs.to(device)
@@ -568,7 +570,7 @@ def main():
             print(f"test embeddings loaded from {os.path.join(args.rst_dir,'embeddings_test.pt')}")
         else:
             print(f"getting test embeddings...")
-            embeddings = torch.empty((len(test_inputs),args.max_length,args.hidden_dim), dtype=torch.float64).to(device)
+            embeddings = torch.empty((len(test_inputs),args.max_length,args.embedding_dim), dtype=torch.float64).to(device)
             print("init model")
             with torch.no_grad():
                 input_ids = test_inputs.to(device)
