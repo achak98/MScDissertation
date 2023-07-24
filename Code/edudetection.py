@@ -85,7 +85,7 @@ def parse_args():
     parser.add_argument('--weight_decay', type=float,
                                 default=1e-4, help='weight decay')
     parser.add_argument('--dropout', type=float,
-                                default=0.1, help='weight decay')
+                                default=0.5, help='weight decay')
     parser.add_argument('--window_size', type=int,
                                 default=5, help='die ya whoreses')
     parser.add_argument('--embedding_dim', type=int,
@@ -99,9 +99,9 @@ def parse_args():
     parser.add_argument('--tagset_size', type=int,
                                 default=2, help='number of tags in the tagset')
     parser.add_argument('--hidden_dim', type=int,
-                                default=200, help='hidden size')
+                                default=50, help='hidden size')
     parser.add_argument('--max_grad_norm', type=float,
-                                default=5.0, help='gradient norm')
+                                default=1.0, help='gradient norm')
     parser.add_argument('--rst_dir', default='../Data/rst/',
                                help='the path of the rst data directory')
     parser.add_argument('--seg_data_path',
