@@ -251,7 +251,7 @@ class EDUPredictor(nn.Module):
         tag_space = self.fc(lstm_out)
         tag_space = self.dropout2(tag_space)
         #tag_scores = tag_space.permute(0,2,1)
-        tag_scores = self.crf(tag_scores)
+        tag_scores = self.crf(tag_space)
 
         return tag_scores
 
