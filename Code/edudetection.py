@@ -248,7 +248,7 @@ class EDUPredictor(nn.Module):
         )"""
         #print("tagset_size: ",tagset_size)
         # Define CRF
-        self.crf = CRF(self.tagset_size)
+        self.crf = CRF(self.tagset_size, batch_first=True)
     
     def similarity(self, hi, hj):
         # Concatenate the hidden representations
