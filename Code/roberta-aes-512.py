@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader, TensorDataset
 from transformers import RobertaTokenizer, RobertaModel
 from matplotlib import pyplot as plt
 from tqdm.auto import tqdm
-
+import torch.nn as nn
 
 # set device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
