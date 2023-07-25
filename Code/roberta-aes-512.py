@@ -117,10 +117,19 @@ class MLP(torch.nn.Module):
       torch.nn.ReLU(),
       torch.nn.Dropout(0.3),
       torch.nn.Linear(96, 1)
-    ) 
-
+    )
+    self.lstm1 = nn.LSTM(input_size, input_size//2, num_layers=1, bidirectional=True)
+    self.dropout1 = nn.Dropout(0.3) 
+    self.fc1 = nn.Linear(input_size,input_size//2)
+    self.dropout2 = nn.Dropout(0.3)
+    self.attention_weights = nn.Linear(input_size//2 * 3, 1)
+    self.dropout3 = nn.Dropout(0.3) 
+    self.lstm2 = nn.LSTM(input_size, input_size//2, num_layers=1, bidirectional=True)
+    self.dropout4 = nn.Dropout(0.3)
+    self.fc1 = nn.Linear(input_size,input_size//2) 
+    self.dropout5 = nn.Dropout(0.3)
     self.layers2 = torch.nn.Sequential(
-      torch.nn.Linear(input_size, 256),
+      torch.nn.Linear(input_size//2, 256),
       torch.nn.ReLU(),
       torch.nn.Dropout(0.3),
       torch.nn.Linear(256, 96),
@@ -128,11 +137,50 @@ class MLP(torch.nn.Module):
       torch.nn.Dropout(0.3),
       torch.nn.Linear(96, 1)
     ) 
+    def similarity(self, hi, hj):
+        # Concatenate the hidden representations
+        h_concat = torch.cat([hi, hj, hi * hj], dim=-1)
+        return self.attention_weights(h_concat)
+    def forward(self, x):
+        layer_1_out = self.layers1(x)
+        print("layer_1_out: ",layer_1_out.size())
+        layer_1_out = layer_1_out.squeeze()
+        print("layer_1_out squeezed: ",layer_1_out.size())
+        lstm_out, _ = self.lstm1(layer_1_out)
+        print("lstm_out: ",lstm_out.size())
+        lstm_out = self.dropout1(lstm_out)
+        lstm_out_sum = self.fc1(lstm_out)
+        lstm_out_sum = self.dropout2 (lstm_out_sum)
+        print("lstm_out_sum: ",lstm_out_sum.size())
+        batch_size, seq_length, hidden_dim = lstm_out_sum.size()
+        # Initialize attention vector tensor
+        attention_vectors = torch.zeros_like(lstm_out_sum)
+        for i in range(seq_length):
+            # Define the start and end positions of the window
+            start_pos = max(0, i - self.window_size)
+            end_pos = min(seq_length, i + self.window_size + 1)
+            
+            # Compute similarity between the current word and nearby words
+            similarity_scores = torch.cat([self.similarity(lstm_out_sum[:, i], lstm_out_sum[:, j]) for j in range(start_pos, end_pos)], dim=1)
 
-  def forward(self, x):
-    x = self.layers1(x)
-    x = x.squeeze()
-    return self.layers2(x)
+            attention_weights = torch.nn.functional.softmax(similarity_scores, dim=-1) #this has all alpha(i,j)s
+
+            attention_vector = torch.sum((lstm_out_sum[:, start_pos:end_pos, :].permute(2,0,1) * attention_weights).permute(1,2,0), dim=1)
+
+            attention_vectors[:,i] = attention_vector.squeeze(1) #(seqlen,hiddim)
+        print("attention_vectors: ",attention_vectors.size())
+        lstm_output_with_attention = torch.cat([lstm_out_sum, attention_vectors], dim=-1)
+        lstm_output_with_attention = self.dropout3(lstm_output_with_attention)
+        print("lstm_output_with_attention: ",lstm_output_with_attention.size())
+        lstm_out2 = self.lstm2(lstm_output_with_attention)
+        lstm_out2 = self.dropout4(lstm_out2)
+        print("lstm_out2: ",lstm_out2.size())
+        lstm_out_sum2 = self.fc1(lstm_out2)
+        lstm_out_sum2 = self.dropout5(lstm_out_sum2)
+        print("lstm_out_sum2: ",lstm_out_sum2.size())
+        layer_2_out = self.layers2(lstm_out_sum2)
+        print("layer_2_out: ",layer_2_out.size())
+        return layer_2_out
 
 
 def training_step(model, cost_function, optimizer, train_loader):
