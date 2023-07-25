@@ -11,7 +11,7 @@ from tqdm.auto import tqdm
 import torch.nn as nn
 
 # set device
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
 
 # Original kaggle training set
 kaggle_dataset = pd.read_csv(
