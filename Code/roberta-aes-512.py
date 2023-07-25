@@ -9,7 +9,7 @@ from transformers import RobertaTokenizer, RobertaModel
 from matplotlib import pyplot as plt
 from tqdm.auto import tqdm
 import torch.nn as nn
-
+import os 
 # set device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -86,8 +86,13 @@ def mean_encoding(essay_list, model, tokenizer):
 
   return np.matrix(embeddings)
 
+if os.path.exists('embeddings_r_512.pt'):
+    essay_embeddings = torch.load('embeddings_r_512.pt')
+    print(f"embeddings loaded from {'embeddings_r_512.pt'}")
+else:
+    essay_embeddings = mean_encoding(dataset['essay'], roberta, tokenizer)
+    torch.save(essay_embeddings, 'embeddings_r_512.pt')
 
-essay_embeddings = mean_encoding(dataset['essay'], roberta, tokenizer)
 
 
 
