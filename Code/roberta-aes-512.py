@@ -78,7 +78,7 @@ def mean_encoding(essay_list, model, tokenizer):
 
   embeddings = []
   for essay in tqdm(essay_list):
-    encoded_input = tokenizer(essay, padding=True, truncation=True, max_length=512, return_tensors='pt', return_attention_mask=True).to(device)
+    encoded_input = tokenizer(essay, padding="max_length", truncation=True, max_length=512, return_tensors='pt', return_attention_mask=True).to(device)
     with torch.no_grad():
       model_output = model(**encoded_input)
     tokens_embeddings = np.matrix(model_output[0].squeeze().cpu())
