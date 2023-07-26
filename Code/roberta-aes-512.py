@@ -146,9 +146,11 @@ class MLP(torch.nn.Module):
         print("hi: ",hi.size())
         print("hj: ",hj.size())
         print("hi * hj: ",(hi * hj).size())
-        h_concat = torch.cat([hi, hj, hi * hj], dim=0)
+        h_concat = torch.cat([hi, hj, hi * hj], dim=-1)
         print("h_concat: ",h_concat.size())
-        return self.attention_weights(h_concat)
+        attn_weights = self.attention_weights(h_concat)
+        print("attn_weights: ",attn_weights.size())
+        return attn_weights
     
   def forward(self, x):
         print("x: ",x.size())
@@ -173,7 +175,7 @@ class MLP(torch.nn.Module):
             
             # Compute similarity between the current word and nearby words
             similarity_scores = torch.cat([self.similarity(lstm_out_sum[:, i, :], lstm_out_sum[:, j, :]) for j in range(start_pos, end_pos)], dim=1)
-
+            print("similarity_scores: ",similarity_scores.size())
             attention_weights = torch.nn.functional.softmax(similarity_scores, dim=-1) #this has all alpha(i,j)s
             print(f"lstm_out_sum: {lstm_out_sum.size()}, attention_weights: {attention_weights.size()}")
             attention_vector = torch.sum((lstm_out_sum[:, start_pos:end_pos] * attention_weights), dim=1)
