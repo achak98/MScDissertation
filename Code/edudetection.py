@@ -255,39 +255,6 @@ class EDUPredictor(nn.Module):
         lstm_out, _ = self.lstm1(embeddings)
         lstm_out = self.dropout1(lstm_out)
         output_sum = self.fc1(lstm_out)
-        """hidden_dim_size = lstm_out.size(-1)
-        batch_size, seq_length, hidden_dim = lstm_out.size()
-        first_half = lstm_out[:, :, : hidden_dim_size// 2]
-        second_half = lstm_out[:, :, hidden_dim_size // 2:]
-        output_sum = first_half + second_half
-        # Initialize attention vector tensor
-        attention_vectors = torch.zeros_like(output_sum)
-        for i in range(seq_length):
-            # Define the start and end positions of the window
-            start_pos = max(0, i - self.window_size)
-            end_pos = min(seq_length, i + self.window_size + 1)
-            
-            # Compute similarity between the current word and nearby words
-            similarity_scores = torch.cat([self.similarity(output_sum[:, i], output_sum[:, j]) for j in range(start_pos, end_pos)], dim=1)
-
-            attention_weights = torch.nn.functional.softmax(similarity_scores, dim=-1) #this has all alpha(i,j)s
-
-            attention_vector = torch.sum((output_sum[:, start_pos:end_pos, :].permute(2,0,1) * attention_weights).permute(1,2,0), dim=1)
-
-            attention_vectors[:,i] = attention_vector.squeeze(1) #(seqlen,hiddim)
-
-
-        lstm_output_with_attention = torch.cat([output_sum, attention_vectors], dim=-1)
-        lstm_output_with_attention = self.dropout2(lstm_output_with_attention)
-
-        lstm_out, _ = self.lstm2(output_sum)
-        lstm_out = self.dropout3(lstm_out)
-
-        hidden_dim_size = lstm_out.size(-1)
-        first_half = lstm_out[:, :, : hidden_dim_size// 2]
-        second_half = lstm_out[:, :, hidden_dim_size // 2:]
-
-        output_sum = first_half + second_half"""
 
         tag_scores = self.crf.decode(output_sum)
 
