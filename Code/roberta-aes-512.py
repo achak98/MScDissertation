@@ -75,7 +75,7 @@ roberta = RobertaModel.from_pretrained("roberta-base").to(device)
 def mean_encoding(essay_list, model, tokenizer):
 
   print('Encoding essay embeddings:')
-
+  essay_list = essay_list[:40]
   embeddings = []
   for essay in tqdm(essay_list):
     encoded_input = tokenizer(essay, padding="max_length", truncation=True, max_length=512, return_tensors='pt', return_attention_mask=True).to(device)
