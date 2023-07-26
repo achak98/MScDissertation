@@ -121,18 +121,27 @@ class MLP(torch.nn.Module):
       torch.nn.Dropout(0.3),
       torch.nn.Linear(96, 1)
     )
-    self.lstm1 = nn.LSTM(input_size, input_size//2, num_layers=1, bidirectional=True)
+    self.lstm1 = nn.LSTM(embedding_size, embedding_size//2, num_layers=1, bidirectional=True)
     self.dropout1 = nn.Dropout(0.3) 
-    self.fc1 = nn.Linear(input_size,input_size//2)
+    self.fc1 = nn.Linear(embedding_size,embedding_size//2)
     self.dropout2 = nn.Dropout(0.3)
-    self.attention_weights = nn.Linear(input_size//2 * 3, 1)
+    self.attention_weights = nn.Linear(embedding_size//2 * 3, 1)
     self.dropout3 = nn.Dropout(0.3) 
-    self.lstm2 = nn.LSTM(input_size, input_size//2, num_layers=1, bidirectional=True)
+    self.lstm2 = nn.LSTM(embedding_size, embedding_size//2, num_layers=1, bidirectional=True)
     self.dropout4 = nn.Dropout(0.3)
-    self.fc1 = nn.Linear(input_size,input_size//2) 
+    self.fc1 = nn.Linear(embedding_size,embedding_size//2) 
     self.dropout5 = nn.Dropout(0.3)
+    self.layers1 = torch.nn.Sequential(
+      torch.nn.Linear(embedding_size//2, 256),
+      torch.nn.ReLU(),
+      torch.nn.Dropout(0.3),
+      torch.nn.Linear(256, 96),
+      torch.nn.ReLU(),
+      torch.nn.Dropout(0.3),
+      torch.nn.Linear(96, 1)
+    )
     self.layers2 = torch.nn.Sequential(
-      torch.nn.Linear(input_size//2, 256),
+      torch.nn.Linear(input_size, 256),
       torch.nn.ReLU(),
       torch.nn.Dropout(0.3),
       torch.nn.Linear(256, 96),
@@ -148,11 +157,7 @@ class MLP(torch.nn.Module):
     
   def forward(self, x):
         print("x: ",x.size())
-        layer_1_out = self.layers1(x)
-        print("layer_1_out: ",layer_1_out.size())
-        layer_1_out = layer_1_out.squeeze()
-        print("layer_1_out squeezed: ",layer_1_out.size())
-        lstm_out, _ = self.lstm1(layer_1_out)
+        lstm_out, _ = self.lstm1(x)
         print("lstm_out: ",lstm_out.size())
         lstm_out = self.dropout1(lstm_out)
         lstm_out_sum = self.fc1(lstm_out)
@@ -184,6 +189,10 @@ class MLP(torch.nn.Module):
         lstm_out_sum2 = self.fc1(lstm_out2)
         lstm_out_sum2 = self.dropout5(lstm_out_sum2)
         print("lstm_out_sum2: ",lstm_out_sum2.size())
+        layer_1_out = self.layers1(lstm_out_sum2)
+        print("layer_1_out: ",layer_1_out.size())
+        layer_1_out = layer_1_out.squeeze()
+        print("layer_1_out squeezed: ",layer_1_out.size())
         layer_2_out = self.layers2(lstm_out_sum2)
         print("layer_2_out: ",layer_2_out.size())
         return layer_2_out
