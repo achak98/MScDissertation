@@ -85,7 +85,7 @@ def mean_encoding(essay_list, model, tokenizer):
   return np.array(embeddings)
 
 if os.path.exists(os.path.join(data_dir,'embeddings_r_512.pt')):
-    essay_embeddings = torch.load(os.path.join(data_dir,'embeddings_r_512.pt'), map_location=torch.device('cpu'), pickle_protocol=4)
+    essay_embeddings = torch.load(os.path.join(data_dir,'embeddings_r_512.pt'), map_location=torch.device('cpu'))
     print(f"embeddings loaded from {os.path.join(data_dir,'embeddings_r_512.pt')}")
 else:
     essay_embeddings = mean_encoding(dataset['essay'], roberta, tokenizer)
