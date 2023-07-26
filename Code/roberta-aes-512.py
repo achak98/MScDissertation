@@ -89,7 +89,7 @@ if os.path.exists(os.path.join(data_dir,'embeddings_r_512.pt')):
     print(f"embeddings loaded from {os.path.join(data_dir,'embeddings_r_512.pt')}")
 else:
     essay_embeddings = mean_encoding(dataset['essay'], roberta, tokenizer)
-    torch.save(essay_embeddings, os.path.join(data_dir,'embeddings_r_512.pt'))
+    torch.save(essay_embeddings, os.path.join(data_dir,'embeddings_r_512.pt'), pickle_protocol=4)
 
 
 
