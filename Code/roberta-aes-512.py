@@ -121,13 +121,13 @@ class MLP(torch.nn.Module):
       torch.nn.Dropout(0.3),
       torch.nn.Linear(96, 1)
     )
-    self.lstm1 = nn.LSTM(input_size, input_size//2, num_layers=1, bidirectional=True)
+    self.lstm1 = nn.LSTM(input_size, input_size, num_layers=1, bidirectional=True)
     self.dropout1 = nn.Dropout(0.3) 
-    self.fc1 = nn.Linear(input_size,input_size//2)
+    self.fc1 = nn.Linear(input_size*2,input_size)
     self.dropout2 = nn.Dropout(0.3)
-    self.attention_weights = nn.Linear(input_size//2 * 3, 1)
+    self.attention_weights = nn.Linear(input_size * 3, 1)
     self.dropout3 = nn.Dropout(0.3) 
-    self.lstm2 = nn.LSTM(input_size, input_size//2, num_layers=1, bidirectional=True)
+    self.lstm2 = nn.LSTM(input_size*2, input_size//2, num_layers=1, bidirectional=True)
     self.dropout4 = nn.Dropout(0.3)
     self.fc1 = nn.Linear(input_size,input_size//2) 
     self.dropout5 = nn.Dropout(0.3)
@@ -144,6 +144,7 @@ class MLP(torch.nn.Module):
   def similarity(self, hi, hj):
         # Concatenate the hidden representations
         h_concat = torch.cat([hi, hj, hi * hj], dim=-1)
+        print("h_concat: ",h_concat.size())
         return self.attention_weights(h_concat)
     
   def forward(self, x):
