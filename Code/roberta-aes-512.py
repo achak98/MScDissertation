@@ -140,11 +140,13 @@ class MLP(torch.nn.Module):
       torch.nn.Dropout(0.3),
       torch.nn.Linear(96, 1)
     ) 
-    def similarity(self, hi, hj):
+
+  def similarity(self, hi, hj):
         # Concatenate the hidden representations
         h_concat = torch.cat([hi, hj, hi * hj], dim=-1)
         return self.attention_weights(h_concat)
-    def forward(self, x):
+    
+  def forward(self, x):
         layer_1_out = self.layers1(x)
         print("layer_1_out: ",layer_1_out.size())
         layer_1_out = layer_1_out.squeeze()
