@@ -109,11 +109,11 @@ def get_loader(df, id2emb, essay_embeddings, shuffle=True):
 
 class MLP(torch.nn.Module):
   
-  def __init__(self, input_size):
+  def __init__(self, input_size,embedding_size):
     super(MLP, self).__init__()
     
     self.layers1 = torch.nn.Sequential(
-      torch.nn.Linear(768, 256),
+      torch.nn.Linear(embedding_size, 256),
       torch.nn.ReLU(),
       torch.nn.Dropout(0.3),
       torch.nn.Linear(256, 96),
@@ -243,7 +243,8 @@ def test_step(model, cost_function, optimizer, test_loader):
   return cumulative_loss/samples, preds
      
 # hyper-parameters
-input_size = 768
+input_size = 512
+embedding_size = 768
 epochs = 20
 lr = 3e-4
 
@@ -275,7 +276,7 @@ for n, (train, test) in enumerate(kf.split(dataset)):
   print('------------------------------------------------------------------')
   print(f"\t\t\tTraining model: {n+1}")
   print('------------------------------------------------------------------')
-  model = MLP(input_size).to(device)
+  model = MLP(input_size, embedding_size).to(device)
   
   # loss and optimizer
   cost_function = torch.nn.MSELoss()
