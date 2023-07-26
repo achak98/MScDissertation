@@ -87,7 +87,7 @@ def mean_encoding(essay_list, model, tokenizer):
     embeddings.append(np.squeeze(np.asarray(tokens_embeddings)))
   embeddings = np.array(embeddings)
   print(embeddings.shape)
-  return np.matrix(embeddings)
+  return (embeddings)
 
 if os.path.exists('embeddings_r_512.pt'):
     essay_embeddings = torch.load('embeddings_r_512.pt')
