@@ -145,7 +145,7 @@ class MLP(torch.nn.Module):
         # Concatenate the hidden representations
         print("hi: ",hi.size())
         print("hj: ",hj.size())
-        print("hi * hj: ",hi * hj.size())
+        print("hi * hj: ",(hi * hj).size())
         h_concat = torch.cat([hi, hj, hi * hj], dim=-1)
         print("h_concat: ",h_concat.size())
         return self.attention_weights(h_concat)
@@ -161,6 +161,7 @@ class MLP(torch.nn.Module):
         lstm_out = self.dropout1(lstm_out)
         lstm_out_sum = self.fc1(lstm_out)
         lstm_out_sum = self.dropout2 (lstm_out_sum)
+        lstm_out_sum = lstm_out_sum.unsqueeze(-1)
         print("lstm_out_sum: ",lstm_out_sum.size())
         batch_size, seq_length = lstm_out_sum.size()
         # Initialize attention vector tensor
