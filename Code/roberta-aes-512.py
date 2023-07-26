@@ -85,7 +85,8 @@ def mean_encoding(essay_list, model, tokenizer):
     tokens_embeddings = np.matrix(model_output[0].squeeze().cpu())
     print(tokens_embeddings.shape)
     embeddings.append(np.squeeze(np.asarray(tokens_embeddings)))
-  print(len(embeddings))
+  embeddings = np.array(embeddings)
+  print(embeddings.shape)
   return np.matrix(embeddings)
 
 if os.path.exists('embeddings_r_512.pt'):
