@@ -83,7 +83,7 @@ def mean_encoding(essay_list, model, tokenizer):
     with torch.no_grad():
       model_output = model(**encoded_input)
     tokens_embeddings = np.matrix(model_output[0].squeeze().cpu())
-    print(tokens_embeddings.size())
+    print(tokens_embeddings.shape())
     embeddings.append(np.squeeze(np.asarray(tokens_embeddings)))
 
   return np.matrix(embeddings)
