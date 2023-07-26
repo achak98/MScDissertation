@@ -12,10 +12,10 @@ import torch.nn as nn
 import os 
 # set device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-data_dir = "./../Data//ASAP-AES/training_set_rel3.tsv"
+data_dir = "./../Data//ASAP-AES/"
 # Original kaggle training set
 kaggle_dataset = pd.read_csv(
-    data_dir, sep="\t", encoding="ISO-8859-1"
+    os.path.join(data_dir,"training_set_rel3.tsv"), sep="\t", encoding="ISO-8859-1"
 )
 # Smaller training set used for this project
 dataset = pd.DataFrame(
