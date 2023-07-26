@@ -113,7 +113,7 @@ class MLP(torch.nn.Module):
     super(MLP, self).__init__()
     
     self.layers1 = torch.nn.Sequential(
-      torch.nn.Linear(input_size, 768),
+      torch.nn.Linear(768, 256),
       torch.nn.ReLU(),
       torch.nn.Dropout(0.3),
       torch.nn.Linear(256, 96),
