@@ -12,10 +12,10 @@ import torch.nn as nn
 import os 
 # set device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+data_dir = "./../Data//ASAP-AES/training_set_rel3.tsv"
 # Original kaggle training set
 kaggle_dataset = pd.read_csv(
-    "./../Data//ASAP-AES/training_set_rel3.tsv", sep="\t", encoding="ISO-8859-1"
+    data_dir, sep="\t", encoding="ISO-8859-1"
 )
 # Smaller training set used for this project
 dataset = pd.DataFrame(
@@ -84,12 +84,12 @@ def mean_encoding(essay_list, model, tokenizer):
     embeddings.append(np.squeeze(np.asarray(tokens_embeddings)))
   return np.array(embeddings)
 
-if os.path.exists('embeddings_r_512.pt'):
-    essay_embeddings = torch.load('embeddings_r_512.pt')
-    print(f"embeddings loaded from {'embeddings_r_512.pt'}")
+if os.path.exists(os.path.join(data_dir,'embeddings_r_512.pt')):
+    essay_embeddings = torch.load(os.path.join(data_dir,'embeddings_r_512.pt'))
+    print(f"embeddings loaded from {os.path.join(data_dir,'embeddings_r_512.pt')}")
 else:
     essay_embeddings = mean_encoding(dataset['essay'], roberta, tokenizer)
-    torch.save(essay_embeddings, 'embeddings_r_512.pt')
+    torch.save(essay_embeddings, os.path.join(data_dir,'embeddings_r_512.pt'))
 
 
 
