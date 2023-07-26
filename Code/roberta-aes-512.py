@@ -109,9 +109,9 @@ def get_loader(df, id2emb, essay_embeddings, shuffle=True):
 
 class MLP(torch.nn.Module):
   
-  def __init__(self, input_size,embedding_size):
+  def __init__(self, input_size,embedding_size, window_size):
     super(MLP, self).__init__()
-    
+    self.window_size = window_size
     self.layers1 = torch.nn.Sequential(
       torch.nn.Linear(768, 256),
       torch.nn.ReLU(),
@@ -247,7 +247,7 @@ input_size = 512
 embedding_size = 768
 epochs = 20
 lr = 3e-4
-
+window_size = 5
 # cross-validation folds
 kf = KFold(n_splits=10, random_state=2022, shuffle=True)
 
@@ -276,7 +276,7 @@ for n, (train, test) in enumerate(kf.split(dataset)):
   print('------------------------------------------------------------------')
   print(f"\t\t\tTraining model: {n+1}")
   print('------------------------------------------------------------------')
-  model = MLP(input_size, embedding_size).to(device)
+  model = MLP(input_size, embedding_size, window_size).to(device)
   
   # loss and optimizer
   cost_function = torch.nn.MSELoss()
