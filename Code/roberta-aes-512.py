@@ -163,7 +163,7 @@ class MLP(torch.nn.Module):
         lstm_out_sum = self.dropout2 (lstm_out_sum)
         lstm_out_sum = lstm_out_sum.unsqueeze(-1)
         print("lstm_out_sum: ",lstm_out_sum.size())
-        batch_size, seq_length = lstm_out_sum.size()
+        batch_size, seq_length, hidden_dim = lstm_out_sum.size()
         # Initialize attention vector tensor
         attention_vectors = torch.zeros_like(lstm_out_sum)
         for i in range(seq_length):
@@ -172,7 +172,7 @@ class MLP(torch.nn.Module):
             end_pos = min(seq_length, i + self.window_size + 1)
             
             # Compute similarity between the current word and nearby words
-            similarity_scores = torch.cat([self.similarity(lstm_out_sum[:, i], lstm_out_sum[:, j]) for j in range(start_pos, end_pos)], dim=1)
+            similarity_scores = torch.cat([self.similarity(lstm_out_sum[:, i, :], lstm_out_sum[:, j, :]) for j in range(start_pos, end_pos)], dim=1)
 
             attention_weights = torch.nn.functional.softmax(similarity_scores, dim=-1) #this has all alpha(i,j)s
             print(f"lstm_out_sum: {lstm_out_sum.size()}, attention_weights: {attention_weights.size()}")
