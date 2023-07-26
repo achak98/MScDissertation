@@ -147,6 +147,7 @@ class MLP(torch.nn.Module):
         return self.attention_weights(h_concat)
     
   def forward(self, x):
+        print("x: ",x.size())
         layer_1_out = self.layers1(x)
         print("layer_1_out: ",layer_1_out.size())
         layer_1_out = layer_1_out.squeeze()
