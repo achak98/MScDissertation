@@ -129,7 +129,7 @@ class MLP(torch.nn.Module):
     self.dropout3 = nn.Dropout(0.3) 
     self.lstm2 = nn.LSTM(input_size*2, input_size//2, num_layers=1, bidirectional=True)
     self.dropout4 = nn.Dropout(0.3)
-    self.fc1 = nn.Linear(input_size,input_size//2) 
+    self.fc2 = nn.Linear(input_size,input_size//2) 
     self.dropout5 = nn.Dropout(0.3)
     self.layers2 = torch.nn.Sequential(
       torch.nn.Linear(input_size//2, 256),
@@ -182,7 +182,7 @@ class MLP(torch.nn.Module):
         lstm_out2 = self.lstm2(lstm_output_with_attention)
         lstm_out2 = self.dropout4(lstm_out2)
         print("lstm_out2: ",lstm_out2.size())
-        lstm_out_sum2 = self.fc1(lstm_out2)
+        lstm_out_sum2 = self.fc2(lstm_out2)
         lstm_out_sum2 = self.dropout5(lstm_out_sum2)
         print("lstm_out_sum2: ",lstm_out_sum2.size())
         layer_2_out = self.layers2(lstm_out_sum2)
