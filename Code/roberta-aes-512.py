@@ -146,7 +146,7 @@ class MLP(torch.nn.Module):
         print("hi: ",hi.size())
         print("hj: ",hj.size())
         print("hi * hj: ",(hi * hj).size())
-        h_concat = torch.cat([hi, hj, hi * hj], dim=-1)
+        h_concat = torch.cat([hi, hj, hi * hj], dim=0)
         print("h_concat: ",h_concat.size())
         return self.attention_weights(h_concat)
     
