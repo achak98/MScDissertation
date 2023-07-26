@@ -158,7 +158,7 @@ class MLP(torch.nn.Module):
         lstm_out_sum = self.fc1(lstm_out)
         lstm_out_sum = self.dropout2 (lstm_out_sum)
         print("lstm_out_sum: ",lstm_out_sum.size())
-        batch_size, seq_length, hidden_dim = lstm_out_sum.size()
+        batch_size, seq_length = lstm_out_sum.size()
         # Initialize attention vector tensor
         attention_vectors = torch.zeros_like(lstm_out_sum)
         for i in range(seq_length):
