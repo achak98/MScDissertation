@@ -196,7 +196,7 @@ class MLP(torch.nn.Module):
         print("lstm_output_with_attention: ",lstm_output_with_attention.size())
         lstm_output_with_attention = self.dropout3(lstm_output_with_attention)
         print("lstm_output_with_attention: ",lstm_output_with_attention.size())
-        lstm_out2 = self.lstm2(lstm_output_with_attention)
+        lstm_out2, _ = self.lstm2(lstm_output_with_attention)
         print("lstm_out2: ",type(lstm_out2))
         print("lstm_out2: ",lstm_out2.size())
         lstm_out2 = self.dropout4(lstm_out2)
