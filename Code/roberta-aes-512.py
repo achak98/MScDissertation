@@ -215,8 +215,8 @@ def training_step(model, cost_function, optimizer, train_loader):
   cumulative_loss = 0.
 
   model.train() 
-
-  for step, (inputs, targets) in enumerate(train_loader):
+  train_loader_tqdm = tqdm(train_loader, total=len(train_loader), desc='Batches')
+  for step, (inputs, targets) in enumerate(train_loader_tqdm):
 
     inputs = inputs.squeeze(dim=1).to(device)
     targets = targets.reshape(targets.shape[0],1).to(device)
@@ -246,7 +246,8 @@ def test_step(model, cost_function, optimizer, test_loader):
   model.eval() 
 
   with torch.no_grad():
-    for step, (inputs, targets) in enumerate(test_loader):
+    test_loader_tqdm = tqdm(test_loader, total=len(test_loader), desc='Test Batches')
+    for step, (inputs, targets) in enumerate(test_loader_tqdm):
 
       inputs = inputs.squeeze(dim=1).to(device)
       targets = targets.reshape(targets.shape[0],1).to(device)
@@ -307,7 +308,7 @@ for n, (train, test) in enumerate(kf.split(dataset)):
   test_loss, test_preds = test_step(model, cost_function, optimizer, test_loader)
   print('Before training:\tLoss/train: {:.5f}\tLoss/test: {:.5f}'.format(train_loss, test_loss))
 
-  for epoch in range(epochs):
+  for epoch in tqdm(range(epochs), desc='Epochs'):
     train_loss = training_step(model, cost_function, optimizer, train_loader)
     test_loss, test_preds = test_step(model, cost_function, optimizer, test_loader)
     print('Epoch: {:}\t\tLoss/train: {:.5f}\tLoss/test: {:.5f}'.format(epoch+1,train_loss, test_loss))
