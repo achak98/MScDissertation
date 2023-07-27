@@ -174,14 +174,15 @@ class MLP(torch.nn.Module):
             end_pos = min(seq_length, i + self.window_size + 1)
             
             # Compute similarity between the current word and nearby words
-            similarity_scores = torch.cat([self.similarity(lstm_out_sum[:, i, :], lstm_out_sum[:, j, :]) for j in range(start_pos, end_pos)], dim=1)
+            similarity_scores = torch.cat([self.similarity(lstm_out_sum[:, i], lstm_out_sum[:, j]) for j in range(start_pos, end_pos)], dim=1)
             print("similarity_scores: ",similarity_scores.size())
             attention_weights = torch.nn.functional.softmax(similarity_scores, dim=-1) #this has all alpha(i,j)s
             print(f"lstm_out_sum: {lstm_out_sum.size()}, attention_weights: {attention_weights.size()}")
             #lstm_out_sum = lstm_out_sum.squeeze() #128,512,1
             attention_weights = attention_weights.unsqueeze(-1) #128,6,1
             print(f"lstm_out_sum: {lstm_out_sum.size()}")
-            attention_vector = torch.sum((lstm_out_sum[:, start_pos:end_pos].permute(2,0,1) * attention_weights), dim=1).permute(1,2,0)
+            print(f"lstm_out_sum[:, start_pos:end_pos, :]: {lstm_out_sum[:, start_pos:end_pos, :].size()}")
+            attention_vector = torch.sum((lstm_out_sum[:, start_pos:end_pos, :].permute(2,0,1) * attention_weights), dim=1).permute(1,2,0)
             print(f"attention_vector: {attention_vector.size()}")
             attention_vectors[:,i] = attention_vector.squeeze(1) #(seqlen,hiddim)
         print("attention_vectors: ",attention_vectors.size())
