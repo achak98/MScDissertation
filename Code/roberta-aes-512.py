@@ -184,7 +184,7 @@ class MLP(torch.nn.Module):
             print(f"lstm_out_sum[:, start_pos:end_pos, :]: {lstm_out_sum[:, start_pos:end_pos, :].size()}")#  torch.Size([batch, window, embed])
             #attention_weights:  torch.Size([batch, window]) 128,6
             #lstm_out_sum[:, start_pos:end_pos, :]:  batch, window, embed/ 128,6,1 -> 1,6,128
-            attention_vector = torch.sum((lstm_out_sum[:, start_pos:end_pos, :].permute(2,1,0) * attention_weights), dim=1)
+            attention_vector = torch.sum((lstm_out_sum[:, start_pos:end_pos, :].permute(2,0,1) * attention_weights), dim=1)
             print("attention_vector: ", attention_vector.size())
             attention_vector = attention_vector.permute(2,1,0)
             print(f"attention_vector: {attention_vector.size()}")
