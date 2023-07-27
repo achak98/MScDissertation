@@ -458,6 +458,18 @@ data = ""
 for i in range(1, 11):
     results_df, data = show_results(i, data)
 
-file = open("./../Data/results/roberta-finetune/qwk.txt", "w")
+
+def check_and_create_directory(directory_path):
+    if not os.path.exists(directory_path):
+        os.makedirs(directory_path)
+        print(f"Directory '{directory_path}' created.")
+    else:
+        print(f"Directory '{directory_path}' already exists.")
+
+# Example usage:
+save_directory = "./../Data/results/roberta-512"
+check_and_create_directory(save_directory)
+
+file = open(os.path.join(save_directory,"qwk.txt"), "w")
 file.write(data)
 file.close()

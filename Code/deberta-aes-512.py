@@ -114,11 +114,11 @@ def get_loader(df, id2emb, essay_embeddings, shuffle=True):
 
 class MLP(torch.nn.Module):
   
-  def __init__(self, input_size):
+  def __init__(self, input_size,embedding_size, window_size):
     super(MLP, self).__init__()
-    
+    self.window_size = window_size
     self.layers1 = torch.nn.Sequential(
-      torch.nn.Linear(input_size, 768),
+      torch.nn.Linear(768, 256),
       torch.nn.ReLU(),
       torch.nn.Dropout(0.3),
       torch.nn.Linear(256, 96),
@@ -126,15 +126,15 @@ class MLP(torch.nn.Module):
       torch.nn.Dropout(0.3),
       torch.nn.Linear(96, 1)
     )
-    self.lstm1 = nn.LSTM(input_size, input_size//2, num_layers=1, bidirectional=True)
+    self.lstm1 = nn.LSTM(input_size, input_size, num_layers=1, bidirectional=True)
     self.dropout1 = nn.Dropout(0.3) 
-    self.fc1 = nn.Linear(input_size,input_size//2)
+    self.fc1 = nn.Linear(input_size*2,input_size)
     self.dropout2 = nn.Dropout(0.3)
-    self.attention_weights = nn.Linear(input_size//2 * 3, 1)
+    self.attention_weights = nn.Linear(3, 1)
     self.dropout3 = nn.Dropout(0.3) 
-    self.lstm2 = nn.LSTM(input_size, input_size//2, num_layers=1, bidirectional=True)
+    self.lstm2 = nn.LSTM(input_size*2, input_size//2, num_layers=1, bidirectional=True)
     self.dropout4 = nn.Dropout(0.3)
-    self.fc1 = nn.Linear(input_size,input_size//2) 
+    self.fc2 = nn.Linear(input_size,input_size//2) 
     self.dropout5 = nn.Dropout(0.3)
     self.layers2 = torch.nn.Sequential(
       torch.nn.Linear(input_size//2, 256),
@@ -145,21 +145,31 @@ class MLP(torch.nn.Module):
       torch.nn.Dropout(0.3),
       torch.nn.Linear(96, 1)
     ) 
-    def similarity(self, hi, hj):
+
+  def similarity(self, hi, hj):
         # Concatenate the hidden representations
+        """print("hi: ",hi.size())
+        print("hj: ",hj.size())
+        print("hi * hj: ",(hi * hj).size())"""
         h_concat = torch.cat([hi, hj, hi * hj], dim=-1)
-        return self.attention_weights(h_concat)
-    def forward(self, x):
+        #print("h_concat: ",h_concat.size())
+        attn_weights = self.attention_weights(h_concat)
+        #print("attn_weights: ",attn_weights.size())
+        return attn_weights
+    
+  def forward(self, x):
+        #print("x: ",x.size())
         layer_1_out = self.layers1(x)
-        print("layer_1_out: ",layer_1_out.size())
+        #print("layer_1_out: ",layer_1_out.size())
         layer_1_out = layer_1_out.squeeze()
-        print("layer_1_out squeezed: ",layer_1_out.size())
+        #print("layer_1_out squeezed: ",layer_1_out.size())
         lstm_out, _ = self.lstm1(layer_1_out)
-        print("lstm_out: ",lstm_out.size())
+        #print("lstm_out: ",lstm_out.size())
         lstm_out = self.dropout1(lstm_out)
         lstm_out_sum = self.fc1(lstm_out)
         lstm_out_sum = self.dropout2 (lstm_out_sum)
-        print("lstm_out_sum: ",lstm_out_sum.size())
+        lstm_out_sum = lstm_out_sum.unsqueeze(-1)
+        #print("lstm_out_sum: ",lstm_out_sum.size())
         batch_size, seq_length, hidden_dim = lstm_out_sum.size()
         # Initialize attention vector tensor
         attention_vectors = torch.zeros_like(lstm_out_sum)
@@ -170,24 +180,37 @@ class MLP(torch.nn.Module):
             
             # Compute similarity between the current word and nearby words
             similarity_scores = torch.cat([self.similarity(lstm_out_sum[:, i], lstm_out_sum[:, j]) for j in range(start_pos, end_pos)], dim=1)
-
+            #print("similarity_scores: ",similarity_scores.size())
             attention_weights = torch.nn.functional.softmax(similarity_scores, dim=-1) #this has all alpha(i,j)s
-
-            attention_vector = torch.sum((lstm_out_sum[:, start_pos:end_pos, :].permute(2,0,1) * attention_weights).permute(1,2,0), dim=1)
-
-            attention_vectors[:,i] = attention_vector.squeeze(1) #(seqlen,hiddim)
-        print("attention_vectors: ",attention_vectors.size())
-        lstm_output_with_attention = torch.cat([lstm_out_sum, attention_vectors], dim=-1)
+            #print(f"lstm_out_sum: {lstm_out_sum.size()}, attention_weights: {attention_weights.size()}")
+            #lstm_out_sum = lstm_out_sum.squeeze() #128,512,1
+            attention_weights = attention_weights #128,6,
+            #print(f"lstm_out_sum: {lstm_out_sum.size()}")
+            #print(f"lstm_out_sum[:, start_pos:end_pos, :]: {lstm_out_sum[:, start_pos:end_pos, :].size()}")#  torch.Size([batch, window, embed])
+            #attention_weights:  torch.Size([batch, window]) 128,6
+            #lstm_out_sum[:, start_pos:end_pos, :]:  batch, window, embed/ 128,6,1 -> 1,6,128
+            attention_vector = (lstm_out_sum[:, start_pos:end_pos, :].permute(2,0,1) * attention_weights)
+            #print("attention_vector: ", attention_vector.size())
+            attention_vector = attention_vector.permute(1,0,2)
+            attention_vector = torch.sum(attention_vector, dim=-1)
+            #print("attention_vector: ", attention_vector.size()) #torch.Size([1, 6])
+            #print(f"attention_vector: {attention_vector.size()}")
+            attention_vectors[:,i] = attention_vector #(seqlen,hiddim)
+        #print("attention_vectors: ",attention_vectors.size())
+        lstm_output_with_attention = torch.cat([lstm_out_sum.squeeze(), attention_vectors.squeeze()], dim=-1)
+        #print("lstm_output_with_attention: ",lstm_output_with_attention.size())
         lstm_output_with_attention = self.dropout3(lstm_output_with_attention)
-        print("lstm_output_with_attention: ",lstm_output_with_attention.size())
-        lstm_out2 = self.lstm2(lstm_output_with_attention)
+        #print("lstm_output_with_attention: ",lstm_output_with_attention.size())
+        lstm_out2, _ = self.lstm2(lstm_output_with_attention)
+        #print("lstm_out2: ",type(lstm_out2))
+        #print("lstm_out2: ",lstm_out2.size())
         lstm_out2 = self.dropout4(lstm_out2)
-        print("lstm_out2: ",lstm_out2.size())
-        lstm_out_sum2 = self.fc1(lstm_out2)
+        #print("lstm_out2: ",lstm_out2.size())
+        lstm_out_sum2 = self.fc2(lstm_out2)
         lstm_out_sum2 = self.dropout5(lstm_out_sum2)
-        print("lstm_out_sum2: ",lstm_out_sum2.size())
+        #print("lstm_out_sum2: ",lstm_out_sum2.size())
         layer_2_out = self.layers2(lstm_out_sum2)
-        print("layer_2_out: ",layer_2_out.size())
+        #print("layer_2_out: ",layer_2_out.size())
         return layer_2_out
 
 
@@ -197,8 +220,8 @@ def training_step(model, cost_function, optimizer, train_loader):
   cumulative_loss = 0.
 
   model.train() 
-
-  for step, (inputs, targets) in enumerate(train_loader):
+  train_loader_tqdm = tqdm(train_loader, total=len(train_loader), desc='Batches')
+  for step, (inputs, targets) in enumerate(train_loader_tqdm):
 
     inputs = inputs.squeeze(dim=1).to(device)
     targets = targets.reshape(targets.shape[0],1).to(device)
@@ -228,7 +251,8 @@ def test_step(model, cost_function, optimizer, test_loader):
   model.eval() 
 
   with torch.no_grad():
-    for step, (inputs, targets) in enumerate(test_loader):
+    test_loader_tqdm = tqdm(test_loader, total=len(test_loader), desc='Test Batches')
+    for step, (inputs, targets) in enumerate(test_loader_tqdm):
 
       inputs = inputs.squeeze(dim=1).to(device)
       targets = targets.reshape(targets.shape[0],1).to(device)
@@ -245,10 +269,11 @@ def test_step(model, cost_function, optimizer, test_loader):
   return cumulative_loss/samples, preds
      
 # hyper-parameters
-input_size = 768
+input_size = 512
+embedding_size = 768
 epochs = 20
 lr = 3e-4
-
+window_size = 5
 # cross-validation folds
 kf = KFold(n_splits=10, random_state=2022, shuffle=True)
 
@@ -277,7 +302,7 @@ for n, (train, test) in enumerate(kf.split(dataset)):
   print('------------------------------------------------------------------')
   print(f"\t\t\tTraining model: {n+1}")
   print('------------------------------------------------------------------')
-  model = MLP(input_size).to(device)
+  model = MLP(input_size, embedding_size, window_size).to(device)
   
   # loss and optimizer
   cost_function = torch.nn.MSELoss()
@@ -288,10 +313,12 @@ for n, (train, test) in enumerate(kf.split(dataset)):
   test_loss, test_preds = test_step(model, cost_function, optimizer, test_loader)
   print('Before training:\tLoss/train: {:.5f}\tLoss/test: {:.5f}'.format(train_loss, test_loss))
 
-  for epoch in range(epochs):
+  epoch_tqdm = tqdm(range(epochs), total=epochs, desc='Epochs')
+  for epoch in epoch_tqdm:
     train_loss = training_step(model, cost_function, optimizer, train_loader)
     test_loss, test_preds = test_step(model, cost_function, optimizer, test_loader)
-    print('Epoch: {:}\t\tLoss/train: {:.5f}\tLoss/test: {:.5f}'.format(epoch+1,train_loss, test_loss))
+    epoch_tqdm.set_postfix ({f"Epoch: {epoch+1} \t\t Train Loss: {train_loss:.5f} Test Loss":  test_loss})
+
 
   train_loss, train_preds = test_step(model, cost_function, optimizer, train_loader)
   test_loss, test_preds = test_step(model, cost_function, optimizer, test_loader)
@@ -436,6 +463,17 @@ data = ""
 for i in range(1, 11):
     results_df, data = show_results(i, data)
 
-file = open("./../Data/results/roberta-finetune/qwk.txt", "w")
+def check_and_create_directory(directory_path):
+    if not os.path.exists(directory_path):
+        os.makedirs(directory_path)
+        print(f"Directory '{directory_path}' created.")
+    else:
+        print(f"Directory '{directory_path}' already exists.")
+
+# Example usage:
+save_directory = "./../Data/results/deberta-512"
+check_and_create_directory(save_directory)
+
+file = open(os.path.join(save_directory,"qwk.txt"), "w")
 file.write(data)
 file.close()
