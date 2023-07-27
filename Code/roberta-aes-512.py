@@ -193,6 +193,7 @@ class MLP(torch.nn.Module):
             attention_vectors[:,i] = attention_vector #(seqlen,hiddim)
         print("attention_vectors: ",attention_vectors.size())
         lstm_output_with_attention = torch.cat([lstm_out_sum.squeeze(), attention_vectors.squeeze()], dim=-1)
+        print("lstm_output_with_attention: ",lstm_output_with_attention.size())
         lstm_output_with_attention = self.dropout3(lstm_output_with_attention)
         print("lstm_output_with_attention: ",lstm_output_with_attention.size())
         lstm_out2 = self.lstm2(lstm_output_with_attention)
