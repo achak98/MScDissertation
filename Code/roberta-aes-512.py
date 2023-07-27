@@ -179,9 +179,10 @@ class MLP(torch.nn.Module):
             attention_weights = torch.nn.functional.softmax(similarity_scores, dim=-1) #this has all alpha(i,j)s
             print(f"lstm_out_sum: {lstm_out_sum.size()}, attention_weights: {attention_weights.size()}")
             #lstm_out_sum = lstm_out_sum.squeeze() #128,512,1
-            attention_weights = attention_weights.unsqueeze(-1) #128,6,1
+            attention_weights = attention_weights #128,6,
             print(f"lstm_out_sum: {lstm_out_sum.size()}")
-            print(f"lstm_out_sum[:, start_pos:end_pos, :]: {lstm_out_sum[:, start_pos:end_pos, :].size()}")
+            print(f"lstm_out_sum[:, start_pos:end_pos, :]: {lstm_out_sum[:, start_pos:end_pos, :].size()}")#  torch.Size([batch, window, embed])
+            #attention_weights:  torch.Size([batch, window])
             attention_vector = torch.sum((lstm_out_sum[:, start_pos:end_pos, :].permute(2,0,1) * attention_weights), dim=1).permute(1,2,0)
             print(f"attention_vector: {attention_vector.size()}")
             attention_vectors[:,i] = attention_vector.squeeze(1) #(seqlen,hiddim)
