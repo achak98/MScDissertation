@@ -77,16 +77,14 @@ roberta = AutoModel.from_pretrained(transformer_architecture).to(device)
 def mean_encoding(essay_list, model, tokenizer):
 
   print('Encoding essay embeddings:')
-
   embeddings = []
   for essay in tqdm(essay_list):
-    encoded_input = tokenizer(essay, padding="max_length", truncation=True, max_length=config.max_position_embeddings, return_tensors='pt', return_attention_mask=True).to(device)
+    encoded_input = tokenizer(essay, padding="max_length", truncation=True, max_length=512, return_tensors='pt', return_attention_mask=True).to(device)
     with torch.no_grad():
       model_output = model(**encoded_input)
     tokens_embeddings = np.matrix(model_output[0].squeeze().cpu())
     embeddings.append(np.squeeze(np.asarray(tokens_embeddings)))
-
-  return np.matrix(embeddings)
+  return np.array(embeddings)
 
 if os.path.exists('embeddings_d_512.pt'):
     essay_embeddings = torch.load('embeddings_d_512.pt')
