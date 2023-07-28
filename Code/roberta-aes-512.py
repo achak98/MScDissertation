@@ -266,7 +266,7 @@ def test_step(model, cost_function, optimizer, test_loader):
 # hyper-parameters
 input_size = 512
 embedding_size = 768
-epochs = 20
+epochs = 10
 lr = 3e-4
 window_size = 5
 # cross-validation folds
