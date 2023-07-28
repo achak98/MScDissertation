@@ -312,7 +312,7 @@ for n, (train, test) in enumerate(kf.split(dataset)):
   for epoch in epoch_tqdm:
     train_loss = training_step(model, cost_function, optimizer, train_loader)
     test_loss, test_preds = test_step(model, cost_function, optimizer, test_loader)
-    epoch_tqdm.set_postfix ({f"Epoch: {epoch+1} \t\t Train Loss: {train_loss:.5f} Test Loss":  test_loss})
+    epoch_tqdm.set_postfix ({f"Epoch: {epoch+1} \t\t Train Loss: {train_loss:.5f} Test Loss: {test_loss:.5f}":  test_loss})
 
 
   train_loss, train_preds = test_step(model, cost_function, optimizer, train_loader)
