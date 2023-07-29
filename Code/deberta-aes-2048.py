@@ -135,7 +135,7 @@ if os.path.exists(os.path.join(data_dir,output_file)):
     print(f"embeddings loaded from {os.path.join(data_dir,output_file)}")
 else:
     print("Creating and saving embeddings")
-    save_embeddings_in_chunks(dataset['essay'][:40], roberta, tokenizer, output_file)
+    save_embeddings_in_chunks(dataset['essay'][:40], roberta, tokenizer, os.path.join(data_dir,output_file))
     essay_embeddings = load_embeddings_from_hdf5(output_file)
     print(f"embeddings loaded from {os.path.join(data_dir,output_file)}")
     
