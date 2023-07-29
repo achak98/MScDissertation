@@ -5,13 +5,14 @@ from sklearn.model_selection import KFold
 from sklearn.metrics import cohen_kappa_score as kappa
 import torch
 from torch.utils.data import DataLoader, TensorDataset
-from transformers import RobertaTokenizer, RobertaModel
+from transformers import AutoTokenizer, AutoModel, AutoConfig
 from matplotlib import pyplot as plt
 from tqdm.auto import tqdm
 import torch.nn as nn
-import os 
+import os
 # set device
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
 data_dir = "./../Data//ASAP-AES/"
 # Original kaggle training set
 kaggle_dataset = pd.read_csv(
@@ -29,8 +30,10 @@ dataset = pd.DataFrame(
     }
 )
 
-
-tokenizer = RobertaTokenizer.from_pretrained("roberta-base")
+transformer_architecture = 'roberta-base' 
+config = AutoConfig.from_pretrained(transformer_architecture, output_hidden_states=True)
+config.max_position_embeddings = 512
+tokenizer = AutoTokenizer.from_pretrained(transformer_architecture, max_length=config.max_position_embeddings, padding="max_length", return_attention_mask=True)
 
 #tokenizer = AutoTokenizer.from_pretrained("roberta-base")
 
@@ -68,7 +71,7 @@ def get_id2emb(ids):
 
 id2emb = get_id2emb(dataset["essay_id"])
 
-roberta = RobertaModel.from_pretrained("roberta-base").to(device)
+roberta = AutoModel.from_pretrained(transformer_architecture).to(device)
 
 
 
@@ -84,12 +87,12 @@ def mean_encoding(essay_list, model, tokenizer):
     embeddings.append(np.squeeze(np.asarray(tokens_embeddings)))
   return np.array(embeddings)
 
-if os.path.exists(os.path.join(data_dir,'embeddings_r_512.pt')):
-    essay_embeddings = torch.load(os.path.join(data_dir,'embeddings_r_512.pt'), map_location=torch.device('cpu'))
-    print(f"embeddings loaded from {os.path.join(data_dir,'embeddings_r_512.pt')}")
+if os.path.exists(os.path.join(data_dir,'embeddings_d_512.pt')):
+    essay_embeddings = torch.load(os.path.join(data_dir,'embeddings_d_512.pt'), map_location=torch.device('cpu'))
+    print(f"embeddings loaded from {os.path.join(data_dir,'embeddings_d_512.pt')}")
 else:
     essay_embeddings = mean_encoding(dataset['essay'], roberta, tokenizer)
-    torch.save(essay_embeddings, os.path.join(data_dir,'embeddings_r_512.pt'), pickle_protocol=4)
+    torch.save(essay_embeddings, os.path.join(data_dir,'embeddings_d_512.pt'), pickle_protocol=4)
 
 
 
@@ -101,7 +104,7 @@ def get_loader(df, id2emb, essay_embeddings, shuffle=True):
 
   # dataset and dataloader
   data = TensorDataset(torch.from_numpy(embeddings).float(), torch.from_numpy(np.array(df['scaled_score'])).float())
-  loader = DataLoader(data, batch_size=1024, shuffle=shuffle, num_workers=0)
+  loader = DataLoader(data, batch_size=1028, shuffle=shuffle, num_workers=0)
 
   return loader
 
@@ -127,12 +130,12 @@ class MLP(torch.nn.Module):
     self.dropout2 = nn.Dropout(0.3)
     self.attention_weights = nn.Linear(3, 1)
     self.dropout3 = nn.Dropout(0.3) 
-    self.lstm2 = nn.LSTM(input_size*2, input_size//2, num_layers=1, bidirectional=True)
+    self.lstm2 = nn.LSTM(input_size, input_size, num_layers=1, bidirectional=True)
     self.dropout4 = nn.Dropout(0.3)
-    self.fc2 = nn.Linear(input_size,input_size//2) 
+    self.fc2 = nn.Linear(input_size*2,input_size) 
     self.dropout5 = nn.Dropout(0.3)
     self.layers2 = torch.nn.Sequential(
-      torch.nn.Linear(input_size//2, 256),
+      torch.nn.Linear(input_size, 256),
       torch.nn.ReLU(),
       torch.nn.Dropout(0.3),
       torch.nn.Linear(256, 96),
@@ -158,7 +161,7 @@ class MLP(torch.nn.Module):
         #print("layer_1_out: ",layer_1_out.size())
         layer_1_out = layer_1_out.squeeze()
         #print("layer_1_out squeezed: ",layer_1_out.size())
-        lstm_out, _ = self.lstm1(layer_1_out)
+        """lstm_out, _ = self.lstm1(layer_1_out)
         #print("lstm_out: ",lstm_out.size())
         lstm_out = self.dropout1(lstm_out)
         lstm_out_sum = self.fc1(lstm_out)
@@ -194,7 +197,7 @@ class MLP(torch.nn.Module):
         #print("attention_vectors: ",attention_vectors.size())
         lstm_output_with_attention = torch.cat([lstm_out_sum.squeeze(), attention_vectors.squeeze()], dim=-1)
         #print("lstm_output_with_attention: ",lstm_output_with_attention.size())
-        lstm_output_with_attention = self.dropout3(lstm_output_with_attention)
+        lstm_output_with_attention = self.dropout3(lstm_out_sum)
         #print("lstm_output_with_attention: ",lstm_output_with_attention.size())
         lstm_out2, _ = self.lstm2(lstm_output_with_attention)
         #print("lstm_out2: ",type(lstm_out2))
@@ -203,8 +206,8 @@ class MLP(torch.nn.Module):
         #print("lstm_out2: ",lstm_out2.size())
         lstm_out_sum2 = self.fc2(lstm_out2)
         lstm_out_sum2 = self.dropout5(lstm_out_sum2)
-        #print("lstm_out_sum2: ",lstm_out_sum2.size())
-        layer_2_out = self.layers2(lstm_out_sum2)
+        #print("lstm_out_sum2: ",lstm_out_sum2.size())"""
+        layer_2_out = self.layers2(layer_1_out)
         #print("layer_2_out: ",layer_2_out.size())
         return layer_2_out
 
@@ -266,7 +269,7 @@ def test_step(model, cost_function, optimizer, test_loader):
 # hyper-parameters
 input_size = 512
 embedding_size = 768
-epochs = 10
+epochs = 15
 lr = 3e-4
 window_size = 5
 # cross-validation folds
@@ -457,7 +460,6 @@ def plot_results(results_df, id):
 data = ""
 for i in range(1, 11):
     results_df, data = show_results(i, data)
-
 
 def check_and_create_directory(directory_path):
     if not os.path.exists(directory_path):
