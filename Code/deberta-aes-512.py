@@ -11,7 +11,7 @@ from tqdm.auto import tqdm
 import torch.nn as nn
 import os
 # set device
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:4" if torch.cuda.is_available() else "cpu")
 
 data_dir = "./../Data//ASAP-AES/"
 # Original kaggle training set
@@ -104,7 +104,7 @@ def get_loader(df, id2emb, essay_embeddings, shuffle=True):
 
   # dataset and dataloader
   data = TensorDataset(torch.from_numpy(embeddings).float(), torch.from_numpy(np.array(df['scaled_score'])).float())
-  loader = DataLoader(data, batch_size=128, shuffle=shuffle, num_workers=2)
+  loader = DataLoader(data, batch_size=1028, shuffle=shuffle, num_workers=0)
 
   return loader
 
@@ -269,7 +269,7 @@ def test_step(model, cost_function, optimizer, test_loader):
 # hyper-parameters
 input_size = 512
 embedding_size = 768
-epochs = 10
+epochs = 5
 lr = 3e-4
 window_size = 5
 # cross-validation folds
@@ -472,6 +472,6 @@ def check_and_create_directory(directory_path):
 save_directory = "./../Data/results/deberta-512"
 check_and_create_directory(save_directory)
 
-file = open(os.path.join(save_directory,"qwk.txt"), "w")
+file = open(os.path.join(save_directory,f"qwk-{window_size}.txt"), "w")
 file.write(data)
 file.close()
