@@ -88,6 +88,58 @@ def mean_encoding(essay_list, model, tokenizer):
   return np.array(embeddings)
 essay_embeddings = mean_encoding(dataset['essay'], roberta, tokenizer)
 
+import h5py
+
+def save_embeddings_in_chunks(essay_list, model, tokenizer, output_file, chunk_size=1000):
+    print('Encoding essay embeddings:')
+    num_essays = len(essay_list)
+    num_features = model.config.hidden_size
+
+    with h5py.File(output_file, 'w') as h5_file:
+        dataset = h5_file.create_dataset('essay_embeddings', shape=(num_essays, num_features), dtype=np.float32,
+                                         chunks=(chunk_size, num_features), compression='gzip')
+
+        for i in tqdm(range(0, num_essays, chunk_size)):
+            end_idx = min(i + chunk_size, num_essays)
+            essays_chunk = essay_list[i:end_idx]
+            encoded_inputs = tokenizer(essays_chunk, padding="max_length", truncation=True,
+                                       max_length=2048, return_tensors='pt', return_attention_mask=True).to(device)
+
+            with torch.no_grad():
+                model_output = model(**encoded_inputs)
+
+            tokens_embeddings = model_output[0].squeeze().cpu().numpy()
+            dataset[i:end_idx] = tokens_embeddings
+
+def load_embeddings_from_hdf5(file_path):
+    with h5py.File(file_path, 'r') as h5_file:
+        dataset = h5_file['essay_embeddings']
+        num_essays = dataset.shape[0]
+        num_features = dataset.shape[1]
+        embeddings = np.empty((num_essays, num_features), dtype=np.float32)
+
+        chunk_size = dataset.chunks[0] if dataset.chunks is not None else num_essays
+        for i in range(0, num_essays, chunk_size):
+            end_idx = min(i + chunk_size, num_essays)
+            embeddings[i:end_idx] = dataset[i:end_idx]
+
+    return embeddings
+
+
+output_file = 'embeddings_d_2048.h5'
+
+# Call the save_embeddings_in_chunks function to save the embeddings to the HDF5 file
+
+if os.path.exists(os.path.join(data_dir,output_file)):
+    essay_embeddings = load_embeddings_from_hdf5(output_file)
+    print(f"embeddings loaded from {os.path.join(data_dir,output_file)}")
+else:
+    print("Creating and saving embeddings")
+    save_embeddings_in_chunks(dataset['essay'][:40], roberta, tokenizer, output_file)
+    essay_embeddings = load_embeddings_from_hdf5(output_file)
+    print(f"embeddings loaded from {os.path.join(data_dir,output_file)}")
+    
+
 
 
 
