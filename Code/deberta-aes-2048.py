@@ -104,7 +104,7 @@ def load_tensor_from_chunks(file_path):
     return tensor
 
 def save_tensor_in_chunks(tensor, file_path, chunk_size=1000):
-    total_elements = tensor.numel()
+    total_elements = torch.tensor(tensor).numel()
     num_chunks = (total_elements + chunk_size - 1) // chunk_size
 
     with h5py.File(file_path, 'w') as h5_file:
