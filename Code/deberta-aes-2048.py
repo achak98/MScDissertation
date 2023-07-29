@@ -86,7 +86,7 @@ def mean_encoding(essay_list, model, tokenizer):
     tokens_embeddings = np.matrix(model_output[0].squeeze().cpu())
     embeddings.append(np.squeeze(np.asarray(tokens_embeddings)))
   return np.array(embeddings)
-essay_embeddings = mean_encoding(dataset['essay'], roberta, tokenizer)
+#essay_embeddings = mean_encoding(dataset['essay'], roberta, tokenizer)
 
 import h5py
 
