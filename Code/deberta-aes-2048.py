@@ -90,7 +90,7 @@ def mean_encoding(essay_list, model, tokenizer):
 
 import h5py
 embeddings_file = os.path.join(data_dir,'embeddings_d_2048.pt')
-if os.path.exists():
+if os.path.exists(embeddings_file):
     h5f = h5py.File(embeddings_file,'r')
     essay_embeddings = h5f['embeddings_d_2048'][:]
     h5f.close()
