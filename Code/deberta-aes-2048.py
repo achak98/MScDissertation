@@ -76,7 +76,7 @@ roberta = AutoModel.from_pretrained(transformer_architecture).to(device)
 
 
 def mean_encoding(essay_list, model, tokenizer):
-
+  essay_list = essay_list[:40]
   print('Encoding essay embeddings:')
   embeddings = []
   for essay in tqdm(essay_list):
@@ -86,8 +86,20 @@ def mean_encoding(essay_list, model, tokenizer):
     tokens_embeddings = np.matrix(model_output[0].squeeze().cpu())
     embeddings.append(np.squeeze(np.asarray(tokens_embeddings)))
   return np.array(embeddings)
-essay_embeddings = mean_encoding(dataset['essay'], roberta, tokenizer)
 
+
+import h5py
+embeddings_file = os.path.join(data_dir,'embeddings_d_2048.pt')
+if os.path.exists():
+    h5f = h5py.File(embeddings_file,'r')
+    essay_embeddings = h5f['embeddings_d_2048'][:]
+    h5f.close()
+    print(f"embeddings loaded from {embeddings_file}")
+else:
+    essay_embeddings = mean_encoding(dataset['essay'], roberta, tokenizer)
+    h5f = h5py.File(embeddings_file, 'w')
+    h5f.create_dataset('embeddings_d_2048', data=essay_embeddings)
+    h5f.close()
 
 
 def get_loader(df, id2emb, essay_embeddings, shuffle=True):
