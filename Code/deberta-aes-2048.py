@@ -86,45 +86,8 @@ def mean_encoding(essay_list, model, tokenizer):
     tokens_embeddings = np.matrix(model_output[0].squeeze().cpu())
     embeddings.append(np.squeeze(np.asarray(tokens_embeddings)))
   return np.array(embeddings)
+essay_embeddings = mean_encoding(dataset['essay'], roberta, tokenizer)
 
-import h5py
-
-def load_tensor_from_chunks(file_path):
-    with h5py.File(file_path, 'r') as h5_file:
-        dataset = h5_file['data']
-        num_elements = dataset.shape[0]
-        tensor_shape = (num_elements,) + dataset.shape[1:]
-        tensor = torch.empty(tensor_shape, dtype=torch.float32)  # Replace with the appropriate dtype if different
-
-        chunk_size = dataset.chunks[0] if dataset.chunks is not None else num_elements
-        for i in range(0, num_elements, chunk_size):
-            end_idx = min(i + chunk_size, num_elements)
-            tensor[i:end_idx] = torch.tensor(dataset[i:end_idx])
-
-    return tensor
-
-def save_tensor_in_chunks(tensor, file_path, chunk_size=1000):
-    total_elements = torch.tensor(tensor).numel()
-    num_chunks = (total_elements + chunk_size - 1) // chunk_size
-
-    with h5py.File(file_path, 'w') as h5_file:
-        dataset = h5_file.create_dataset('data', shape=tensor.shape, dtype=str(tensor.dtype),
-                                         chunks=(chunk_size,), compression='gzip')
-
-        for i in range(num_chunks):
-            start_idx = i * chunk_size
-            end_idx = min((i + 1) * chunk_size, total_elements)
-            chunk = tensor.flatten()[start_idx:end_idx]
-            dataset[start_idx:end_idx] = chunk
-
-
-
-if os.path.exists(os.path.join(data_dir,'embeddings_d_2048.h5')):
-    essay_embeddings = load_tensor_from_chunks({os.path.join(data_dir,'embeddings_d_2048.h5')})
-    print(f"embeddings loaded from {os.path.join(data_dir,'embeddings_d_2048.h5')}")
-else:
-    essay_embeddings = mean_encoding(dataset['essay'], roberta, tokenizer)
-    save_tensor_in_chunks(essay_embeddings, os.path.join(data_dir,'embeddings_d_2048.h5'))
 
 
 
