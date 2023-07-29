@@ -161,12 +161,12 @@ class MLP(torch.nn.Module):
         #print("layer_1_out: ",layer_1_out.size())
         layer_1_out = layer_1_out.squeeze()
         #print("layer_1_out squeezed: ",layer_1_out.size())
-        lstm_out, _ = self.lstm1(layer_1_out)
+        """lstm_out, _ = self.lstm1(layer_1_out)
         #print("lstm_out: ",lstm_out.size())
         lstm_out = self.dropout1(lstm_out)
         lstm_out_sum = self.fc1(lstm_out)
         lstm_out_sum = self.dropout2 (lstm_out_sum)
-        """lstm_out_sum = lstm_out_sum.unsqueeze(-1)
+        lstm_out_sum = lstm_out_sum.unsqueeze(-1)
         #print("lstm_out_sum: ",lstm_out_sum.size())
         batch_size, seq_length, hidden_dim = lstm_out_sum.size()
         # Initialize attention vector tensor
@@ -196,7 +196,7 @@ class MLP(torch.nn.Module):
             attention_vectors[:,i] = attention_vector #(seqlen,hiddim)
         #print("attention_vectors: ",attention_vectors.size())
         lstm_output_with_attention = torch.cat([lstm_out_sum.squeeze(), attention_vectors.squeeze()], dim=-1)
-        #print("lstm_output_with_attention: ",lstm_output_with_attention.size())"""
+        #print("lstm_output_with_attention: ",lstm_output_with_attention.size())
         lstm_output_with_attention = self.dropout3(lstm_out_sum)
         #print("lstm_output_with_attention: ",lstm_output_with_attention.size())
         lstm_out2, _ = self.lstm2(lstm_output_with_attention)
@@ -206,8 +206,8 @@ class MLP(torch.nn.Module):
         #print("lstm_out2: ",lstm_out2.size())
         lstm_out_sum2 = self.fc2(lstm_out2)
         lstm_out_sum2 = self.dropout5(lstm_out_sum2)
-        #print("lstm_out_sum2: ",lstm_out_sum2.size())
-        layer_2_out = self.layers2(lstm_out_sum2)
+        #print("lstm_out_sum2: ",lstm_out_sum2.size())"""
+        layer_2_out = self.layers2(layer_1_out)
         #print("layer_2_out: ",layer_2_out.size())
         return layer_2_out
 
