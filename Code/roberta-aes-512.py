@@ -13,7 +13,7 @@ import os
 # set device
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-data_dir = "./../Data//ASAP-AES/"
+data_dir = "./../Data/ASAP-AES/"
 # Original kaggle training set
 kaggle_dataset = pd.read_csv(
     os.path.join(data_dir,"training_set_rel3.tsv"), sep="\t", encoding="ISO-8859-1"
@@ -81,7 +81,9 @@ def mean_encoding(essay_list, model, tokenizer):
   embeddings = []
   for essay in tqdm(essay_list):
     essay = essay[:512]
+    print(len(essay))
     encoded_input = tokenizer(essay, padding="max_length", truncation=True, max_length=512, return_tensors='pt', return_attention_mask=True).to(device)
+    print(encoded_input.size())
     with torch.no_grad():
       model_output = model(**encoded_input)
     tokens_embeddings = np.matrix(model_output[0].squeeze().cpu())
