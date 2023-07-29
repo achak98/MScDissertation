@@ -130,12 +130,12 @@ class MLP(torch.nn.Module):
     self.dropout2 = nn.Dropout(0.3)
     self.attention_weights = nn.Linear(3, 1)
     self.dropout3 = nn.Dropout(0.3) 
-    self.lstm2 = nn.LSTM(input_size*2, input_size//2, num_layers=1, bidirectional=True)
+    self.lstm2 = nn.LSTM(input_size, input_size, num_layers=1, bidirectional=True)
     self.dropout4 = nn.Dropout(0.3)
-    self.fc2 = nn.Linear(input_size,input_size//2) 
+    self.fc2 = nn.Linear(input_size*2,input_size) 
     self.dropout5 = nn.Dropout(0.3)
     self.layers2 = torch.nn.Sequential(
-      torch.nn.Linear(input_size//2, 256),
+      torch.nn.Linear(input_size, 256),
       torch.nn.ReLU(),
       torch.nn.Dropout(0.3),
       torch.nn.Linear(256, 96),
@@ -161,7 +161,7 @@ class MLP(torch.nn.Module):
         #print("layer_1_out: ",layer_1_out.size())
         layer_1_out = layer_1_out.squeeze()
         #print("layer_1_out squeezed: ",layer_1_out.size())
-        lstm_out, _ = self.lstm1(layer_1_out)
+        """lstm_out, _ = self.lstm1(layer_1_out)
         #print("lstm_out: ",lstm_out.size())
         lstm_out = self.dropout1(lstm_out)
         lstm_out_sum = self.fc1(lstm_out)
@@ -197,7 +197,7 @@ class MLP(torch.nn.Module):
         #print("attention_vectors: ",attention_vectors.size())
         lstm_output_with_attention = torch.cat([lstm_out_sum.squeeze(), attention_vectors.squeeze()], dim=-1)
         #print("lstm_output_with_attention: ",lstm_output_with_attention.size())
-        lstm_output_with_attention = self.dropout3(lstm_output_with_attention)
+        lstm_output_with_attention = self.dropout3(lstm_out_sum)
         #print("lstm_output_with_attention: ",lstm_output_with_attention.size())
         lstm_out2, _ = self.lstm2(lstm_output_with_attention)
         #print("lstm_out2: ",type(lstm_out2))
@@ -206,8 +206,8 @@ class MLP(torch.nn.Module):
         #print("lstm_out2: ",lstm_out2.size())
         lstm_out_sum2 = self.fc2(lstm_out2)
         lstm_out_sum2 = self.dropout5(lstm_out_sum2)
-        #print("lstm_out_sum2: ",lstm_out_sum2.size())
-        layer_2_out = self.layers2(lstm_out_sum2)
+        #print("lstm_out_sum2: ",lstm_out_sum2.size())"""
+        layer_2_out = self.layers2(layer_1_out)
         #print("layer_2_out: ",layer_2_out.size())
         return layer_2_out
 
@@ -269,7 +269,7 @@ def test_step(model, cost_function, optimizer, test_loader):
 # hyper-parameters
 input_size = 2048
 embedding_size = 768
-epochs = 5
+epochs = 15
 lr = 3e-4
 window_size = 5
 # cross-validation folds
