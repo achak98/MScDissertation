@@ -76,7 +76,6 @@ roberta = AutoModel.from_pretrained(transformer_architecture).to(device)
 
 
 def mean_encoding(essay_list, model, tokenizer):
-  essay_list = essay_list[:40]
   print('Encoding essay embeddings:')
   embeddings = []
   for essay in tqdm(essay_list):
