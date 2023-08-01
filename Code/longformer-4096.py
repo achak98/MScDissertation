@@ -90,12 +90,7 @@ def mean_encoding(essay_list, model, tokenizer):
     embeddings.append(np.squeeze(np.asarray(tokens_embeddings)))
   return np.array(embeddings)
 
-if os.path.exists(os.path.join(data_dir,'embeddings_l_4096.pt')):
-    essay_embeddings = torch.load(os.path.join(data_dir,'embeddings_r_4096.pt'), map_location=torch.device('cpu'))
-    print(f"embeddings loaded from {os.path.join(data_dir,'embeddings_r_4096.pt')}")
-else:
-    essay_embeddings = mean_encoding(dataset['essay'], roberta, tokenizer)
-    torch.save(essay_embeddings, os.path.join(data_dir,'embeddings_r_4096.pt'), pickle_protocol=4)
+
 
 
 
