@@ -71,7 +71,7 @@ def get_id2emb(ids):
 
 id2emb = get_id2emb(dataset["essay_id"])
 
-roberta = LongformerModel.from_pretrained("allenai/longformer-base-4096")
+roberta = LongformerModel.from_pretrained("allenai/longformer-base-4096").to(device)
 
 
 
