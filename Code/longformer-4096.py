@@ -90,7 +90,18 @@ def mean_encoding(essay_list, model, tokenizer):
     embeddings.append(np.squeeze(np.asarray(tokens_embeddings)))
   return np.array(embeddings)
 
-
+import h5py
+embeddings_file = os.path.join(data_dir,'embeddings_l_4096.pt')
+if os.path.exists(embeddings_file):
+    h5f = h5py.File(embeddings_file,'r')
+    essay_embeddings = h5f['embeddings_l_4096'][:]
+    h5f.close()
+    print(f"embeddings loaded from {embeddings_file}")
+else:
+    essay_embeddings = mean_encoding(dataset['essay'], roberta, tokenizer)
+    h5f = h5py.File(embeddings_file, 'w')
+    h5f.create_dataset('embeddings_l_4096', data=essay_embeddings)
+    h5f.close()
 
 
 
