@@ -10,6 +10,7 @@ from matplotlib import pyplot as plt
 from tqdm.auto import tqdm
 import torch.nn as nn
 import os
+import gc
 # set device
 device = torch.device("cuda:5" if torch.cuda.is_available() else "cpu")
 
@@ -104,7 +105,7 @@ else:
     h5f.create_dataset('embeddings_l_2048', data=essay_embeddings)
     h5f.close()
 
-
+print("embeddings done")
 
 
 def get_loader(df, id2emb, essay_embeddings, shuffle=True):
@@ -114,7 +115,7 @@ def get_loader(df, id2emb, essay_embeddings, shuffle=True):
 
   # dataset and dataloader
   data = TensorDataset(torch.from_numpy(embeddings).float(), torch.from_numpy(np.array(df['scaled_score'])).float())
-  loader = DataLoader(data, batch_size=1, shuffle=shuffle, num_workers=0)
+  loader = DataLoader(data, batch_size=128, shuffle=shuffle, num_workers=0)
 
   return loader
 
@@ -230,69 +231,6 @@ def test_step(model, cost_function, optimizer, test_loader):
         preds.append(float(out))
 
   return cumulative_loss/samples, preds
-     
-# hyper-parameters
-input_size = 2048
-embedding_size = 768
-epochs = 15
-lr = 3e-4
-window_size = 5
-# cross-validation folds
-kf = KFold(n_splits=10, random_state=2022, shuffle=True)
-
-# dicts with train_df, test_df and predictions for each model
-train_df_dict = {}
-test_df_dict = {}
-preds_dict = {}
-
-# copy of dataset with scaled scores computed using the whole dataset
-scaled_dataset = get_scaled_dataset(dataset)
-
-for n, (train, test) in enumerate(kf.split(dataset)):
-  
-  # train, test splits 
-  # scaled scores in train_df are computed only using training data
-  train_df = dataset.iloc[train]
-  train_df = get_scaled_dataset(train_df)
-
-  test_df = scaled_dataset.iloc[test]
-
-  # dataloaders
-  train_loader = get_loader(train_df, id2emb, essay_embeddings, shuffle=True)
-  test_loader = get_loader(test_df, id2emb, essay_embeddings, shuffle=False)
-
-  # model
-  print('------------------------------------------------------------------')
-  print(f"\t\t\tTraining model: {n+1}")
-  print('------------------------------------------------------------------')
-  model = MLP(input_size, embedding_size, window_size).to(device)
-  
-  # loss and optimizer
-  cost_function = torch.nn.MSELoss()
-  optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-
-  # training
-  train_loss, train_preds = test_step(model, cost_function, optimizer, train_loader)
-  test_loss, test_preds = test_step(model, cost_function, optimizer, test_loader)
-  print('Before training:\tLoss/train: {:.5f}\tLoss/test: {:.5f}'.format(train_loss, test_loss))
-
-  epoch_tqdm = tqdm(range(epochs), total=epochs, desc='Epochs')
-  for epoch in epoch_tqdm:
-    train_loss = training_step(model, cost_function, optimizer, train_loader)
-    test_loss, test_preds = test_step(model, cost_function, optimizer, test_loader)
-    epoch_tqdm.set_postfix ({f"Epoch: {epoch+1} \t\t Train Loss: {train_loss:.5f} Test Loss: {test_loss:.5f} \n":  test_loss})
-
-
-  train_loss, train_preds = test_step(model, cost_function, optimizer, train_loader)
-  test_loss, test_preds = test_step(model, cost_function, optimizer, test_loader)
-  print('After training:\t\tLoss/train: {:.5f}\tLoss/test: {:.5f}'.format(train_loss, test_loss))
-
-  # store test_df and predictions
-  train_df_dict[f"model_{n+1}"] = train_df
-  test_df_dict[f"model_{n+1}"] = test_df
-  preds_dict[f"model_{n+1}"] = test_preds
-  
-
 
 def get_results_df(train_df, test_df, model_preds):
     # create new results df with model scaled preds
@@ -328,115 +266,105 @@ def get_results_df(train_df, test_df, model_preds):
 
     return results_df
 
+print("before hypparams")
+# hyper-parameters
+input_size = 2048
+embedding_size = 768
+epochs = 15
+lr = 3e-4
+window_size = 5
+# cross-validation folds
+kf = KFold(n_splits=10, random_state=2022, shuffle=True)
+print("after kfold init")
+# dicts with train_df, test_df and predictions for each model
+train_df_dict = {}
+test_df_dict = {}
+preds_dict = {}
 
-# list of mqw_kappa for each model
-mqwk_list = []
+# copy of dataset with scaled scores computed using the whole dataset
+print("copy of scaled_dataset begin")
+scaled_dataset = get_scaled_dataset(dataset)
+print("copy of scaled_dataset end")
+gc.collect()
+print("gc collected #1")
+#for n, (train, test) in enumerate(kf.split(dataset)):
+n = 0
+train, test =kf.split(dataset)[n]
+print("train test split done")
+gc.collect()
+print("gc collected #2")
+# train, test splits 
+# scaled scores in train_df are computed only using training data
+train_df = dataset.iloc[train]
+print("train_df #1")
+train_df = get_scaled_dataset(train_df)
+print("train_df #2")
+test_df = scaled_dataset.iloc[test]
+print("train_df #1")
+# dataloaders
+train_loader = get_loader(train_df, id2emb, essay_embeddings, shuffle=True)
+print("train_loader")
+test_loader = get_loader(test_df, id2emb, essay_embeddings, shuffle=False)
+print("test_loader")
+# model
+print('------------------------------------------------------------------')
+print(f"\t\t\tTraining model: {n+1}")
+print('------------------------------------------------------------------')
+model = MLP(input_size, embedding_size, window_size).to(device)
 
-for model_id in test_df_dict:
-    results_df = get_results_df(
-        train_df_dict[model_id], test_df_dict[model_id], preds_dict[model_id]
-    )
+# loss and optimizer
+cost_function = torch.nn.MSELoss()
+optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
-    kappas_by_set = []
-    for essay_set in range(1, 9):
-        kappas_by_set.append(
-            kappa(
-                results_df.loc[results_df["essay_set"] == essay_set, "score"],
-                results_df.loc[results_df["essay_set"] == essay_set, "pred"],
-                weights="quadratic",
-            )
-        )
+# training
+train_loss, train_preds = test_step(model, cost_function, optimizer, train_loader)
+test_loss, test_preds = test_step(model, cost_function, optimizer, test_loader)
+print('Before training:\tLoss/train: {:.5f}\tLoss/test: {:.5f}'.format(train_loss, test_loss))
 
-    mqwk_list.append(np.mean(kappas_by_set))
-print("----------------------------------------------")
-print("mean QWK after 5-fold cross-validation:\t{:.4f}".format(np.mean(mqwk_list)))
-print("Max mean QWK:\t\t\t\t{:.4f}".format(max(mqwk_list)))
-print("Min mean QWK:\t\t\t\t{:.4f}".format(min(mqwk_list)))
+epoch_tqdm = tqdm(range(epochs), total=epochs, desc='Epochs')
+for epoch in epoch_tqdm:
+train_loss = training_step(model, cost_function, optimizer, train_loader)
+test_loss, test_preds = test_step(model, cost_function, optimizer, test_loader)
+epoch_tqdm.set_postfix ({f"Epoch: {epoch+1} \t\t Train Loss: {train_loss:.5f} Test Loss: {test_loss:.5f} \n":  test_loss})
 
-raters_kappas = []
+
+train_loss, train_preds = test_step(model, cost_function, optimizer, train_loader)
+test_loss, test_preds = test_step(model, cost_function, optimizer, test_loader)
+print('After training:\t\tLoss/train: {:.5f}\tLoss/test: {:.5f}'.format(train_loss, test_loss))
+
+print("getting results df")
+results_df = get_results_df(train_df, test_df, test_preds)
+print("got results df")
+kappas_by_set = []
 for essay_set in range(1, 9):
-    raters_kappas.append(
+    kappas_by_set.append(
         kappa(
-            dataset.loc[dataset["essay_set"] == essay_set, "rater1"],
-            dataset.loc[dataset["essay_set"] == essay_set, "rater2"],
+            results_df.loc[results_df["essay_set"] == essay_set, "score"],
+            results_df.loc[results_df["essay_set"] == essay_set, "pred"],
             weights="quadratic",
         )
     )
-
-mqwk_raters = np.mean(raters_kappas)
-print("----------------------------------------------")
-print("mean QWK for two human raters:\t\t{:.4f}".format(mqwk_raters))
-print("----------------------------------------------")
-
-
-def show_results(id, data):
-    model_id = f"model_{id}"
-    results_df = get_results_df(
-        train_df_dict[model_id], test_df_dict[model_id], preds_dict[model_id]
+    print(f"got kappa for essay set {essay_set}")
+id = n + 1
+data = ""
+print("--------------------------------------")
+print(f"\tResults for model: {id}")
+print("--------------------------------------")
+data += "\n--------------------------------------"
+data += f"\n\tResults for model: {id}"
+data += "\n--------------------------------------"
+for essay_set in range(8):
+    data += "\nKappa for essay set {:}:\t\t{:.4f}".format(
+        essay_set + 1, kappas_by_set[essay_set]
     )
-
-    kappas_by_set = []
-    for essay_set in range(1, 9):
-        kappas_by_set.append(
-            kappa(
-                results_df.loc[results_df["essay_set"] == essay_set, "score"],
-                results_df.loc[results_df["essay_set"] == essay_set, "pred"],
-                weights="quadratic",
-            )
-        )
-    print("--------------------------------------")
-    print(f"\tResults for model: {id}")
-    print("--------------------------------------")
-    data += "\n--------------------------------------"
-    data += f"\n\tResults for model: {id}"
-    data += "\n--------------------------------------"
-    for essay_set in range(8):
-        data += "\nKappa for essay set {:}:\t\t{:.4f}".format(
+    print(
+        "Kappa for essay set {:}:\t\t{:.4f}".format(
             essay_set + 1, kappas_by_set[essay_set]
         )
-        print(
-            "Kappa for essay set {:}:\t\t{:.4f}".format(
-                essay_set + 1, kappas_by_set[essay_set]
-            )
-        )
-    data += "\nmean QWK:\t\t\t{:.4f}".format(np.mean(kappas_by_set))
-    print("mean QWK:\t\t\t{:.4f}".format(np.mean(kappas_by_set)))
+    )
+data += "\nmean QWK:\t\t\t{:.4f}".format(np.mean(kappas_by_set))
+print("mean QWK:\t\t\t{:.4f}".format(np.mean(kappas_by_set)))
 
-    return results_df, data
+  
 
 
-def plot_results(results_df, id):
-    set_number = 0
-    fig, ax = plt.subplots(4, 2, figsize=(9, 9), sharey=False)
-    for i in range(4):
-        for j in range(2):
-            set_number += 1
-            results_df[results_df["essay_set"] == set_number][
-                ["score", "pred"]
-            ].plot.hist(histtype="step", bins=20, ax=ax[i, j], rot=0)
-            ax[i, j].set_title("Set %i" % set_number)
-    ax[3, 0].locator_params(nbins=10)
-    ax[3, 1].locator_params(nbins=10)
-    plt.suptitle(f"Histograms of scores for Model {id}")
-    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-    plt.show()
-
-
-data = ""
-for i in range(1, 11):
-    results_df, data = show_results(i, data)
-
-def check_and_create_directory(directory_path):
-    if not os.path.exists(directory_path):
-        os.makedirs(directory_path)
-        print(f"Directory '{directory_path}' created.")
-    else:
-        print(f"Directory '{directory_path}' already exists.")
-
-# Example usage:
-save_directory = "./../Data/results/longformer"
-check_and_create_directory(save_directory)
-
-file = open(os.path.join(save_directory,f"qwk-{window_size}.txt"), "w")
-file.write(data)
-file.close()
