@@ -286,6 +286,7 @@ scaled_dataset = get_scaled_dataset(dataset)
 print("copy of scaled_dataset end")
 gc.collect()
 print("gc collected #1")
+data = ""
 for n, (train, test) in enumerate(kf.split(dataset)):
 
     print("train test split done")
@@ -344,7 +345,7 @@ for n, (train, test) in enumerate(kf.split(dataset)):
         )
         print(f"got kappa for essay set {essay_set}")
     id = n + 1
-    data = ""
+    
     print("--------------------------------------")
     print(f"\tResults for model: {id}")
     print("--------------------------------------")
@@ -366,3 +367,18 @@ for n, (train, test) in enumerate(kf.split(dataset)):
 
 
 
+def check_and_create_directory(directory_path):
+    if not os.path.exists(directory_path):
+        os.makedirs(directory_path)
+        print(f"Directory '{directory_path}' created.")
+    else:
+        print(f"Directory '{directory_path}' already exists.")
+
+
+# Example usage:
+save_directory = "./../Data/results/longformer"
+check_and_create_directory(save_directory)
+
+file = open(os.path.join(save_directory, f"qwk.txt"), "w")
+file.write(data)
+file.close()
