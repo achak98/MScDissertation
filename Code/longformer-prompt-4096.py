@@ -74,38 +74,51 @@ def get_id2emb(ids):
 
 
 id2emb = get_id2emb(dataset["essay_id"])
-
+prompts_dict = {
+    1:"Write a letter to your local newspaper in which you state your opinion on the effects computers have on people. Persuade the readers to agree with you.",
+    2:"Censorship in the Libraries Do you believe that certain materials, such as books, music, movies, magazines, etc., should be removed from the shelves if they are found offensive? Support your position with convincing arguments from your own experience, observations, and/or reading.",
+    3:"ROUGH ROAD AHEAD: Do Not Exceed Posted Speed Limit by Joe Kurmaskie Write a response that explains how the features of the setting affect the cyclist. In your response, include examples from the essay that support your conclusion.",
+    4:"Write a response that explains why the author concludes the story with this paragraph. In your response, include details and examples from the story that support your ideas.",
+    5:"Narciso Rodriguez from Home: The Blueprints of Our Lives Describe the mood created by the author in the memoir. Support your answer with relevant and specific information from the memoir.",
+    6:"The Mooring Mast by Marcia Amidon Lüsted Based on the excerpt, describe the obstacles the builders of the Empire State Building faced in attempting to allow dirigibles to dock there. Support your answer with relevant and specific information from the excerpt.",
+    7:"Write about patience. Being patient means that you are understanding and tolerant. A patient person experience difficulties without complaining. Do only one of the following: write a story about a time when you were patient OR write a story about a time when someone you know was patient OR write a story in your own way about patience.",
+    8:"We all understand the benefits of laughter. For example, someone once said, “Laughter is the shortest distance between two people.” Many other people believe that laughter is an important part of any relationship. Tell a true story in which laughter was one element or part."
+}
 roberta = LongformerModel.from_pretrained("allenai/longformer-base-4096").to(device)
 
 
 
-def mean_encoding(essay_list, model, tokenizer):
+def mean_encoding(essay_list, essay_set_list, model, tokenizer):
 
   print('Encoding essay embeddings:')
   embeddings = []
-  for essay in tqdm(essay_list):
+  max_len = 0
+  for (essay,essay_set) in tqdm(zip(essay_list, essay_set_list)):
     #essay = essay[:512]
     #print(len(essay))
-    encoded_input = tokenizer(essay, padding="max_length", max_length=1536, return_tensors='pt', return_attention_mask=True).to(device)
+    essay = prompts_dict[essay_set] + essay
+    if max_len < len(tokenizer.tokenize(essay)):
+       max_len = len(tokenizer.tokenize(essay))
+    encoded_input = tokenizer(essay, padding="max_length", truncation=True, max_length=1536, return_tensors='pt', return_attention_mask=True).to(device)
     #print(encoded_input["input_ids"].size())
     with torch.no_grad():
       model_output = model(**encoded_input)
-    #print(model_output[0].squeeze().size())
     tokens_embeddings = np.matrix(model_output[0].squeeze().cpu())
     embeddings.append(np.squeeze(np.asarray(tokens_embeddings)))
+  print(max_len)
   return np.array(embeddings)
 
 import h5py
-embeddings_file = os.path.join(data_dir,'embeddings_l_1536.pt')
+embeddings_file = os.path.join(data_dir,'embeddings_l_p_1536.pt')
 if os.path.exists(embeddings_file):
     h5f = h5py.File(embeddings_file,'r')
-    essay_embeddings = h5f['embeddings_l_1536'][:]
+    essay_embeddings = h5f['embeddings_l_p_1536'][:]
     h5f.close()
     print(f"embeddings loaded from {embeddings_file}")
 else:
-    essay_embeddings = mean_encoding(dataset['essay'], roberta, tokenizer)
+    essay_embeddings = mean_encoding(dataset['essay'], dataset["essay_set"], roberta, tokenizer)
     h5f = h5py.File(embeddings_file, 'w')
-    h5f.create_dataset('embeddings_l_1536', data=essay_embeddings)
+    h5f.create_dataset('embeddings_l_p_1536', data=essay_embeddings)
     h5f.close()
 
 print("embeddings done")
@@ -375,7 +388,7 @@ def check_and_create_directory(directory_path):
 
 
 # Example usage:
-save_directory = "./../Data/results/longformer"
+save_directory = "./../Data/results/longformer-prompt"
 check_and_create_directory(save_directory)
 
 file = open(os.path.join(save_directory, f"qwk.txt"), "w")
