@@ -269,7 +269,7 @@ print("before hypparams")
 # hyper-parameters
 input_size = 1536
 embedding_size = 768
-epochs = 10
+epochs = 20
 lr = 3e-4
 window_size = 5
 # cross-validation folds
