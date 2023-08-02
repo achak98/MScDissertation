@@ -82,10 +82,11 @@ def mean_encoding(essay_list, model, tokenizer):
   for essay in tqdm(essay_list):
     #essay = essay[:512]
     #print(len(essay))
-    encoded_input = tokenizer(essay, padding="max_length", max_length=4096, return_tensors='pt', return_attention_mask=True).to(device)
+    encoded_input = tokenizer(essay, padding="max_length", max_length=2048, return_tensors='pt', return_attention_mask=True).to(device)
     #print(encoded_input["input_ids"].size())
     with torch.no_grad():
       model_output = model(**encoded_input)
+    print(model_output[0].squeeze().size())
     tokens_embeddings = np.matrix(model_output[0].squeeze().cpu())
     embeddings.append(np.squeeze(np.asarray(tokens_embeddings)))
   return np.array(embeddings)
@@ -170,52 +171,7 @@ class MLP(torch.nn.Module):
         #print("layer_1_out: ",layer_1_out.size())
         layer_1_out = layer_1_out.squeeze()
         #print("layer_1_out squeezed: ",layer_1_out.size())
-        """lstm_out, _ = self.lstm1(layer_1_out)
-        #print("lstm_out: ",lstm_out.size())
-        lstm_out = self.dropout1(lstm_out)
-        lstm_out_sum = self.fc1(lstm_out)
-        lstm_out_sum = self.dropout2 (lstm_out_sum)
-        lstm_out_sum = lstm_out_sum.unsqueeze(-1)
-        #print("lstm_out_sum: ",lstm_out_sum.size())
-        batch_size, seq_length, hidden_dim = lstm_out_sum.size()
-        # Initialize attention vector tensor
-        attention_vectors = torch.zeros_like(lstm_out_sum)
-        for i in range(seq_length):
-            # Define the start and end positions of the window
-            start_pos = max(0, i - self.window_size)
-            end_pos = min(seq_length, i + self.window_size + 1)
-            
-            # Compute similarity between the current word and nearby words
-            similarity_scores = torch.cat([self.similarity(lstm_out_sum[:, i], lstm_out_sum[:, j]) for j in range(start_pos, end_pos)], dim=1)
-            #print("similarity_scores: ",similarity_scores.size())
-            attention_weights = torch.nn.functional.softmax(similarity_scores, dim=-1) #this has all alpha(i,j)s
-            #print(f"lstm_out_sum: {lstm_out_sum.size()}, attention_weights: {attention_weights.size()}")
-            #lstm_out_sum = lstm_out_sum.squeeze() #128,512,1
-            attention_weights = attention_weights #128,6,
-            #print(f"lstm_out_sum: {lstm_out_sum.size()}")
-            #print(f"lstm_out_sum[:, start_pos:end_pos, :]: {lstm_out_sum[:, start_pos:end_pos, :].size()}")#  torch.Size([batch, window, embed])
-            #attention_weights:  torch.Size([batch, window]) 128,6
-            #lstm_out_sum[:, start_pos:end_pos, :]:  batch, window, embed/ 128,6,1 -> 1,6,128
-            attention_vector = (lstm_out_sum[:, start_pos:end_pos, :].permute(2,0,1) * attention_weights)
-            #print("attention_vector: ", attention_vector.size())
-            attention_vector = attention_vector.permute(1,0,2)
-            attention_vector = torch.sum(attention_vector, dim=-1)
-            #print("attention_vector: ", attention_vector.size()) #torch.Size([1, 6])
-            #print(f"attention_vector: {attention_vector.size()}")
-            attention_vectors[:,i] = attention_vector #(seqlen,hiddim)
-        #print("attention_vectors: ",attention_vectors.size())
-        lstm_output_with_attention = torch.cat([lstm_out_sum.squeeze(), attention_vectors.squeeze()], dim=-1)
-        #print("lstm_output_with_attention: ",lstm_output_with_attention.size())
-        lstm_output_with_attention = self.dropout3(lstm_out_sum)
-        #print("lstm_output_with_attention: ",lstm_output_with_attention.size())
-        lstm_out2, _ = self.lstm2(lstm_output_with_attention)
-        #print("lstm_out2: ",type(lstm_out2))
-        #print("lstm_out2: ",lstm_out2.size())
-        lstm_out2 = self.dropout4(lstm_out2)
-        #print("lstm_out2: ",lstm_out2.size())
-        lstm_out_sum2 = self.fc2(lstm_out2)
-        lstm_out_sum2 = self.dropout5(lstm_out_sum2)
-        #print("lstm_out_sum2: ",lstm_out_sum2.size())"""
+        
         layer_2_out = self.layers2(layer_1_out)
         #print("layer_2_out: ",layer_2_out.size())
         return layer_2_out
@@ -276,7 +232,7 @@ def test_step(model, cost_function, optimizer, test_loader):
   return cumulative_loss/samples, preds
      
 # hyper-parameters
-input_size = 4096
+input_size = 2048
 embedding_size = 768
 epochs = 15
 lr = 3e-4
