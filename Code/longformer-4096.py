@@ -11,6 +11,10 @@ from tqdm.auto import tqdm
 import torch.nn as nn
 import os
 import gc
+
+import warnings
+warnings.filterwarnings("ignore")
+
 # set device
 device = torch.device("cuda:5" if torch.cuda.is_available() else "cpu")
 
