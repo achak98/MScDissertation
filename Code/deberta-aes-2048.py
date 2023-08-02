@@ -10,6 +10,7 @@ from matplotlib import pyplot as plt
 from tqdm.auto import tqdm
 import torch.nn as nn
 import os
+import gc
 # set device
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -288,7 +289,7 @@ preds_dict = {}
 scaled_dataset = get_scaled_dataset(dataset)
 
 for n, (train, test) in enumerate(kf.split(dataset)):
-  
+  gc.collect()
   # train, test splits 
   # scaled scores in train_df are computed only using training data
   train_df = dataset.iloc[train]
