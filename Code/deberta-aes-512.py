@@ -30,7 +30,7 @@ dataset = pd.DataFrame(
     }
 )
 
-transformer_architecture = 'microsoft/deberta-v3-base' #'microsoft/deberta-v3-small' mlcorelib/debertav2-base-uncased microsoft/deberta-v2-xlarge
+transformer_architecture = "microsoft/deberta-v2-xlarge" #'microsoft/deberta-v3-small' mlcorelib/debertav2-base-uncased microsoft/deberta-v2-xlarge
 config = AutoConfig.from_pretrained(transformer_architecture, output_hidden_states=True)
 config.max_position_embeddings = 512
 tokenizer = AutoTokenizer.from_pretrained(transformer_architecture, max_length=config.max_position_embeddings, padding="max_length", return_attention_mask=True)
@@ -116,7 +116,7 @@ class MLP(torch.nn.Module):
     super(MLP, self).__init__()
     self.window_size = window_size
     self.layers1 = torch.nn.Sequential(
-      torch.nn.Linear(768, 256),
+      torch.nn.Linear(1536, 256),
       torch.nn.ReLU(),
       torch.nn.Dropout(0.3),
       torch.nn.Linear(256, 96),
@@ -269,7 +269,7 @@ def test_step(model, cost_function, optimizer, test_loader):
 # hyper-parameters
 input_size = 512
 embedding_size = 768
-epochs = 15
+epochs = 10
 lr = 3e-4
 window_size = 5
 # cross-validation folds
@@ -469,7 +469,7 @@ def check_and_create_directory(directory_path):
         print(f"Directory '{directory_path}' already exists.")
 
 # Example usage:
-save_directory = "./../Data/results/deberta-512"
+save_directory = "./../Data/results/deberta-V2-512"
 check_and_create_directory(save_directory)
 
 file = open(os.path.join(save_directory,f"qwk-{window_size}.txt"), "w")
