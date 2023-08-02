@@ -385,9 +385,9 @@ for n, (train, test) in enumerate(kf.split(dataset)):
                 train_loss, test_loss
             )
         )
-
+        print("getting results df")
         results_df = get_results_df(train_df, test_df, test_preds)
-
+        print("got results df")
         kappas_by_set = []
         for essay_set in range(1, 9):
             kappas_by_set.append(
@@ -397,6 +397,7 @@ for n, (train, test) in enumerate(kf.split(dataset)):
                     weights="quadratic",
                 )
             )
+            print(f"got kappa for essay set {essay_set}")
         id = n + 1
         data = ""
         print("--------------------------------------")
