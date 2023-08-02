@@ -323,13 +323,13 @@ print('Before training:\tLoss/train: {:.5f}\tLoss/test: {:.5f}'.format(train_los
 
 epoch_tqdm = tqdm(range(epochs), total=epochs, desc='Epochs')
 for epoch in epoch_tqdm:
-train_loss = training_step(model, cost_function, optimizer, train_loader)
-test_loss, test_preds = test_step(model, cost_function, optimizer, test_loader)
-epoch_tqdm.set_postfix ({f"Epoch: {epoch+1} \t\t Train Loss: {train_loss:.5f} Test Loss: {test_loss:.5f} \n":  test_loss})
+    train_loss = training_step(model, cost_function, optimizer, train_loader)
+    test_loss, test_preds = test_step(model, cost_function, optimizer, test_loader)
+    epoch_tqdm.set_postfix ({f"Epoch: {epoch+1} \t\t Train Loss: {train_loss:.5f} Test Loss: {test_loss:.5f} \n":  test_loss})
 
 
-train_loss, train_preds = test_step(model, cost_function, optimizer, train_loader)
-test_loss, test_preds = test_step(model, cost_function, optimizer, test_loader)
+    train_loss, train_preds = test_step(model, cost_function, optimizer, train_loader)
+    test_loss, test_preds = test_step(model, cost_function, optimizer, test_loader)
 print('After training:\t\tLoss/train: {:.5f}\tLoss/test: {:.5f}'.format(train_loss, test_loss))
 
 print("getting results df")
