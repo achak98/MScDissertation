@@ -11,13 +11,14 @@ from tqdm.auto import tqdm
 import torch.nn as nn
 import os
 import gc
+
 # set device
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 data_dir = "./../Data//ASAP-AES/"
 # Original kaggle training set
 kaggle_dataset = pd.read_csv(
-    os.path.join(data_dir,"training_set_rel3.tsv"), sep="\t", encoding="ISO-8859-1"
+    os.path.join(data_dir, "training_set_rel3.tsv"), sep="\t", encoding="ISO-8859-1"
 )
 # Smaller training set used for this project
 dataset = pd.DataFrame(
@@ -31,12 +32,17 @@ dataset = pd.DataFrame(
     }
 )
 
-transformer_architecture = 'microsoft/deberta-v3-base' #'microsoft/deberta-v3-small' mlcorelib/debertav2-base-uncased microsoft/deberta-v2-xlarge
+transformer_architecture = "microsoft/deberta-v3-base"  #'microsoft/deberta-v3-small' mlcorelib/debertav2-base-uncased microsoft/deberta-v2-xlarge
 config = AutoConfig.from_pretrained(transformer_architecture, output_hidden_states=True)
 config.max_position_embeddings = 2048
-tokenizer = AutoTokenizer.from_pretrained(transformer_architecture, max_length=config.max_position_embeddings, padding="max_length", return_attention_mask=True)
+tokenizer = AutoTokenizer.from_pretrained(
+    transformer_architecture,
+    max_length=config.max_position_embeddings,
+    padding="max_length",
+    return_attention_mask=True,
+)
 
-#tokenizer = AutoTokenizer.from_pretrained("roberta-base")
+# tokenizer = AutoTokenizer.from_pretrained("roberta-base")
 
 length_dict = {}
 
@@ -75,97 +81,139 @@ id2emb = get_id2emb(dataset["essay_id"])
 roberta = AutoModel.from_pretrained(transformer_architecture).to(device)
 
 
-
 def mean_encoding(essay_list, model, tokenizer):
-  print('Encoding essay embeddings:')
-  embeddings = []
-  for essay in tqdm(essay_list):
-    encoded_input = tokenizer(essay, padding="max_length", truncation=True, max_length=2048, return_tensors='pt', return_attention_mask=True).to(device)
-    with torch.no_grad():
-      model_output = model(**encoded_input)
-    tokens_embeddings = np.matrix(model_output[0].squeeze().cpu())
-    embeddings.append(np.squeeze(np.asarray(tokens_embeddings)))
-  return np.array(embeddings)
+    print("Encoding essay embeddings:")
+    embeddings = []
+    for essay in tqdm(essay_list):
+        encoded_input = tokenizer(
+            essay,
+            padding="max_length",
+            truncation=True,
+            max_length=2048,
+            return_tensors="pt",
+            return_attention_mask=True,
+        ).to(device)
+        with torch.no_grad():
+            model_output = model(**encoded_input)
+        tokens_embeddings = np.matrix(model_output[0].squeeze().cpu())
+        embeddings.append(np.squeeze(np.asarray(tokens_embeddings)))
+    return np.array(embeddings)
 
 
 import h5py
-embeddings_file = os.path.join(data_dir,'embeddings_d_2048.pt')
+
+embeddings_file = os.path.join(data_dir, "embeddings_d_2048.pt")
 if os.path.exists(embeddings_file):
-    h5f = h5py.File(embeddings_file,'r')
-    essay_embeddings = h5f['embeddings_d_2048'][:]
+    h5f = h5py.File(embeddings_file, "r")
+    essay_embeddings = h5f["embeddings_d_2048"][:]
     h5f.close()
     print(f"embeddings loaded from {embeddings_file}")
 else:
-    essay_embeddings = mean_encoding(dataset['essay'], roberta, tokenizer)
-    h5f = h5py.File(embeddings_file, 'w')
-    h5f.create_dataset('embeddings_d_2048', data=essay_embeddings)
+    essay_embeddings = mean_encoding(dataset["essay"], roberta, tokenizer)
+    h5f = h5py.File(embeddings_file, "w")
+    h5f.create_dataset("embeddings_d_2048", data=essay_embeddings)
     h5f.close()
 
 
 def get_loader(df, id2emb, essay_embeddings, shuffle=True):
+    # get embeddings from essay_id using id2emb dict
+    embeddings = np.array([essay_embeddings[id2emb[id]] for id in df["essay_id"]])
 
-  # get embeddings from essay_id using id2emb dict
-  embeddings = np.array([essay_embeddings[id2emb[id]] for id in df['essay_id']])
+    # dataset and dataloader
+    data = TensorDataset(
+        torch.from_numpy(embeddings).float(),
+        torch.from_numpy(np.array(df["scaled_score"])).float(),
+    )
+    loader = DataLoader(data, batch_size=1024, shuffle=shuffle, num_workers=0)
 
-  # dataset and dataloader
-  data = TensorDataset(torch.from_numpy(embeddings).float(), torch.from_numpy(np.array(df['scaled_score'])).float())
-  loader = DataLoader(data, batch_size=1024, shuffle=shuffle, num_workers=0)
+    return loader
 
-  return loader
 
+def get_results_df(train_df, test_df, model_preds):
+    # create new results df with model scaled preds
+    preds_df = pd.DataFrame(model_preds)
+    results_df = (
+        test_df.reset_index(drop=True)
+        .join(preds_df)
+        .rename(columns={0: "scaled_pred"})
+        .sort_values(by="essay_set")
+        .reset_index(drop=True)
+    )
+
+    # move score to last colum
+    s_df = results_df.pop("score")
+    results_df["score"] = s_df
+
+    # scale back to original range by essay set
+    preds = pd.Series(dtype="float64")
+    for essay_set in range(1, 9):
+        scaler = StandardScaler()
+        score_df = train_df[train_df["essay_set"] == essay_set]["score"].to_frame()
+        scaler.fit(score_df)
+        scaled_preds = results_df.loc[
+            results_df["essay_set"] == essay_set, "scaled_pred"
+        ].to_frame()
+        preds_rescaled = scaler.inverse_transform(scaled_preds).round(0).astype("int")
+        preds = preds.append(
+            pd.Series(np.squeeze(np.asarray(preds_rescaled))), ignore_index=True
+        )
+
+    # append to results df
+    results_df["pred"] = preds
+
+    return results_df
 
 
 class MLP(torch.nn.Module):
-  
-  def __init__(self, input_size,embedding_size, window_size):
-    super(MLP, self).__init__()
-    self.window_size = window_size
-    self.layers1 = torch.nn.Sequential(
-      torch.nn.Linear(768, 256),
-      torch.nn.ReLU(),
-      torch.nn.Dropout(0.3),
-      torch.nn.Linear(256, 96),
-      torch.nn.ReLU(),
-      torch.nn.Dropout(0.3),
-      torch.nn.Linear(96, 1)
-    )
-    self.lstm1 = nn.LSTM(input_size, input_size, num_layers=1, bidirectional=True)
-    self.dropout1 = nn.Dropout(0.3) 
-    self.fc1 = nn.Linear(input_size*2,input_size)
-    self.dropout2 = nn.Dropout(0.3)
-    self.attention_weights = nn.Linear(3, 1)
-    self.dropout3 = nn.Dropout(0.3) 
-    self.lstm2 = nn.LSTM(input_size, input_size, num_layers=1, bidirectional=True)
-    self.dropout4 = nn.Dropout(0.3)
-    self.fc2 = nn.Linear(input_size*2,input_size) 
-    self.dropout5 = nn.Dropout(0.3)
-    self.layers2 = torch.nn.Sequential(
-      torch.nn.Linear(input_size, 256),
-      torch.nn.ReLU(),
-      torch.nn.Dropout(0.3),
-      torch.nn.Linear(256, 96),
-      torch.nn.ReLU(),
-      torch.nn.Dropout(0.3),
-      torch.nn.Linear(96, 1)
-    ) 
+    def __init__(self, input_size, embedding_size, window_size):
+        super(MLP, self).__init__()
+        self.window_size = window_size
+        self.layers1 = torch.nn.Sequential(
+            torch.nn.Linear(768, 256),
+            torch.nn.ReLU(),
+            torch.nn.Dropout(0.3),
+            torch.nn.Linear(256, 96),
+            torch.nn.ReLU(),
+            torch.nn.Dropout(0.3),
+            torch.nn.Linear(96, 1),
+        )
+        self.lstm1 = nn.LSTM(input_size, input_size, num_layers=1, bidirectional=True)
+        self.dropout1 = nn.Dropout(0.3)
+        self.fc1 = nn.Linear(input_size * 2, input_size)
+        self.dropout2 = nn.Dropout(0.3)
+        self.attention_weights = nn.Linear(3, 1)
+        self.dropout3 = nn.Dropout(0.3)
+        self.lstm2 = nn.LSTM(input_size, input_size, num_layers=1, bidirectional=True)
+        self.dropout4 = nn.Dropout(0.3)
+        self.fc2 = nn.Linear(input_size * 2, input_size)
+        self.dropout5 = nn.Dropout(0.3)
+        self.layers2 = torch.nn.Sequential(
+            torch.nn.Linear(input_size, 256),
+            torch.nn.ReLU(),
+            torch.nn.Dropout(0.3),
+            torch.nn.Linear(256, 96),
+            torch.nn.ReLU(),
+            torch.nn.Dropout(0.3),
+            torch.nn.Linear(96, 1),
+        )
 
-  def similarity(self, hi, hj):
+    def similarity(self, hi, hj):
         # Concatenate the hidden representations
         """print("hi: ",hi.size())
         print("hj: ",hj.size())
         print("hi * hj: ",(hi * hj).size())"""
         h_concat = torch.cat([hi, hj, hi * hj], dim=-1)
-        #print("h_concat: ",h_concat.size())
+        # print("h_concat: ",h_concat.size())
         attn_weights = self.attention_weights(h_concat)
-        #print("attn_weights: ",attn_weights.size())
+        # print("attn_weights: ",attn_weights.size())
         return attn_weights
-    
-  def forward(self, x):
-        #print("x: ",x.size())
+
+    def forward(self, x):
+        # print("x: ",x.size())
         layer_1_out = self.layers1(x)
-        #print("layer_1_out: ",layer_1_out.size())
+        # print("layer_1_out: ",layer_1_out.size())
         layer_1_out = layer_1_out.squeeze()
-        #print("layer_1_out squeezed: ",layer_1_out.size())
+        # print("layer_1_out squeezed: ",layer_1_out.size())
         """lstm_out, _ = self.lstm1(layer_1_out)
         #print("lstm_out: ",lstm_out.size())
         lstm_out = self.dropout1(lstm_out)
@@ -213,64 +261,63 @@ class MLP(torch.nn.Module):
         lstm_out_sum2 = self.dropout5(lstm_out_sum2)
         #print("lstm_out_sum2: ",lstm_out_sum2.size())"""
         layer_2_out = self.layers2(layer_1_out)
-        #print("layer_2_out: ",layer_2_out.size())
+        # print("layer_2_out: ",layer_2_out.size())
         return layer_2_out
 
 
 def training_step(model, cost_function, optimizer, train_loader):
+    samples = 0.0
+    cumulative_loss = 0.0
 
-  samples = 0.
-  cumulative_loss = 0.
+    model.train()
+    train_loader_tqdm = tqdm(train_loader, total=len(train_loader), desc="Batches")
+    for step, (inputs, targets) in enumerate(train_loader_tqdm):
+        inputs = inputs.squeeze(dim=1).to(device)
+        targets = targets.reshape(targets.shape[0], 1).to(device)
 
-  model.train() 
-  train_loader_tqdm = tqdm(train_loader, total=len(train_loader), desc='Batches')
-  for step, (inputs, targets) in enumerate(train_loader_tqdm):
+        outputs = model(inputs)
 
-    inputs = inputs.squeeze(dim=1).to(device)
-    targets = targets.reshape(targets.shape[0],1).to(device)
+        loss = cost_function(outputs, targets)
 
-    outputs = model(inputs)
+        loss.backward()
 
-    loss = cost_function(outputs, targets)
+        optimizer.step()
 
-    loss.backward()  
-  
-    optimizer.step()  
- 
-    optimizer.zero_grad()
+        optimizer.zero_grad()
 
-    samples += inputs.shape[0]
-    cumulative_loss += loss.item()
+        samples += inputs.shape[0]
+        cumulative_loss += loss.item()
 
-  return cumulative_loss/samples
+    return cumulative_loss / samples
 
 
 def test_step(model, cost_function, optimizer, test_loader):
+    samples = 0.0
+    cumulative_loss = 0.0
+    preds = []
 
-  samples = 0.
-  cumulative_loss = 0.
-  preds = []
+    model.eval()
 
-  model.eval() 
+    with torch.no_grad():
+        test_loader_tqdm = tqdm(
+            test_loader, total=len(test_loader), desc="Test Batches"
+        )
+        for step, (inputs, targets) in enumerate(test_loader_tqdm):
+            inputs = inputs.squeeze(dim=1).to(device)
+            targets = targets.reshape(targets.shape[0], 1).to(device)
 
-  with torch.no_grad():
-    test_loader_tqdm = tqdm(test_loader, total=len(test_loader), desc='Test Batches')
-    for step, (inputs, targets) in enumerate(test_loader_tqdm):
+            outputs = model(inputs)
 
-      inputs = inputs.squeeze(dim=1).to(device)
-      targets = targets.reshape(targets.shape[0],1).to(device)
+            loss = cost_function(outputs, targets)
 
-      outputs = model(inputs)
+            samples += inputs.shape[0]
+            cumulative_loss += loss.item()
+            for out in outputs:
+                preds.append(float(out))
 
-      loss = cost_function(outputs, targets)
+    return cumulative_loss / samples, preds
 
-      samples += inputs.shape[0]
-      cumulative_loss += loss.item()
-      for out in outputs:
-        preds.append(float(out))
 
-  return cumulative_loss/samples, preds
-     
 # hyper-parameters
 input_size = 2048
 embedding_size = 768
@@ -289,85 +336,94 @@ preds_dict = {}
 scaled_dataset = get_scaled_dataset(dataset)
 
 for n, (train, test) in enumerate(kf.split(dataset)):
-  gc.collect()
-  # train, test splits 
-  # scaled scores in train_df are computed only using training data
-  train_df = dataset.iloc[train]
-  train_df = get_scaled_dataset(train_df)
+    if n == 0:
+        gc.collect()
+        # train, test splits
+        # scaled scores in train_df are computed only using training data
+        train_df = dataset.iloc[train]
+        train_df = get_scaled_dataset(train_df)
 
-  test_df = scaled_dataset.iloc[test]
+        test_df = scaled_dataset.iloc[test]
 
-  # dataloaders
-  train_loader = get_loader(train_df, id2emb, essay_embeddings, shuffle=True)
-  test_loader = get_loader(test_df, id2emb, essay_embeddings, shuffle=False)
+        # dataloaders
+        train_loader = get_loader(train_df, id2emb, essay_embeddings, shuffle=True)
+        test_loader = get_loader(test_df, id2emb, essay_embeddings, shuffle=False)
 
-  # model
-  print('------------------------------------------------------------------')
-  print(f"\t\t\tTraining model: {n+1}")
-  print('------------------------------------------------------------------')
-  model = MLP(input_size, embedding_size, window_size).to(device)
-  
-  # loss and optimizer
-  cost_function = torch.nn.MSELoss()
-  optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+        # model
+        print("------------------------------------------------------------------")
+        print(f"\t\t\tTraining model: {n+1}")
+        print("------------------------------------------------------------------")
+        model = MLP(input_size, embedding_size, window_size).to(device)
 
-  # training
-  train_loss, train_preds = test_step(model, cost_function, optimizer, train_loader)
-  test_loss, test_preds = test_step(model, cost_function, optimizer, test_loader)
-  print('Before training:\tLoss/train: {:.5f}\tLoss/test: {:.5f}'.format(train_loss, test_loss))
+        # loss and optimizer
+        cost_function = torch.nn.MSELoss()
+        optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
-  epoch_tqdm = tqdm(range(epochs), total=epochs, desc='Epochs')
-  for epoch in epoch_tqdm:
-    train_loss = training_step(model, cost_function, optimizer, train_loader)
-    test_loss, test_preds = test_step(model, cost_function, optimizer, test_loader)
-    epoch_tqdm.set_postfix ({f"Epoch: {epoch+1} \t\t Train Loss: {train_loss:.5f} Test Loss: {test_loss:.5f} \n":  test_loss})
-
-
-  train_loss, train_preds = test_step(model, cost_function, optimizer, train_loader)
-  test_loss, test_preds = test_step(model, cost_function, optimizer, test_loader)
-  print('After training:\t\tLoss/train: {:.5f}\tLoss/test: {:.5f}'.format(train_loss, test_loss))
-
-  # store test_df and predictions
-  train_df_dict[f"model_{n+1}"] = train_df
-  test_df_dict[f"model_{n+1}"] = test_df
-  preds_dict[f"model_{n+1}"] = test_preds
-  
-
-
-def get_results_df(train_df, test_df, model_preds):
-    # create new results df with model scaled preds
-    preds_df = pd.DataFrame(model_preds)
-    results_df = (
-        test_df.reset_index(drop=True)
-        .join(preds_df)
-        .rename(columns={0: "scaled_pred"})
-        .sort_values(by="essay_set")
-        .reset_index(drop=True)
-    )
-
-    # move score to last colum
-    s_df = results_df.pop("score")
-    results_df["score"] = s_df
-
-    # scale back to original range by essay set
-    preds = pd.Series(dtype="float64")
-    for essay_set in range(1, 9):
-        scaler = StandardScaler()
-        score_df = train_df[train_df["essay_set"] == essay_set]["score"].to_frame()
-        scaler.fit(score_df)
-        scaled_preds = results_df.loc[
-            results_df["essay_set"] == essay_set, "scaled_pred"
-        ].to_frame()
-        preds_rescaled = scaler.inverse_transform(scaled_preds).round(0).astype("int")
-        preds = preds.append(
-            pd.Series(np.squeeze(np.asarray(preds_rescaled))), ignore_index=True
+        # training
+        train_loss, train_preds = test_step(model, cost_function, optimizer, train_loader)
+        test_loss, test_preds = test_step(model, cost_function, optimizer, test_loader)
+        print(
+            "Before training:\tLoss/train: {:.5f}\tLoss/test: {:.5f}".format(
+                train_loss, test_loss
+            )
         )
 
-    # append to results df
-    results_df["pred"] = preds
+        epoch_tqdm = tqdm(range(epochs), total=epochs, desc="Epochs")
+        for epoch in epoch_tqdm:
+            train_loss = training_step(model, cost_function, optimizer, train_loader)
+            test_loss, test_preds = test_step(model, cost_function, optimizer, test_loader)
+            epoch_tqdm.set_postfix(
+                {
+                    f"Epoch: {epoch+1} \t\t Train Loss: {train_loss:.5f} Test Loss: {test_loss:.5f} \n": test_loss
+                }
+            )
 
-    return results_df
+        train_loss, train_preds = test_step(model, cost_function, optimizer, train_loader)
+        test_loss, test_preds = test_step(model, cost_function, optimizer, test_loader)
+        print(
+            "After training:\t\tLoss/train: {:.5f}\tLoss/test: {:.5f}".format(
+                train_loss, test_loss
+            )
+        )
 
+        results_df = get_results_df(train_df, test_df, test_preds)
+
+        kappas_by_set = []
+        for essay_set in range(1, 9):
+            kappas_by_set.append(
+                kappa(
+                    results_df.loc[results_df["essay_set"] == essay_set, "score"],
+                    results_df.loc[results_df["essay_set"] == essay_set, "pred"],
+                    weights="quadratic",
+                )
+            )
+        id = n + 1
+        data = ""
+        print("--------------------------------------")
+        print(f"\tResults for model: {id}")
+        print("--------------------------------------")
+        data += "\n--------------------------------------"
+        data += f"\n\tResults for model: {id}"
+        data += "\n--------------------------------------"
+        for essay_set in range(8):
+            data += "\nKappa for essay set {:}:\t\t{:.4f}".format(
+                essay_set + 1, kappas_by_set[essay_set]
+            )
+            print(
+                "Kappa for essay set {:}:\t\t{:.4f}".format(
+                    essay_set + 1, kappas_by_set[essay_set]
+                )
+            )
+        data += "\nmean QWK:\t\t\t{:.4f}".format(np.mean(kappas_by_set))
+        print("mean QWK:\t\t\t{:.4f}".format(np.mean(kappas_by_set)))
+
+        # store test_df and predictions
+        train_df_dict[f"model_{n+1}"] = train_df
+        test_df_dict[f"model_{n+1}"] = test_df
+        preds_dict[f"model_{n+1}"] = test_preds
+
+import sys
+sys.exit()
 
 # list of mqw_kappa for each model
 mqwk_list = []
@@ -466,6 +522,7 @@ data = ""
 for i in range(1, 11):
     results_df, data = show_results(i, data)
 
+
 def check_and_create_directory(directory_path):
     if not os.path.exists(directory_path):
         os.makedirs(directory_path)
@@ -473,10 +530,11 @@ def check_and_create_directory(directory_path):
     else:
         print(f"Directory '{directory_path}' already exists.")
 
+
 # Example usage:
 save_directory = "./../Data/results/deberta-2048"
 check_and_create_directory(save_directory)
 
-file = open(os.path.join(save_directory,f"qwk-{window_size}.txt"), "w")
+file = open(os.path.join(save_directory, f"qwk-{window_size}.txt"), "w")
 file.write(data)
 file.close()
