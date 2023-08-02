@@ -283,7 +283,7 @@ print("after kfold init")
 train_df_dict = {}
 test_df_dict = {}
 preds_dict = {}
-
+best_model_path = os.path.join(data_dir,'long_best.pth')
 # copy of dataset with scaled scores computed using the whole dataset
 print("copy of scaled_dataset begin")
 scaled_dataset = get_scaled_dataset(dataset)
@@ -323,14 +323,19 @@ for n, (train, test) in enumerate(kf.split(dataset)):
     train_loss, train_preds = test_step(model, cost_function, optimizer, train_loader)
     test_loss, test_preds = test_step(model, cost_function, optimizer, test_loader)
     print('Before training:\tLoss/train: {:.5f}\tLoss/test: {:.5f}'.format(train_loss, test_loss))
-
+    best_loss = 1.0
     epoch_tqdm = tqdm(range(epochs), total=epochs, desc='Epochs')
     for epoch in epoch_tqdm:
         train_loss = training_step(model, cost_function, optimizer, train_loader)
         test_loss, test_preds = test_step(model, cost_function, optimizer, test_loader)
+        if test_loss < best_loss:
+            torch.save(model.state_dict(), best_model_path)
+            print("Saving model")
+            best_loss = test_loss
+
         epoch_tqdm.set_postfix ({f"Epoch: {epoch+1} \t\t Train Loss: {train_loss:.5f} Test Loss: {test_loss:.5f} \n":  test_loss})
 
-
+    model.load_state_dict(torch.load(best_model_path))
     train_loss, train_preds = test_step(model, cost_function, optimizer, train_loader)
     test_loss, test_preds = test_step(model, cost_function, optimizer, test_loader)
     print('After training:\t\tLoss/train: {:.5f}\tLoss/test: {:.5f}'.format(train_loss, test_loss))
