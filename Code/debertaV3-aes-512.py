@@ -30,7 +30,7 @@ dataset = pd.DataFrame(
     }
 )
 
-transformer_architecture = "microsoft/deberta-v2-xlarge" #'microsoft/deberta-v3-small' mlcorelib/debertav2-base-uncased microsoft/deberta-v2-xlarge
+transformer_architecture = 'microsoft/deberta-v3-base' #'microsoft/deberta-v3-small' mlcorelib/debertav2-base-uncased microsoft/deberta-v2-xlarge
 config = AutoConfig.from_pretrained(transformer_architecture, output_hidden_states=True)
 config.max_position_embeddings = 512
 tokenizer = AutoTokenizer.from_pretrained(transformer_architecture, max_length=config.max_position_embeddings, padding="max_length", return_attention_mask=True)
@@ -87,12 +87,12 @@ def mean_encoding(essay_list, model, tokenizer):
     embeddings.append(np.squeeze(np.asarray(tokens_embeddings)))
   return np.array(embeddings)
 
-if os.path.exists(os.path.join(data_dir,'embeddings_d_512.pt')):
-    essay_embeddings = torch.load(os.path.join(data_dir,'embeddings_d_512.pt'), map_location=torch.device('cpu'))
-    print(f"embeddings loaded from {os.path.join(data_dir,'embeddings_d_512.pt')}")
+if os.path.exists(os.path.join(data_dir,'embeddings_dv3_512.pt')):
+    essay_embeddings = torch.load(os.path.join(data_dir,'embeddings_dv3_512.pt'), map_location=torch.device('cpu'))
+    print(f"embeddings loaded from {os.path.join(data_dir,'embeddings_dv3_512.pt')}")
 else:
     essay_embeddings = mean_encoding(dataset['essay'], roberta, tokenizer)
-    torch.save(essay_embeddings, os.path.join(data_dir,'embeddings_d_512.pt'), pickle_protocol=4)
+    torch.save(essay_embeddings, os.path.join(data_dir,'embeddings_dv3_512.pt'), pickle_protocol=4)
 
 
 
@@ -116,7 +116,7 @@ class MLP(torch.nn.Module):
     super(MLP, self).__init__()
     self.window_size = window_size
     self.layers1 = torch.nn.Sequential(
-      torch.nn.Linear(1536, 256),
+      torch.nn.Linear(768, 256),
       torch.nn.ReLU(),
       torch.nn.Dropout(0.3),
       torch.nn.Linear(256, 96),
@@ -469,7 +469,7 @@ def check_and_create_directory(directory_path):
         print(f"Directory '{directory_path}' already exists.")
 
 # Example usage:
-save_directory = "./../Data/results/deberta-V2-512"
+save_directory = "./../Data/results/deberta-512"
 check_and_create_directory(save_directory)
 
 file = open(os.path.join(save_directory,f"qwk-{window_size}.txt"), "w")
