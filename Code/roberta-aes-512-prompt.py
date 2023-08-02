@@ -101,12 +101,12 @@ def mean_encoding(essay_list, essay_set_list, model, tokenizer):
     embeddings.append(np.squeeze(np.asarray(tokens_embeddings)))
   return np.array(embeddings)
 
-if os.path.exists(os.path.join(data_dir,'embeddings_r_512.pt')):
-    essay_embeddings = torch.load(os.path.join(data_dir,'embeddings_r_512.pt'), map_location=torch.device('cpu'))
-    print(f"embeddings loaded from {os.path.join(data_dir,'embeddings_r_512.pt')}")
+if os.path.exists(os.path.join(data_dir,'embeddings_r_p_512.pt')):
+    essay_embeddings = torch.load(os.path.join(data_dir,'embeddings_r_p_512.pt'), map_location=torch.device('cpu'))
+    print(f"embeddings loaded from {os.path.join(data_dir,'embeddings_r_p_512.pt')}")
 else:
     essay_embeddings = mean_encoding(dataset['essay'], dataset["essay_set"], roberta, tokenizer)
-    torch.save(essay_embeddings, os.path.join(data_dir,'embeddings_r_512.pt'), pickle_protocol=4)
+    torch.save(essay_embeddings, os.path.join(data_dir,'embeddings_r_p_512.pt'), pickle_protocol=4)
 
 
 
@@ -483,7 +483,7 @@ def check_and_create_directory(directory_path):
         print(f"Directory '{directory_path}' already exists.")
 
 # Example usage:
-save_directory = "./../Data/results/roberta-512"
+save_directory = "./../Data/results/roberta-512-prompt"
 check_and_create_directory(save_directory)
 
 file = open(os.path.join(save_directory,f"qwk-{window_size}.txt"), "w")
