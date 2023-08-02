@@ -45,8 +45,7 @@ for essay_set in range(1, 9):
         len(tokenizer.tokenize(essay))
         for essay in dataset[dataset["essay_set"] == essay_set]["essay"]
     ]
-
-print(length_dict[0].keys())
+    print(max(length_dict[essay_set]))
 def get_scaled_dataset(dataset):
     scaler = StandardScaler()
     scaled = []
