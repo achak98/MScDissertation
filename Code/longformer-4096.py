@@ -82,7 +82,7 @@ def mean_encoding(essay_list, model, tokenizer):
   for essay in tqdm(essay_list):
     #essay = essay[:512]
     #print(len(essay))
-    encoded_input = tokenizer(essay, padding="max_length", max_length=2048, return_tensors='pt', return_attention_mask=True).to(device)
+    encoded_input = tokenizer(essay, padding="max_length", max_length=1536, return_tensors='pt', return_attention_mask=True).to(device)
     #print(encoded_input["input_ids"].size())
     with torch.no_grad():
       model_output = model(**encoded_input)
@@ -92,16 +92,16 @@ def mean_encoding(essay_list, model, tokenizer):
   return np.array(embeddings)
 
 import h5py
-embeddings_file = os.path.join(data_dir,'embeddings_l_2048.pt')
+embeddings_file = os.path.join(data_dir,'embeddings_l_1536.pt')
 if os.path.exists(embeddings_file):
     h5f = h5py.File(embeddings_file,'r')
-    essay_embeddings = h5f['embeddings_l_2048'][:]
+    essay_embeddings = h5f['embeddings_l_1536'][:]
     h5f.close()
     print(f"embeddings loaded from {embeddings_file}")
 else:
     essay_embeddings = mean_encoding(dataset['essay'], roberta, tokenizer)
     h5f = h5py.File(embeddings_file, 'w')
-    h5f.create_dataset('embeddings_l_2048', data=essay_embeddings)
+    h5f.create_dataset('embeddings_l_1536', data=essay_embeddings)
     h5f.close()
 
 print("embeddings done")
@@ -267,7 +267,7 @@ def get_results_df(train_df, test_df, model_preds):
 
 print("before hypparams")
 # hyper-parameters
-input_size = 2048
+input_size = 1536
 embedding_size = 768
 epochs = 10
 lr = 3e-4
