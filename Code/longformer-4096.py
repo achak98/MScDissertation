@@ -46,7 +46,7 @@ for essay_set in range(1, 9):
         for essay in dataset[dataset["essay_set"] == essay_set]["essay"]
     ]
 
-
+print(length_dict[0].keys())
 def get_scaled_dataset(dataset):
     scaler = StandardScaler()
     scaled = []
@@ -270,7 +270,7 @@ print("before hypparams")
 # hyper-parameters
 input_size = 2048
 embedding_size = 768
-epochs = 50
+epochs = 10
 lr = 3e-4
 window_size = 5
 # cross-validation folds
