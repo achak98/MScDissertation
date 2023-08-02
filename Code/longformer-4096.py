@@ -270,7 +270,7 @@ print("before hypparams")
 # hyper-parameters
 input_size = 2048
 embedding_size = 768
-epochs = 15
+epochs = 50
 lr = 3e-4
 window_size = 5
 # cross-validation folds
@@ -327,8 +327,8 @@ for n, (train, test) in enumerate(kf.split(dataset)):
             epoch_tqdm.set_postfix ({f"Epoch: {epoch+1} \t\t Train Loss: {train_loss:.5f} Test Loss: {test_loss:.5f} \n":  test_loss})
 
 
-            train_loss, train_preds = test_step(model, cost_function, optimizer, train_loader)
-            test_loss, test_preds = test_step(model, cost_function, optimizer, test_loader)
+        train_loss, train_preds = test_step(model, cost_function, optimizer, train_loader)
+        test_loss, test_preds = test_step(model, cost_function, optimizer, test_loader)
         print('After training:\t\tLoss/train: {:.5f}\tLoss/test: {:.5f}'.format(train_loss, test_loss))
 
         print("getting results df")
