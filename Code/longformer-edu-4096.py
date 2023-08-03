@@ -105,7 +105,7 @@ def mean_encoding(essay_list, essay_id_list, model, tokenizer):
                 essay += line.strip() + " [SEP] "
     else:
        essay = default_essay
-    
+       
     if max_len < len(tokenizer.tokenize(essay)):
        max_len = len(tokenizer.tokenize(essay))
     encoded_input = tokenizer(essay, padding="max_length", truncation=True, max_length=length, return_tensors='pt', return_attention_mask=True).to(device)
@@ -118,16 +118,16 @@ def mean_encoding(essay_list, essay_id_list, model, tokenizer):
   return np.array(embeddings)
 
 import h5py
-embeddings_file = os.path.join(data_dir,f'embeddings_l_p_{length}.pt')
+embeddings_file = os.path.join(data_dir,f'embeddings_l_edu_{length}.pt')
 if os.path.exists(embeddings_file):
     h5f = h5py.File(embeddings_file,'r')
-    essay_embeddings = h5f[f'embeddings_l_p_{length}'][:]
+    essay_embeddings = h5f[f'embeddings_l_edu_{length}'][:]
     h5f.close()
     print(f"embeddings loaded from {embeddings_file}")
 else:
     essay_embeddings = mean_encoding(dataset['essay'], dataset["essay_id"], roberta, tokenizer)
     h5f = h5py.File(embeddings_file, 'w')
-    h5f.create_dataset(f'embeddings_l_p_{length}', data=essay_embeddings)
+    h5f.create_dataset(f'embeddings_l_edu_{length}', data=essay_embeddings)
     h5f.close()
 
 print("embeddings done")
@@ -397,7 +397,7 @@ def check_and_create_directory(directory_path):
 
 
 # Example usage:
-save_directory = "./../Data/results/longformer-prompt"
+save_directory = "./../Data/results/longformer-edu"
 check_and_create_directory(save_directory)
 
 file = open(os.path.join(save_directory, f"qwk.txt"), "w")
