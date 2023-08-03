@@ -15,6 +15,8 @@ import gc
 import warnings
 warnings.filterwarnings("ignore")
 
+length = 1664
+
 # set device
 device = torch.device("cuda:5" if torch.cuda.is_available() else "cpu")
 
@@ -99,7 +101,7 @@ def mean_encoding(essay_list, essay_set_list, model, tokenizer):
     essay = prompts_dict[essay_set] + " [SEP] [CLS] " +essay
     if max_len < len(tokenizer.tokenize(essay)):
        max_len = len(tokenizer.tokenize(essay))
-    encoded_input = tokenizer(essay, padding="max_length", truncation=True, max_length=1536, return_tensors='pt', return_attention_mask=True).to(device)
+    encoded_input = tokenizer(essay, padding="max_length", truncation=True, max_length=length, return_tensors='pt', return_attention_mask=True).to(device)
     #print(encoded_input["input_ids"].size())
     with torch.no_grad():
       model_output = model(**encoded_input)
@@ -109,16 +111,16 @@ def mean_encoding(essay_list, essay_set_list, model, tokenizer):
   return np.array(embeddings)
 
 import h5py
-embeddings_file = os.path.join(data_dir,'embeddings_l_p_1536.pt')
+embeddings_file = os.path.join(data_dir,'embeddings_l_p_length.pt')
 if os.path.exists(embeddings_file):
     h5f = h5py.File(embeddings_file,'r')
-    essay_embeddings = h5f['embeddings_l_p_1536'][:]
+    essay_embeddings = h5f['embeddings_l_p_length'][:]
     h5f.close()
     print(f"embeddings loaded from {embeddings_file}")
 else:
     essay_embeddings = mean_encoding(dataset['essay'], dataset["essay_set"], roberta, tokenizer)
     h5f = h5py.File(embeddings_file, 'w')
-    h5f.create_dataset('embeddings_l_p_1536', data=essay_embeddings)
+    h5f.create_dataset('embeddings_l_p_length', data=essay_embeddings)
     h5f.close()
 
 print("embeddings done")
@@ -274,7 +276,7 @@ def get_results_df(train_df, test_df, model_preds):
 
 print("before hypparams")
 # hyper-parameters
-input_size = 1536
+input_size = length
 embedding_size = 768
 epochs = 12
 lr = 3e-4
