@@ -15,7 +15,7 @@ import gc
 import warnings
 warnings.filterwarnings("ignore")
 
-length = 1664
+length = 1536
 
 # set device
 device = torch.device("cuda:5" if torch.cuda.is_available() else "cpu")
