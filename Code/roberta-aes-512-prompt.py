@@ -92,7 +92,7 @@ def mean_encoding(essay_list, essay_set_list, model, tokenizer):
   for (essay,essay_set) in tqdm(zip(essay_list, essay_set_list)):
     #essay = essay[:512]
     #print(len(essay))
-    essay = prompts_dict[essay_set] + essay
+    essay = prompts_dict[essay_set]  + " [SEP] [CLS] " + essay
     encoded_input = tokenizer(essay, padding="max_length", truncation=True, max_length=512, return_tensors='pt', return_attention_mask=True).to(device)
     #print(encoded_input["input_ids"].size())
     with torch.no_grad():

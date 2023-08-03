@@ -111,16 +111,16 @@ def mean_encoding(essay_list, essay_set_list, model, tokenizer):
   return np.array(embeddings)
 
 import h5py
-embeddings_file = os.path.join(data_dir,'embeddings_l_p_length.pt')
+embeddings_file = os.path.join(data_dir,f'embeddings_l_p_{length}.pt')
 if os.path.exists(embeddings_file):
     h5f = h5py.File(embeddings_file,'r')
-    essay_embeddings = h5f['embeddings_l_p_length'][:]
+    essay_embeddings = h5f[f'embeddings_l_p_{length}'][:]
     h5f.close()
     print(f"embeddings loaded from {embeddings_file}")
 else:
     essay_embeddings = mean_encoding(dataset['essay'], dataset["essay_set"], roberta, tokenizer)
     h5f = h5py.File(embeddings_file, 'w')
-    h5f.create_dataset('embeddings_l_p_length', data=essay_embeddings)
+    h5f.create_dataset(f'embeddings_l_p_{length}', data=essay_embeddings)
     h5f.close()
 
 print("embeddings done")
