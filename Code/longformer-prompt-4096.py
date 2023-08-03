@@ -98,7 +98,7 @@ def mean_encoding(essay_list, essay_set_list, model, tokenizer):
   for (essay,essay_set) in tqdm(zip(essay_list, essay_set_list), total=len(essay_list)):
     #essay = essay[:512]
     #print(len(essay))
-    essay = prompts_dict[essay_set] + " [SEP] [CLS] " +essay
+    essay = prompts_dict[essay_set] + f" {tokenizer.sep_token} {tokenizer.cls_token} " +essay
     if max_len < len(tokenizer.tokenize(essay)):
        max_len = len(tokenizer.tokenize(essay))
     encoded_input = tokenizer(essay, padding="max_length", truncation=True, max_length=length, return_tensors='pt', return_attention_mask=True).to(device)
