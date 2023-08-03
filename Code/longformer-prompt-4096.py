@@ -95,7 +95,7 @@ def mean_encoding(essay_list, essay_set_list, model, tokenizer):
   print('Encoding essay embeddings:')
   embeddings = []
   max_len = 0
-  for (essay,essay_set) in tqdm(zip(essay_list, essay_set_list)):
+  for (essay,essay_set) in tqdm(zip(essay_list, essay_set_list), total=len(essay_list)):
     #essay = essay[:512]
     #print(len(essay))
     essay = prompts_dict[essay_set] + " [SEP] [CLS] " +essay
