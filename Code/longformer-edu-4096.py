@@ -104,7 +104,7 @@ def mean_encoding(essay_list, essay_id_list, model, tokenizer):
             for line in file:
                 essay += line.strip() + " [SEP] "
     else:
-       print(f"couldn't find edus for essay id: {essay_id}")
+       print(f"couldn't find edus for essay id: {essay_id} \n Looked at path: {os.path.join(edu_dir, str(essay_id) + '.out')}")
        essay = default_essay
        
     if max_len < len(tokenizer.tokenize(essay)):
