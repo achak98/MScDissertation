@@ -2,20 +2,17 @@ import pandas as pd
 import os
 from tqdm import tqdm
 data_dir = "./../Data/ArgumentAnnotatedEssays-2.0"
-essay_dir = "./../Data/ArgumentAnnotatedEssays-2.0/brat-project-final"
+essay_dir = os.path.join(data_dir,"brat-project-final")
+test_train_split_file = os.path.join(data_dir,"train-test-split.csv")
 # Original kaggle training set
-kaggle_dataset = pd.read_csv(
-    os.path.join(data_dir,"training_set_rel3.tsv"), sep="\t", encoding="ISO-8859-1"
+test_train_split = pd.read_csv(
+    test_train_split_file, sep="\t", encoding="ISO-8859-1"
 )
 # Smaller training set used for this project
 dataset = pd.DataFrame(
     {
-        "essay_id": kaggle_dataset["essay_id"],
-        "essay_set": kaggle_dataset["essay_set"],
-        "essay": kaggle_dataset["essay"],
-        "rater1": kaggle_dataset["rater1_domain1"],
-        "rater2": kaggle_dataset["rater2_domain1"],
-        "score": kaggle_dataset["domain1_score"],
+        "ID": test_train_split["ID"],
+        "SET": test_train_split["SET"]
     }
 )
 def check_and_create_directory(directory_path):
@@ -25,10 +22,36 @@ def check_and_create_directory(directory_path):
     else:
         print(f"Directory '{directory_path}' already exists.")
 
-check_and_create_directory(os.path.join(data_dir,"edu_in"))
+adu_in = os.path.join(data_dir,"adu_in")
+test = os.path.join(adu_in,"TEST")
+train = os.path.join(adu_in,"TRAINING")
+check_and_create_directory(adu_in)
+check_and_create_directory(test)
+check_and_create_directory(train)
 
-for (essay,essay_id) in tqdm(zip(dataset["essay"], dataset["essay_id"])):
-    modified_essay = essay.replace(". ", ".\n")
-    output_file_name = os.path.join(data_dir,"edu_in",f"{essay_id}.out")
-    with open(output_file_name, "w") as file:
-        file.write(modified_essay)
+for (eid,eset) in tqdm(zip(dataset["ID"], dataset["SET"])):
+    annfile = str(eid)+".ann"
+    txtfile = str(eid)+".txt"
+    data = ""
+    if eset == "TRAIN":
+        output_file_name = os.path.join(train,f"{eid}.out")
+    elif eset == "TEST":
+        output_file_name = os.path.join(test,f"{eid}.out")
+    sorted_t_anns = []
+    with open(txtfile, "r") as text:
+        essay = text.read()
+        with open(annfile, "r") as ann:
+            annotations = ann.read()
+            t_anns = []
+            for annotation in annotations:
+                if annotation.startswith("T"):
+                    print(annotation)
+                    first_split = annotation.split("\t") 
+                    second_split = first_split[1].split()
+                    t_anns.append([second_split[1],second_split[2]])
+            sorted_t_anns = sorted(t_anns, key=lambda x: int(x[0]))
+        data = ""
+        for (start, end) in sorted_t_anns:
+            data += essay[int(start):int(end)] + "\n"
+        with open(output_file_name, "w") as op:
+            op.write(data)
