@@ -8,7 +8,7 @@ import numpy as np
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from transformers import DebertaV3Model
-from TorchCRF import CRF 
+
 import torch.optim as optim
 from sklearn.metrics import classification_report, multilabel_confusion_matrix
 from seqeval.metrics import precision_score, recall_score, f1_score, accuracy_score
@@ -45,9 +45,9 @@ def parse_args():
                                help = 'split file name')
     path_settings.add_argument('--prompts_file', default = "prompts.csv", 
                                help = 'prompts file name')
-    path_settings.add_argument('--output_train_file', default = "preprocessed_data_train.csv", 
+    path_settings.add_argument('--output_train_file', default = "preprocessed_data_adu_train.csv", 
                                help = 'preprocessed_train file name')
-    path_settings.add_argument('--output_test_file', default = "preprocessed_data_test.csv", 
+    path_settings.add_argument('--output_test_file', default = "preprocessed_data_adu_test.csv", 
                                help = 'preprocessed_test file name')
     path_settings.add_argument('--seg_data_path',
                                help='the path of the data to segment')
@@ -117,10 +117,8 @@ def preprocess_PE_dataset(input_folder, train_test_split_file, prompts_file, out
             # Generate BIOE labels for the ADUs
             adu_labels = [tag2idx["O"]] * len(text)
             for start, end, label in adus:
-                adu_labels[start] = tag2idx[f"B-{label}"]
-                for i in range(start + 1, end):
-                    adu_labels[i] = tag2idx[f"I-{label}"]
-                adu_labels[end] = tag2idx[f"E-{label}"]
+                for i in range(start, end+1):
+                    adu_labels[i] = tag2idx["I"]
 
             # Write the preprocessed data to the appropriate file
             writer.writerow([file_name, prompts[file_name], text, adu_labels])
@@ -143,13 +141,13 @@ class SelfAttention(nn.Module):
         return outputs, weights
 
 class ADUPredictor(nn.Module):
-    def __init__(self, tagset_size=4, hidden_dim=512):
+    def __init__(self, tagset_size=1, hidden_dim=512):
         super(ADUPredictor, self).__init__()
 
         self.hidden_dim = hidden_dim
-        self.transformer_architecture = 'microsoft/deberta-v3-base'
+        self.transformer_architecture = 'allenai/longformer-base-4096'
         self.config = AutoConfig.from_pretrained(self.transformer_architecture, output_hidden_states=True)
-        self.config.max_position_embeddings = 2046
+        self.config.max_position_embeddings = 2048
         self.encoder = AutoModel.from_pretrained(self.transformer_architecture, config=self.config)
         # Define BiLSTM 1
         self.lstm1 = nn.LSTM(self.encoder.config.hidden_size, hidden_dim // 2, bidirectional=True)
@@ -162,9 +160,9 @@ class ADUPredictor(nn.Module):
 
         # Define MLP
         self.hidden2tag = nn.Linear(hidden_dim, tagset_size)
-
+        #self.softmax = nn.Softmax(dim=1)
         # Define CRF
-        self.crf = CRF(tagset_size)
+        #self.crf = CRF(tagset_size)
 
     def forward(self, sentences):
         encoded_layers = self.encoder(sentences)
@@ -173,15 +171,15 @@ class ADUPredictor(nn.Module):
         attn_out, attention_weights = self.self_attention(lstm_out)
         lstm_out, _ = self.lstm2(attn_out.unsqueeze(1))
         tag_space = self.hidden2tag(lstm_out.view(len(sentences), -1))
-        tag_scores = self.crf.decode(tag_space)
 
-        return tag_scores, attention_weights
+        return tag_space
 
 def main():
     args = parse_args()
 
     # Define the mapping from index to tag
-    idx2tag = {0: 'B-MajorClaim', 1: 'B-Claim', 2: 'B-Premise', 3: 'I-MajorClaim', 4: 'I-Claim', 5: 'I-Premise', 6:'O', 7: 'E-MajorClaim', 8: 'E-Claim', 9: 'E-Premise'}
+    #idx2tag = {0: 'B-MajorClaim', 1: 'B-Claim', 2: 'B-Premise', 3: 'I-MajorClaim', 4: 'I-Claim', 5: 'I-Premise', 6:'O', 7: 'E-MajorClaim', 8: 'E-Claim', 9: 'E-Premise'}
+    idx2tag = {0:"I", 1:"O"}
     tag2idx = {tag: idx for idx, tag in idx2tag.items()}
     
 
@@ -198,10 +196,10 @@ def main():
 
     # Define the optimizer
     optimizer = optim.AdamW(model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
-
+    criterion = nn.BCEWithLogitsLoss()
     if args.train:
          # Convert data to PyTorch tensors and move to the device
-        train_data = pd.read_csv(os.path.join(args.pe_dir, 'preprocessed_data_train.csv'))
+        train_data = pd.read_csv(os.path.join(args.pe_dir, 'preprocessed_data_adu_train.csv'))
         "Prompt", "Text", "ADU"
         train_inputs = torch.tensor(train_data['Text'], dtype=torch.long).to(device)
         train_labels = torch.tensor(train_data['BIOE'], dtype=torch.long).to(device)
@@ -221,11 +219,10 @@ def main():
                 optimizer.zero_grad()  # Zero the gradients
 
                 # Forward propagation
-                tag_scores, _ = model(inputs)
+                tag_space = model(inputs)
 
                 # Compute the loss
-                loss = -model.crf(tag_scores, labels)
-
+                loss = criterion(tag_space, labels)
                 # Backward propagation
                 loss.backward()
 
@@ -246,7 +243,7 @@ def main():
         print(f"Trained model saved to: {model_path}")
 
     if args.evaluate:
-        test_data = pd.read_csv(os.path.join(args.pe_dir, 'preprocessed_data_test.csv'))
+        test_data = pd.read_csv(os.path.join(args.pe_dir, 'preprocessed_data_adu_test.csv'))
         test_inputs = torch.tensor(test_data['Text'], dtype=torch.long).to(device)
         test_labels = torch.tensor(test_data['BIOE'], dtype=torch.long).to(device)
         # Load the trained model
@@ -258,8 +255,9 @@ def main():
         model.eval()  # Set model to evaluation mode
         with torch.no_grad():
             # Predict output for test set
-            test_tag_scores, _ = model(test_inputs)
-            test_pred = model.crf.decode(test_tag_scores)
+            test_tag_scores = model(test_inputs)
+            sig = nn.Sigmoid()
+            test_pred = (sig(test_tag_scores) > 0.5).float()
 
             # Flatten both labels and predictions
             test_tags = [idx2tag[i] for row in test_labels for i in row]
@@ -306,6 +304,6 @@ def main():
 
         #TODO: FIGURE OUT HOW TO SAVE THE DATA
         seg_df = pd.DataFrame(data, columns=['Text', 'BIOE'])
-        seg_df.to_csv('preprocessed_data_test.csv', index=False)
+        seg_df.to_csv('preprocessed_data_adu_test.csv', index=False)
 if __name__ == '__main__':
     main()

@@ -118,20 +118,20 @@ def mean_encoding(essay_list, essay_id_list, model, tokenizer):
   print(max_len)
   return np.array(embeddings)
 
-import h5py
+"""import h5py
 embeddings_file = os.path.join(data_dir,f'embeddings_l_edu_{length}.pt')
 if os.path.exists(embeddings_file):
     h5f = h5py.File(embeddings_file,'r')
     essay_embeddings = h5f[f'embeddings_l_edu_{length}'][:]
     h5f.close()
     print(f"embeddings loaded from {embeddings_file}")
-else:
-    essay_embeddings = mean_encoding(dataset['essay'], dataset["essay_id"], roberta, tokenizer)
-    h5f = h5py.File(embeddings_file, 'w')
+else:"""
+essay_embeddings = mean_encoding(dataset['essay'], dataset["essay_id"], roberta, tokenizer)
+"""    h5f = h5py.File(embeddings_file, 'w')
     h5f.create_dataset(f'embeddings_l_edu_{length}', data=essay_embeddings)
     h5f.close()
 
-print("embeddings done")
+print("embeddings done")"""
 
 
 def get_loader(df, id2emb, essay_embeddings, shuffle=True):
