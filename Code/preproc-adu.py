@@ -36,9 +36,11 @@ for (eid,eset) in tqdm(zip(dataset["ID"], dataset["SET"])):
     txtfile = os.path.join(data_dir,str(eid)+".txt")
     data = ""
     if eset == "TRAIN":
-        output_file_name = os.path.join(train,f"{eid}.out")
+        ann_output_file_name = os.path.join(train,f"{eid}.out.edus")
+        text_output_file_name = os.path.join(train,f"{eid}.out")
     elif eset == "TEST":
-        output_file_name = os.path.join(test,f"{eid}.out")
+        ann_output_file_name = os.path.join(test,f"{eid}.out.edus")
+        text_output_file_name = os.path.join(test,f"{eid}.out")
     sorted_t_anns = []
     with open(txtfile, "r") as text:
         essay = text.read()
@@ -55,5 +57,7 @@ for (eid,eset) in tqdm(zip(dataset["ID"], dataset["SET"])):
         data = ""
         for (start, end) in sorted_t_anns:
             data += essay[int(start):int(end)] + "\n"
-        with open(output_file_name, "w") as op:
-            op.write(data)
+        with open(ann_output_file_name, "w") as ann_op:
+            ann_op.write(data)
+        with open(text_output_file_name, "w") as txt_op:
+            txt_op.write(essay)
