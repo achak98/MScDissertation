@@ -1,13 +1,15 @@
 import pandas as pd
 import os
 from tqdm import tqdm
-data_dir = "./../Data/ArgumentAnnotatedEssays-2.0"
-essay_dir = os.path.join(data_dir,"brat-project-final")
+data_dir = "./../Data/pe"
+essay_dir = data_dir
 test_train_split_file = os.path.join(data_dir,"train-test-split.csv")
 # Original kaggle training set
 test_train_split = pd.read_csv(
-    test_train_split_file, sep="\t", encoding="ISO-8859-1"
-)
+    test_train_split_file, delimiter=";"
+    )
+headers = test_train_split.columns.tolist()
+print(headers)
 # Smaller training set used for this project
 dataset = pd.DataFrame(
     {
@@ -30,8 +32,8 @@ check_and_create_directory(test)
 check_and_create_directory(train)
 
 for (eid,eset) in tqdm(zip(dataset["ID"], dataset["SET"])):
-    annfile = str(eid)+".ann"
-    txtfile = str(eid)+".txt"
+    annfile = os.path.join(data_dir,str(eid)+".ann")
+    txtfile = os.path.join(data_dir,str(eid)+".txt")
     data = ""
     if eset == "TRAIN":
         output_file_name = os.path.join(train,f"{eid}.out")
@@ -41,7 +43,7 @@ for (eid,eset) in tqdm(zip(dataset["ID"], dataset["SET"])):
     with open(txtfile, "r") as text:
         essay = text.read()
         with open(annfile, "r") as ann:
-            annotations = ann.read()
+            annotations = ann.read().split("\n")
             t_anns = []
             for annotation in annotations:
                 if annotation.startswith("T"):
