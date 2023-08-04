@@ -217,16 +217,23 @@ class Ngram_Clsfr(nn.Module):
         self.dropout3 = nn.Dropout(p=0.4)
 
         self.fc = nn.Linear(128*2*3,1)
-        self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
+        print(f"x: {x.size()}")
         x=x.permute(0,2,1)
+        print(f"x: {x.size()}")
         x1 = self.conv1(x)
+        print(f"x1: {x1.size()}")
         x1 = self.pool1(x1)
+        print(f"x1: {x1.size()}")
         x1=x1.permute(0,2,1)
+        print(f"x1: {x1.size()}")
         _, h1 = self.gru1(x1) #x1 should be batch size, sequence length, input length
+        print(f"h1: {h1.size()}")
         h1 = torch.cat((h1[0, :, :], h1[1, :, :]), dim=1)
+        print(f"h1: {h1.size()}")
         h1 = self.dropout1(h1)
+        print(f"h1: {h1.size()}")
 
         x2 = self.conv2(x)
         x2 = self.pool2(x2)
@@ -243,10 +250,13 @@ class Ngram_Clsfr(nn.Module):
         h3 = self.dropout1(h3)
 
         h = torch.cat((h1, h2, h3), dim=1)
+        print(f"h: {h.size()}")
         h = self.fc(h)
-        h = self.sigmoid(h)
+        print(f"h: {h.size()}")
+        h = h.squeeze()
+        print(f"h: {h.size()}")
 
-        return h.squeeze()
+        return h
 
 
 def training_step(model, cost_function, optimizer, train_loader):
