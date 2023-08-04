@@ -147,22 +147,22 @@ class MLP(torch.nn.Module):
     self.layers1 = torch.nn.Sequential(
       torch.nn.Linear(768, 256),
       torch.nn.ReLU(),
-      torch.nn.Dropout(0.4),
+      torch.nn.Dropout(0.2),
       torch.nn.Linear(256, 96),
       torch.nn.ReLU(),
-      torch.nn.Dropout(0.4),
+      torch.nn.Dropout(0.2),
       torch.nn.Linear(96, 1)
     )
     self.layers2 = torch.nn.Sequential(
       torch.nn.Linear(input_size, 1024),
       torch.nn.ReLU(),
-      torch.nn.Dropout(0.4),
+      torch.nn.Dropout(0.2),
       torch.nn.Linear(1024, 256),
       torch.nn.ReLU(),
-      torch.nn.Dropout(0.4),
+      torch.nn.Dropout(0.2),
       torch.nn.Linear(256, 96),
       torch.nn.ReLU(),
-      torch.nn.Dropout(0.4),
+      torch.nn.Dropout(0.2),
       torch.nn.Linear(96, 1)
     ) 
 
@@ -283,7 +283,7 @@ print("before hypparams")
 input_size = length
 embedding_size = 768
 epochs = 12
-lr = 3e-5
+lr = 3e-4
 window_size = 5
 # cross-validation folds
 kf = KFold(n_splits=10, random_state=2022, shuffle=True)

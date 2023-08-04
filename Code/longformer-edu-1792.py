@@ -159,22 +159,22 @@ class MLP(torch.nn.Module):
     self.layers1 = torch.nn.Sequential(
       torch.nn.Linear(768, 256),
       torch.nn.ReLU(),
-      torch.nn.Dropout(0.4),
+      torch.nn.Dropout(0.2),
       torch.nn.Linear(256, 96),
       torch.nn.ReLU(),
-      torch.nn.Dropout(0.4),
+      torch.nn.Dropout(0.2),
       torch.nn.Linear(96, 1)
     )
     self.layers2 = torch.nn.Sequential(
       torch.nn.Linear(input_size, 1024),
       torch.nn.ReLU(),
-      torch.nn.Dropout(0.4),
+      torch.nn.Dropout(0.2),
       torch.nn.Linear(1024, 256),
       torch.nn.ReLU(),
-      torch.nn.Dropout(0.4),
+      torch.nn.Dropout(0.2),
       torch.nn.Linear(256, 96),
       torch.nn.ReLU(),
-      torch.nn.Dropout(0.4),
+      torch.nn.Dropout(0.2),
       torch.nn.Linear(96, 1)
     ) 
 
