@@ -283,7 +283,7 @@ print("before hypparams")
 input_size = length
 embedding_size = 768
 epochs = 12
-lr = 3e-4
+lr = 3e-5
 window_size = 5
 # cross-validation folds
 kf = KFold(n_splits=10, random_state=2022, shuffle=True)
