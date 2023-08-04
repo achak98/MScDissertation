@@ -57,7 +57,8 @@ for (eid,eset) in tqdm(zip(dataset["ID"], dataset["SET"])):
         data = ""
         for (start, end) in sorted_t_anns:
             data += essay[int(start):int(end)] + "\n"
+        modified_essay = essay.replace(". ", ".\n")
         with open(ann_output_file_name, "w") as ann_op:
             ann_op.write(data)
         with open(text_output_file_name, "w") as txt_op:
-            txt_op.write(essay)
+            txt_op.write(modified_essay)
