@@ -196,6 +196,57 @@ class MLP(torch.nn.Module):
         layer_2_out = self.layers2(layer_1_out)
         #print("layer_2_out: ",layer_2_out.size())
         return layer_2_out
+  
+class Ngram_Clsfr(nn.Module):
+    def __init__(self):
+        super(Ngram_Clsfr, self).__init__()
+        #print("in: {} out: {} ks: {}".format(args.embedding_dim, args.cnnfilters, args.cnn_window_size_small))
+        self.conv1 = nn.Conv1d(in_channels=768, out_channels=100, kernel_size=2, stride = 2)
+        self.pool1 = nn.MaxPool1d(kernel_size=2, stride=2)
+        self.gru1 = nn.LSTM(100, 128, batch_first=True, bidirectional=True)
+        self.dropout1 = nn.Dropout(p=0.4)
+
+        self.conv2 = nn.Conv1d(in_channels=768, out_channels=100, kernel_size=3, stride = 3)
+        self.pool2 = nn.MaxPool1d(kernel_size=3, stride=3)
+        self.gru2 = nn.LSTM(100, 128, batch_first=True, bidirectional=True)
+        self.dropout2 = nn.Dropout(p=0.4)
+
+        self.conv3 = nn.Conv1d(in_channels=768, out_channels=100, kernel_size=4, stride = 4)
+        self.pool3 = nn.MaxPool1d(kernel_size=4, stride=4)
+        self.gru3 = nn.LSTM(100, 128, batch_first=True, bidirectional=True)
+        self.dropout3 = nn.Dropout(p=0.4)
+
+        self.fc = nn.Linear(128*2*3,1)
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, x):
+        x=x.permute(0,2,1)
+        x1 = self.conv1(x)
+        x1 = self.pool1(x1)
+        x1=x1.permute(0,2,1)
+        _, h1 = self.gru1(x1) #x1 should be batch size, sequence length, input length
+        h1 = torch.cat((h1[0, :, :], h1[1, :, :]), dim=1)
+        h1 = self.dropout1(h1)
+
+        x2 = self.conv2(x)
+        x2 = self.pool2(x2)
+        x2=x2.permute(0,2,1)
+        _, h2 = self.gru2(x2)
+        h2 = torch.cat((h2[0, :, :], h2[1, :, :]), dim=1)
+        h2 = self.dropout1(h2)
+
+        x3 = self.conv3(x)
+        x3 = self.pool3(x3)
+        x3=x3.permute(0,2,1)
+        _, h3 = self.gru3(x3)
+        h3 = torch.cat((h3[0, :, :], h3[1, :, :]), dim=1)
+        h3 = self.dropout1(h3)
+
+        h = torch.cat((h1, h2, h3), dim=1)
+        h = self.fc(h)
+        h = self.sigmoid(h)
+
+        return h.squeeze()
 
 
 def training_step(model, cost_function, optimizer, train_loader):
@@ -330,8 +381,8 @@ for n, (train, test) in enumerate(kf.split(dataset)):
     print('------------------------------------------------------------------')
     print(f"\t\t\tTraining model: {n+1}")
     print('------------------------------------------------------------------')
-    model = MLP(input_size, embedding_size, window_size).to(device)
-
+    #model = MLP(input_size, embedding_size, window_size).to(device)
+    model = Ngram_Clsfr().to(device)
     # loss and optimizer
     cost_function = torch.nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
