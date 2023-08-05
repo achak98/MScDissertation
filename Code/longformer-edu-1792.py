@@ -201,12 +201,15 @@ class MLP(torch.nn.Module):
     
   def forward(self, x):
         #print("x: ",x.size())
-        layer_1_out = self.layers1(x)
+        l1out = self.lstm1(x) 
+        l1out = self.dropout1(l1out)
+        layer_1_out = self.layers1(l1out)
         #print("layer_1_out: ",layer_1_out.size())
         layer_1_out = layer_1_out.squeeze()
         #print("layer_1_out squeezed: ",layer_1_out.size())
-        
-        layer_2_out = self.layers2(layer_1_out)
+        l2out = self.lstm2(layer_1_out) 
+        l2out = self.dropout2(l2out)
+        layer_2_out = self.layers2(l2out)
         #print("layer_2_out: ",layer_2_out.size())
         return layer_2_out
   
