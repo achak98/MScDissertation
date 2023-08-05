@@ -91,7 +91,7 @@ prompts_dict = {
     8:"We all understand the benefits of laughter. For example, someone once said, “Laughter is the shortest distance between two people.” Many other people believe that laughter is an important part of any relationship. Tell a true story in which laughter was one element or part."
 }
 roberta = LongformerModel.from_pretrained("allenai/longformer-base-4096").to(device)
-
+roberta.resize_token_embeddings(len(tokenizer))
 
 edu_dir = os.path.join(data_dir,"seg-edu")
 def mean_encoding(essay_list, essay_id_list, model, tokenizer):
