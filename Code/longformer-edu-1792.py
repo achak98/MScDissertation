@@ -103,10 +103,14 @@ def mean_encoding(essay_list, essay_id_list, model, tokenizer):
     #essay = essay[:512]
     #print(len(essay))
     essay = ""
+    show_once = True
     if  os.path.exists(os.path.join(edu_dir, str(essay_id) + ".out")):
         with open(os.path.join(edu_dir, str(essay_id) + ".out"), "r") as file:
             for line in file:
                 essay += "{special_token} {line.strip()} "
+            if(show_once):
+               print(essay)
+               show_once = False
     else:
        print(f"couldn't find edus for essay id: {essay_id} \n Looked at path: {os.path.join(edu_dir, str(essay_id) + '.out')}")
        essay = default_essay
@@ -261,6 +265,8 @@ class Ngram_Clsfr(nn.Module):
         print(f"h: {h.size()}")
 
         return h
+
+
 
 
 def training_step(model, cost_function, optimizer, train_loader):
