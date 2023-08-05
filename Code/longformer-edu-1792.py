@@ -236,7 +236,7 @@ class Ngram_Clsfr(nn.Module):
         print(f"x1: {x1.size()}")
         x1=x1.permute(0,2,1)
         print(f"x1: {x1.size()}")
-        _, h1 = self.gru1(x1) #x1 should be batch size, sequence length, input length
+        h1, _ = self.gru1(x1) #x1 should be batch size, sequence length, input length
         print(f"h1: {h1.size()}")
         h1 = torch.cat((h1[0, :, :], h1[1, :, :]), dim=1)
         print(f"h1: {h1.size()}")
@@ -246,14 +246,14 @@ class Ngram_Clsfr(nn.Module):
         x2 = self.conv2(x)
         x2 = self.pool2(x2)
         x2=x2.permute(0,2,1)
-        _, h2 = self.gru2(x2)
+        h2, _ = self.gru2(x2)
         h2 = torch.cat((h2[0, :, :], h2[1, :, :]), dim=1)
         h2 = self.dropout1(h2)
 
         x3 = self.conv3(x)
         x3 = self.pool3(x3)
         x3=x3.permute(0,2,1)
-        _, h3 = self.gru3(x3)
+        h3, _ = self.gru3(x3)
         h3 = torch.cat((h3[0, :, :], h3[1, :, :]), dim=1)
         h3 = self.dropout1(h3)
 
