@@ -164,22 +164,27 @@ class MLP(torch.nn.Module):
   def __init__(self, input_size,embedding_size, window_size):
     super(MLP, self).__init__()
     self.window_size = window_size
+    self.p = 0.4
+    self.lstm1 = nn.LSTM(768, 512, batch_first=True, bidirectional=True)
+    self.dropout1 = nn.Dropout(p=self.p)
     self.layers1 = torch.nn.Sequential(
-      torch.nn.Linear(768, 256),
+      torch.nn.Linear(512*2, 256),
       torch.nn.ReLU(),
-      torch.nn.Dropout(0.2),
+      torch.nn.Dropout(p=self.p),
       torch.nn.Linear(256, 96),
       torch.nn.ReLU(),
-      torch.nn.Dropout(0.2),
+      torch.nn.Dropout(p=self.p),
       torch.nn.Linear(96, 1)
     )
+    self.lstm2 = nn.LSTM(input_size, 512, batch_first=True, bidirectional=True)
+    self.dropout2 = nn.Dropout(p=self.p)
     self.layers2 = torch.nn.Sequential(
-      torch.nn.Linear(input_size, 256),
+      torch.nn.Linear(512*2, 256),
       torch.nn.ReLU(),
-      torch.nn.Dropout(0.2),
+      torch.nn.Dropout(p=self.p),
       torch.nn.Linear(256, 96),
       torch.nn.ReLU(),
-      torch.nn.Dropout(0.2),
+      torch.nn.Dropout(p=self.p),
       torch.nn.Linear(96, 1)
     ) 
 
@@ -401,8 +406,8 @@ for n, (train, test) in enumerate(kf.split(dataset)):
     print('------------------------------------------------------------------')
     print(f"\t\t\tTraining model: {n+1}")
     print('------------------------------------------------------------------')
-    #model = MLP(input_size, embedding_size, window_size).to(device)
-    model = Ngram_Clsfr().to(device)
+    model = MLP(input_size, embedding_size, window_size).to(device)
+    #model = Ngram_Clsfr().to(device)
     # loss and optimizer
     cost_function = torch.nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
