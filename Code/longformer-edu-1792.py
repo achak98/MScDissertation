@@ -40,8 +40,12 @@ dataset = pd.DataFrame(
 #transformer_architecture = 'roberta-base' 
 #config = AutoConfig.from_pretrained(transformer_architecture, output_hidden_states=True)
 #config.max_position_embeddings = 512
-tokenizer = AutoTokenizer.from_pretrained("allenai/longformer-base-4096")
+special_token = "[EDU]"
 
+# Add the special token to the tokenizer
+
+tokenizer = AutoTokenizer.from_pretrained("allenai/longformer-base-4096")
+tokenizer.add_special_tokens({"additional_special_tokens": [special_token]})
 #tokenizer = AutoTokenizer.from_pretrained("roberta-base")
 
 length_dict = {}
@@ -102,14 +106,14 @@ def mean_encoding(essay_list, essay_id_list, model, tokenizer):
     if  os.path.exists(os.path.join(edu_dir, str(essay_id) + ".out")):
         with open(os.path.join(edu_dir, str(essay_id) + ".out"), "r") as file:
             for line in file:
-                essay += line.strip() + f" {tokenizer.sep_token} {tokenizer.cls_token} "
+                essay += "{special_token} {line.strip()} "
     else:
        print(f"couldn't find edus for essay id: {essay_id} \n Looked at path: {os.path.join(edu_dir, str(essay_id) + '.out')}")
        essay = default_essay
        
     if max_len < len(tokenizer.tokenize(essay)):
        max_len = len(tokenizer.tokenize(essay))
-    encoded_input = tokenizer(essay, padding="max_length", truncation=True, max_length=length, return_tensors='pt', return_attention_mask=True).to(device)
+    encoded_input = tokenizer(essay, padding="max_length", truncation=True, max_length=length, return_tensors='pt', return_attention_mask=True, add_special_tokens=True).to(device)
     #print(encoded_input["input_ids"].size())
     with torch.no_grad():
       model_output = model(**encoded_input)
