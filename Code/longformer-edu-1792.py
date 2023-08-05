@@ -99,15 +99,15 @@ def mean_encoding(essay_list, essay_id_list, model, tokenizer):
   print('Encoding essay embeddings:')
   embeddings = []
   max_len = 0
+  show_once = True
   for (default_essay,essay_id) in tqdm(zip(essay_list, essay_id_list), total=len(essay_list)):
     #essay = essay[:512]
     #print(len(essay))
     essay = ""
-    show_once = True
     if  os.path.exists(os.path.join(edu_dir, str(essay_id) + ".out")):
         with open(os.path.join(edu_dir, str(essay_id) + ".out"), "r") as file:
             for line in file:
-                essay += "{special_token} {line.strip()} "
+                essay += f"{special_token} {line.strip()} "
             if(show_once):
                print(essay)
                show_once = False
