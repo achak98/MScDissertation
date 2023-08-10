@@ -125,7 +125,7 @@ def mean_encoding(essay_list, essay_id_list, tokenizer):
     #print(encoded_input["input_ids"].size())
     #with torch.no_grad():
     #print(encoded_input.size())
-    tokens_embeddings = np.matrix(encoded_input.cpu())
+    tokens_embeddings = np.matrix(encoded_input)
     embeddings.append(np.squeeze(np.asarray(tokens_embeddings)))
   print(max_len)
   return np.array(embeddings)
