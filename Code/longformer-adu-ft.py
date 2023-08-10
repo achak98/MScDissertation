@@ -268,7 +268,7 @@ class MLP(torch.nn.Module):
         l1out = self.dropout1(l1out)
         layer_1_out = self.layers1(l1out)
         #print("layer_1_out: ",layer_1_out.size())
-        layer_1_out = layer_1_out.squeeze()
+        layer_1_out = layer_1_out.squeeze(dim=-1)
         #print("layer_1_out squeezed: ",layer_1_out.size())
         l2out, _ = self.lstm2(layer_1_out) 
         l2out = self.dropout2(l2out)
