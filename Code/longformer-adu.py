@@ -16,9 +16,9 @@ import warnings
 warnings.filterwarnings("ignore")
 
 length = 1792
-alpha = 0.5
-beta = 0.3
-gamma = 0.2
+alpha = 0.7
+beta = 0.2
+gamma = 0.1
 input_size = length
 embedding_size = 768
 epochs = 25
@@ -172,11 +172,11 @@ class CombinedLoss(nn.Module):
         self.beta = beta
         self.gamma = gamma
 
-    def forward(self, y, y_hat, labels):
-        mse_loss = nn.MSELoss()(y_hat, labels)
+    def forward(self, y, labels):
+        mse_loss = nn.MSELoss()(y, labels)
         
         # Compute cosine similarity loss
-        similarity_loss = 1 - nn.functional.cosine_similarity(y, y_hat).mean()
+        similarity_loss = 1 - nn.functional.cosine_similarity(y, labels).mean()
         
         # Compute margin ranking loss
         margin_ranking_loss = 0
