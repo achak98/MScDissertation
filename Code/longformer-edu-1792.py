@@ -15,7 +15,7 @@ import gc
 import warnings
 warnings.filterwarnings("ignore")
 
-length = 1536
+length = 1890
 
 # set device
 device = torch.device("cuda:5" if torch.cuda.is_available() else "cpu")
@@ -153,7 +153,7 @@ def get_loader(df, id2emb, essay_embeddings, shuffle=True):
 
   # dataset and dataloader
   data = TensorDataset(torch.from_numpy(embeddings).float(), torch.from_numpy(np.array(df['scaled_score'])).float())
-  loader = DataLoader(data, batch_size=128, shuffle=shuffle, num_workers=2)
+  loader = DataLoader(data, batch_size=128, shuffle=shuffle, num_workers=0)
 
   return loader
 
@@ -165,10 +165,10 @@ class MLP(torch.nn.Module):
     super(MLP, self).__init__()
     self.window_size = window_size
     self.p = 0.4
-    self.lstm1 = nn.LSTM(768, 512, batch_first=True, bidirectional=True)
-    self.dropout1 = nn.Dropout(p=self.p)
+    #self.lstm1 = nn.LSTM(768, 512, batch_first=True, bidirectional=True)
+    #self.dropout1 = nn.Dropout(p=self.p)
     self.layers1 = torch.nn.Sequential(
-      torch.nn.Linear(512*2, 256),
+      torch.nn.Linear(768, 256),
       torch.nn.ReLU(),
       torch.nn.Dropout(p=self.p),
       torch.nn.Linear(256, 96),
@@ -176,10 +176,10 @@ class MLP(torch.nn.Module):
       torch.nn.Dropout(p=self.p),
       torch.nn.Linear(96, 1)
     )
-    self.lstm2 = nn.LSTM(input_size, 512, batch_first=True, bidirectional=True)
-    self.dropout2 = nn.Dropout(p=self.p)
+    #self.lstm2 = nn.LSTM(input_size, 512, batch_first=True, bidirectional=True)
+    #self.dropout2 = nn.Dropout(p=self.p)
     self.layers2 = torch.nn.Sequential(
-      torch.nn.Linear(512*2, 256),
+      torch.nn.Linear(input_size, 256),
       torch.nn.ReLU(),
       torch.nn.Dropout(p=self.p),
       torch.nn.Linear(256, 96),
@@ -201,15 +201,15 @@ class MLP(torch.nn.Module):
     
   def forward(self, x):
         #print("x: ",x.size())
-        l1out, _ = self.lstm1(x) 
-        l1out = self.dropout1(l1out)
-        layer_1_out = self.layers1(l1out)
+        #l1out, _ = self.lstm1(x) 
+        #l1out = self.dropout1(l1out)
+        layer_1_out = self.layers1(x)
         #print("layer_1_out: ",layer_1_out.size())
         layer_1_out = layer_1_out.squeeze()
         #print("layer_1_out squeezed: ",layer_1_out.size())
-        l2out, _ = self.lstm2(layer_1_out) 
-        l2out = self.dropout2(l2out)
-        layer_2_out = self.layers2(l2out)
+        #l2out, _ = self.lstm2(layer_1_out) 
+        #l2out = self.dropout2(l2out)
+        layer_2_out = self.layers2(layer_1_out)
         #print("layer_2_out: ",layer_2_out.size())
         return layer_2_out
   
@@ -369,7 +369,7 @@ print("before hypparams")
 # hyper-parameters
 input_size = length
 embedding_size = 768
-epochs = 15
+epochs = 25
 lr = 1e-4
 window_size = 5
 # cross-validation folds

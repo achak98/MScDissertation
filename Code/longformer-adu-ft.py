@@ -15,7 +15,7 @@ import gc
 import warnings
 warnings.filterwarnings("ignore")
 
-length = 1920
+length = 1792
 
 # set device
 device = torch.device("cuda:5" if torch.cuda.is_available() else "cpu")
@@ -371,7 +371,7 @@ print("before hypparams")
 # hyper-parameters
 input_size = length
 embedding_size = 768
-epochs = 40
+epochs = 25
 lr = 3e-4
 window_size = 5
 # cross-validation folds
