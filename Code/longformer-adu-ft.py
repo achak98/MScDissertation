@@ -16,7 +16,12 @@ import warnings
 warnings.filterwarnings("ignore")
 
 length = 1792
-
+input_size = length
+embedding_size = 768
+epochs = 25
+lrlo = 1e-6
+lrcls = 3.5e-6
+window_size = 5
 # set device
 device = torch.device("cuda:5" if torch.cuda.is_available() else "cpu")
 
@@ -156,15 +161,18 @@ def get_loader(df, id2emb, essay_embeddings, shuffle=True):
 
   return loader
 
-
-
+class LongFo(torch.nn.Module):
+  def __init__(self):
+    super(LongFo, self).__init__()
+    self.model = LongformerModel.from_pretrained("allenai/longformer-base-4096").to(device)
+    self.model.resize_token_embeddings(len(tokenizer))     
+  def forward(self,x):
+    model_output = self.model(**x)
+    return model_output
 class MLP(torch.nn.Module):
-  
   def __init__(self, input_size,embedding_size, window_size):
     super(MLP, self).__init__()
     self.window_size = window_size
-    model = LongformerModel.from_pretrained("allenai/longformer-base-4096").to(device)
-    model.resize_token_embeddings(len(tokenizer))
     self.p = 0.4
     self.lstm1 = nn.LSTM(768, 512, batch_first=True, bidirectional=True)
     self.dropout1 = nn.Dropout(p=self.p)
@@ -202,7 +210,6 @@ class MLP(torch.nn.Module):
     
   def forward(self, x):
         #print("x: ",x.size())
-        model_output = model(**x)
         l1out, _ = self.lstm1(x) 
         l1out = self.dropout1(l1out)
         layer_1_out = self.layers1(l1out)
@@ -279,27 +286,31 @@ class Ngram_Clsfr(nn.Module):
 
 
 
-def training_step(model, cost_function, optimizer, train_loader):
+def training_step(trans, clsfr, cost_function, optimizerLo, optimizerCls, train_loader):
 
   samples = 0.
   cumulative_loss = 0.
 
-  model.train() 
+  trans.train() 
+  clsfr.train()
   train_loader_tqdm = tqdm(train_loader, total=len(train_loader), desc='Batches')
   for step, (inputs, targets) in enumerate(train_loader_tqdm):
 
     inputs = inputs.squeeze(dim=1).to(device)
     targets = targets.reshape(targets.shape[0],1).to(device)
 
-    outputs = model(inputs)
-
-    loss = cost_function(outputs, targets)
+    trans_op = trans(inputs)
+    clsfr_op = clsfr(trans_op[0].squeeze())
+    loss = cost_function(clsfr_op, targets)
 
     loss.backward()  
   
-    optimizer.step()  
+    optimizerLo.step()  
  
-    optimizer.zero_grad()
+    optimizerLo.zero_grad()
+    optimizerCls.step()  
+ 
+    optimizerCls.zero_grad()
 
     samples += inputs.shape[0]
     cumulative_loss += loss.item()
@@ -307,14 +318,14 @@ def training_step(model, cost_function, optimizer, train_loader):
   return cumulative_loss/samples
 
 
-def test_step(model, cost_function, optimizer, test_loader):
+def test_step(trans, clsfr, cost_function, optimizerLo, optimizerCls, test_loader):
 
   samples = 0.
   cumulative_loss = 0.
   preds = []
 
-  model.eval() 
-
+  trans.eval() 
+  clsfr.eval()
   with torch.no_grad():
     test_loader_tqdm = tqdm(test_loader, total=len(test_loader), desc='Test Batches')
     for step, (inputs, targets) in enumerate(test_loader_tqdm):
@@ -322,13 +333,15 @@ def test_step(model, cost_function, optimizer, test_loader):
       inputs = inputs.squeeze(dim=1).to(device)
       targets = targets.reshape(targets.shape[0],1).to(device)
 
-      outputs = model(inputs)
+      trans_op = trans(inputs)
+      clsfr_op = clsfr(trans_op[0].squeeze())
+      loss = cost_function(clsfr_op, targets)
 
-      loss = cost_function(outputs, targets)
+      loss = cost_function(clsfr_op, targets)
 
       samples += inputs.shape[0]
       cumulative_loss += loss.item()
-      for out in outputs:
+      for out in clsfr_op:
         preds.append(float(out))
 
   return cumulative_loss/samples, preds
@@ -369,11 +382,7 @@ def get_results_df(train_df, test_df, model_preds):
 
 print("before hypparams")
 # hyper-parameters
-input_size = length
-embedding_size = 768
-epochs = 25
-lr = 3e-4
-window_size = 5
+
 # cross-validation folds
 kf = KFold(n_splits=10, random_state=2022, shuffle=True)
 print("after kfold init")
@@ -381,7 +390,8 @@ print("after kfold init")
 train_df_dict = {}
 test_df_dict = {}
 preds_dict = {}
-best_model_path = os.path.join(data_dir,'long_best.pth')
+best_lo_path = os.path.join(data_dir,'long_best.pth')
+best_clsfr_path = os.path.join(data_dir,'clsfr_best.pth')
 # copy of dataset with scaled scores computed using the whole dataset
 print("copy of scaled_dataset begin")
 scaled_dataset = get_scaled_dataset(dataset)
@@ -411,31 +421,34 @@ for n, (train, test) in enumerate(kf.split(dataset)):
     print('------------------------------------------------------------------')
     print(f"\t\t\tTraining model: {n+1}")
     print('------------------------------------------------------------------')
-    model = MLP(input_size, embedding_size, window_size).to(device)
+    trans = LongFo().to(device)
+    clsfr = MLP(input_size, embedding_size, window_size).to(device)
     #model = Ngram_Clsfr().to(device)
     # loss and optimizer
     cost_function = torch.nn.MSELoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-
+    optimizerLo = torch.optim.Adam(trans.parameters(), lr=lrlo)
+    optimizerCls = torch.optim.Adam(clsfr.parameters(), lr=lrcls)
     # training
-    train_loss, train_preds = test_step(model, cost_function, optimizer, train_loader)
-    test_loss, test_preds = test_step(model, cost_function, optimizer, test_loader)
+    train_loss, train_preds = test_step(trans, clsfr, cost_function, optimizerLo, optimizerCls, train_loader)
+    test_loss, test_preds = test_step(trans, clsfr, cost_function, optimizerLo, optimizerCls, test_loader)
     print('Before training:\tLoss/train: {:.5f}\tLoss/test: {:.5f}'.format(train_loss, test_loss))
     best_loss = 1.0
     epoch_tqdm = tqdm(range(epochs), total=epochs, desc='Epochs')
     for epoch in epoch_tqdm:
-        train_loss = training_step(model, cost_function, optimizer, train_loader)
-        test_loss, test_preds = test_step(model, cost_function, optimizer, test_loader)
+        train_loss = training_step(trans, clsfr, cost_function, optimizerLo, optimizerCls, train_loader)
+        test_loss, test_preds = test_step(trans, clsfr, cost_function, optimizerLo, optimizerCls, test_loader)
         if test_loss < best_loss:
-            torch.save(model.state_dict(), best_model_path)
+            torch.save(clsfr.state_dict(), best_clsfr_path)
+            torch.save(trans.state_dict(), best_lo_path)
             print("Saving model")
             best_loss = test_loss
 
         epoch_tqdm.set_postfix ({f"Epoch: {epoch+1} \t\t Train Loss: {train_loss:.5f} Test Loss: {test_loss:.5f} \n":  test_loss})
 
-    model.load_state_dict(torch.load(best_model_path))
-    train_loss, train_preds = test_step(model, cost_function, optimizer, train_loader)
-    test_loss, test_preds = test_step(model, cost_function, optimizer, test_loader)
+    clsfr.load_state_dict(torch.load(best_clsfr_path))
+    trans.load_state_dict(torch.load(best_lo_path))
+    train_loss, train_preds = test_step(trans, clsfr, cost_function, optimizerLo, optimizerCls, train_loader)
+    test_loss, test_preds = test_step(trans, clsfr, cost_function, optimizerLo, optimizerCls, test_loader)
     print('After training:\t\tLoss/train: {:.5f}\tLoss/test: {:.5f}'.format(train_loss, test_loss))
 
     print("getting results df")
