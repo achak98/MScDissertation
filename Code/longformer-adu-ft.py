@@ -101,7 +101,8 @@ edu_dir = os.path.join(data_dir,"seg-adu")
 def mean_encoding(essay_list, essay_id_list, tokenizer):
 
   print('Encoding essay embeddings:')
-  embeddings = []
+  ip_ids = []
+  attn_masks = []
   max_len = 0
   show_once = True
   for (default_essay,essay_id) in tqdm(zip(essay_list, essay_id_list), total=len(essay_list)):
@@ -125,10 +126,12 @@ def mean_encoding(essay_list, essay_id_list, tokenizer):
     #print(encoded_input["input_ids"].size())
     #with torch.no_grad():
     #print(encoded_input.size())
-    tokens_embeddings = np.matrix(encoded_input)
-    embeddings.append(np.squeeze(np.asarray(tokens_embeddings)))
+    tokens_id_mat = np.matrix(encoded_input["input_ids"])
+    attn_mask_mat = np.matrix(encoded_input["attention_mask"])
+    ip_ids.append(np.squeeze(np.asarray(tokens_id_mat)))
+    attn_masks.append(np.squeeze(np.asarray(attn_mask_mat)))
   print(max_len)
-  return np.array(embeddings)
+  return np.array(ip_ids), np.array(attn_masks)
 
 """import h5py
 embeddings_file = os.path.join(data_dir,f'embeddings_l_adu_{length}.pt')
@@ -138,7 +141,7 @@ if os.path.exists(embeddings_file):
     h5f.close()
     print(f"embeddings loaded from {embeddings_file}")
 else:"""
-essay_embeddings = mean_encoding(dataset['essay'], dataset["essay_id"], tokenizer)
+ip_ids, attn_masks = mean_encoding(dataset['essay'], dataset["essay_id"], tokenizer)
 """    print("essay_embeddings got from function")
     h5f = h5py.File(embeddings_file, 'w')
     print("h5f variable init")
@@ -150,14 +153,13 @@ essay_embeddings = mean_encoding(dataset['essay'], dataset["essay_id"], tokenize
 print("embeddings done")
 
 
-def get_loader(df, id2emb, essay_embeddings, shuffle=True):
+def get_loader(df, id2emb, ip_ids, attn_masks, shuffle=True):
 
   # get embeddings from essay_id using id2emb dict
-  embeddings = np.array([essay_embeddings[id2emb[id]] for id in df['essay_id']])
-  print(embeddings)
-  print(type(embeddings))
+  ip = np.array([ip_ids[id2emb[id]] for id in df['essay_id']])
+  attn = np.array([attn_masks[id2emb[id]] for id in df['essay_id']])
   # dataset and dataloader
-  data = TensorDataset(torch.from_numpy(embeddings["input_ids"]).float(), torch.from_numpy(embeddings["attention_mask"]).float(), torch.from_numpy(np.array(df['scaled_score'])).float())
+  data = TensorDataset(torch.from_numpy(ip).float(), torch.from_numpy(attn).float(), torch.from_numpy(np.array(df['scaled_score'])).float())
   loader = DataLoader(data, batch_size=128, shuffle=shuffle, num_workers=2)
 
   return loader
@@ -415,9 +417,9 @@ for n, (train, test) in enumerate(kf.split(dataset)):
     test_df = scaled_dataset.iloc[test]
     print("train_df #1")
     # dataloaders
-    train_loader = get_loader(train_df, id2emb, essay_embeddings, shuffle=True)
+    train_loader = get_loader(train_df, id2emb, ip_ids, attn_masks, shuffle=True)
     print("train_loader")
-    test_loader = get_loader(test_df, id2emb, essay_embeddings, shuffle=False)
+    test_loader = get_loader(test_df, id2emb, ip_ids, attn_masks, shuffle=False)
     print("test_loader")
     # model
     print('------------------------------------------------------------------')
