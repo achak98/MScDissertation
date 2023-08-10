@@ -456,7 +456,7 @@ for n, (train, test) in enumerate(kf.split(dataset)):
             print("Saving model")
             best_loss = test_loss
 
-        epoch_tqdm.set_postfix ({f"Epoch: {epoch+1} \t\t Train Loss: {train_loss:.5f} Test Loss: {test_loss:.5f} \n":  test_loss})
+        epoch_tqdm.set_postfix ({f"Test Loss: {test_loss:.5f} Train Loss: {train_loss:.5f} for Epoch: ":  {epoch+1}})
 
     model.load_state_dict(torch.load(best_model_path))
     train_loss, train_preds = test_step(model, cost_function, optimizer, train_loader)
