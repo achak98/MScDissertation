@@ -23,7 +23,7 @@ lrlo = 1e-6
 lrcls = 3.5e-6
 window_size = 5
 # set device
-device = torch.device("cuda:5" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 alpha = 0.5
 beta = 0.3
 gamma = 0.2
@@ -178,6 +178,31 @@ ip_ids, attn_masks = mean_encoding(dataset['essay'], dataset["essay_id"], tokeni
 
 print("embeddings done")
 
+class CombinedLoss(nn.Module):
+    def __init__(self, alpha, beta, gamma):
+        super(CombinedLoss, self).__init__()
+        self.alpha = alpha
+        self.beta = beta
+        self.gamma = gamma
+
+    def forward(self, y, labels):
+        mse_loss = nn.MSELoss()(y, labels)
+        
+        # Compute cosine similarity loss
+        similarity_loss = 1 - nn.functional.cosine_similarity(y, labels).mean()
+        
+        # Compute margin ranking loss
+        margin_ranking_loss = 0
+        N = y.size(0)
+        for i in range(N):
+            for j in range(i+1, N):
+                r_ij = 1 if labels[i] > labels[j] else -1 if labels[i] < labels[j] else torch.sign(y[i] - y[j])
+                margin_ranking_loss += torch.max(torch.tensor(0), -r_ij * (y[i] - y[j]) + torch.tensor(0))
+        margin_ranking_loss /= (N * (N - 1)) / 2  # Normalize by the number of pairs
+        
+        total_loss = self.alpha * mse_loss + self.beta * margin_ranking_loss + self.gamma * similarity_loss
+        return total_loss
+
 
 def get_loader(df, id2emb, ip_ids, attn_masks, shuffle=True):
 
@@ -186,7 +211,7 @@ def get_loader(df, id2emb, ip_ids, attn_masks, shuffle=True):
   attn = np.array([attn_masks[id2emb[id]] for id in df['essay_id']])
   # dataset and dataloader
   data = TensorDataset(torch.from_numpy(ip).long(), torch.from_numpy(attn).float(), torch.from_numpy(np.array(df['scaled_score'])).float())
-  loader = DataLoader(data, batch_size=2, shuffle=shuffle, num_workers=0)
+  loader = DataLoader(data, batch_size=32, shuffle=shuffle, num_workers=0)
 
   return loader
 
@@ -456,8 +481,8 @@ for n, (train, test) in enumerate(kf.split(dataset)):
     print('------------------------------------------------------------------')
     print(f"\t\t\tTraining model: {n+1}")
     print('------------------------------------------------------------------')
-    trans = LongFo().to(device)
-    clsfr = MLP(input_size, embedding_size, window_size).to(device)
+    trans = nn.DataParallel(LongFo()).to(device)
+    clsfr = nn.DataParallel(MLP(input_size, embedding_size, window_size)).to(device)
     #model = Ngram_Clsfr().to(device)
     # loss and optimizer
     cost_function = CombinedLoss(alpha, beta, gamma)
