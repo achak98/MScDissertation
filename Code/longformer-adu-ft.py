@@ -122,7 +122,7 @@ def mean_encoding(essay_list, essay_id_list, tokenizer):
        
     if max_len < len(tokenizer.tokenize(essay)):
        max_len = len(tokenizer.tokenize(essay))
-    encoded_input = tokenizer(essay, padding="max_length", truncation=True, max_length=length, return_tensors='pt', return_attention_mask=True, add_special_tokens=True).to(device)
+    encoded_input = tokenizer(essay, padding="max_length", truncation=True, max_length=length, return_tensors='pt', return_attention_mask=True, add_special_tokens=True)
     #print(encoded_input["input_ids"].size())
     #with torch.no_grad():
     #print(encoded_input.size())
