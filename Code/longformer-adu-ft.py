@@ -18,14 +18,14 @@ warnings.filterwarnings("ignore")
 length = 1792
 input_size = length
 embedding_size = 768
-epochs = 25
+epochs = 40
 lrlo = 1e-5
 lrcls = 3.5e-5
 window_size = 5
 # set device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-alpha = 0.5
-beta = 0.3
+alpha = 0.7
+beta = 0.1
 gamma = 0.2
 data_dir = "./../Data/ASAP-AES/"
 # Original kaggle training set
