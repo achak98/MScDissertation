@@ -125,22 +125,22 @@ def mean_encoding(essay_list, essay_id_list, tokenizer):
   print(max_len)
   return np.array(embeddings)
 
-import h5py
+"""import h5py
 embeddings_file = os.path.join(data_dir,f'embeddings_l_adu_{length}.pt')
 if os.path.exists(embeddings_file):
     h5f = h5py.File(embeddings_file,'r')
     essay_embeddings = h5f[f'embeddings_l_adu_{length}'][:]
     h5f.close()
     print(f"embeddings loaded from {embeddings_file}")
-else:
-    essay_embeddings = mean_encoding(dataset['essay'], dataset["essay_id"], tokenizer)
-    print("essay_embeddings got from function")
+else:"""
+essay_embeddings = mean_encoding(dataset['essay'], dataset["essay_id"], tokenizer)
+"""    print("essay_embeddings got from function")
     h5f = h5py.File(embeddings_file, 'w')
     print("h5f variable init")
     h5f.create_dataset(f'embeddings_l_adu_{length}', data=essay_embeddings)
     print("h5f dataset created")
     h5f.close()
-    print("h5f closed")
+    print("h5f closed")"""
 
 print("embeddings done")
 
