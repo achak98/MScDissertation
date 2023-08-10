@@ -16,9 +16,9 @@ import warnings
 warnings.filterwarnings("ignore")
 
 length = 1792
-alpha = 0.7
-beta = 0.1
-gamma = 0.2
+alpha = 0.4
+beta = 0.5
+gamma = 0.1
 input_size = length
 embedding_size = 768
 epochs = 25

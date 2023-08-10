@@ -24,9 +24,9 @@ lrcls = 3.5e-5
 window_size = 5
 # set device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-alpha = 0.7
-beta = 0.1
-gamma = 0.2
+alpha = 0.4
+beta = 0.5
+gamma = 0.1
 data_dir = "./../Data/ASAP-AES/"
 # Original kaggle training set
 kaggle_dataset = pd.read_csv(
