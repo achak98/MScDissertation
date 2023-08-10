@@ -170,6 +170,8 @@ class LongFo(torch.nn.Module):
     self.model = LongformerModel.from_pretrained("allenai/longformer-base-4096").to(device)
     self.model.resize_token_embeddings(len(tokenizer))     
   def forward(self,ip,mask):
+    print(type(ip))
+    print(type(mask))
     model_output = self.model(input_ids=ip,attention_mask=mask)
     print(model_output.size())
     return model_output
