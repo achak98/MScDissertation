@@ -16,7 +16,14 @@ import warnings
 warnings.filterwarnings("ignore")
 
 length = 1792
-
+alpha = 0.5
+beta = 0.3
+gamma = 0.2
+input_size = length
+embedding_size = 768
+epochs = 25
+lr = 3e-4
+window_size = 5
 # set device
 device = torch.device("cuda:5" if torch.cuda.is_available() else "cpu")
 
@@ -153,11 +160,35 @@ def get_loader(df, id2emb, essay_embeddings, shuffle=True):
 
   # dataset and dataloader
   data = TensorDataset(torch.from_numpy(embeddings).float(), torch.from_numpy(np.array(df['scaled_score'])).float())
-  loader = DataLoader(data, batch_size=128, shuffle=shuffle, num_workers=2)
+  loader = DataLoader(data, batch_size=64, shuffle=shuffle, num_workers=2)
 
   return loader
 
 
+class CombinedLoss(nn.Module):
+    def __init__(self, alpha, beta, gamma):
+        super(CombinedLoss, self).__init__()
+        self.alpha = alpha
+        self.beta = beta
+        self.gamma = gamma
+
+    def forward(self, y, y_hat, labels):
+        mse_loss = nn.MSELoss()(y_hat, labels)
+        
+        # Compute cosine similarity loss
+        similarity_loss = 1 - nn.functional.cosine_similarity(y, y_hat).mean()
+        
+        # Compute margin ranking loss
+        margin_ranking_loss = 0
+        N = y.size(0)
+        for i in range(N):
+            for j in range(i+1, N):
+                r_ij = 1 if labels[i] > labels[j] else -1 if labels[i] < labels[j] else torch.sign(y[i] - y[j])
+                margin_ranking_loss += torch.max(0, -r_ij * (y[i] - y[j]) + 0)
+        margin_ranking_loss /= (N * (N - 1)) / 2  # Normalize by the number of pairs
+        
+        total_loss = self.alpha * mse_loss + self.beta * margin_ranking_loss + self.gamma * similarity_loss
+        return total_loss
 
 class MLP(torch.nn.Module):
   
@@ -367,11 +398,7 @@ def get_results_df(train_df, test_df, model_preds):
 
 print("before hypparams")
 # hyper-parameters
-input_size = length
-embedding_size = 768
-epochs = 30
-lr = 3e-4
-window_size = 5
+
 # cross-validation folds
 kf = KFold(n_splits=10, random_state=2022, shuffle=True)
 print("after kfold init")
@@ -412,7 +439,7 @@ for n, (train, test) in enumerate(kf.split(dataset)):
     model = MLP(input_size, embedding_size, window_size).to(device)
     #model = Ngram_Clsfr().to(device)
     # loss and optimizer
-    cost_function = torch.nn.MSELoss()
+    cost_function = CombinedLoss(alpha, beta, gamma)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
     # training

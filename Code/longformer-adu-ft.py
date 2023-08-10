@@ -24,7 +24,9 @@ lrcls = 3.5e-6
 window_size = 5
 # set device
 device = torch.device("cuda:5" if torch.cuda.is_available() else "cpu")
-
+alpha = 0.5
+beta = 0.3
+gamma = 0.2
 data_dir = "./../Data/ASAP-AES/"
 # Original kaggle training set
 kaggle_dataset = pd.read_csv(
@@ -83,6 +85,30 @@ def get_id2emb(ids):
 
     return id2emb
 
+class CombinedLoss(nn.Module):
+    def __init__(self, alpha, beta, gamma):
+        super(CombinedLoss, self).__init__()
+        self.alpha = alpha
+        self.beta = beta
+        self.gamma = gamma
+
+    def forward(self, y, y_hat, labels):
+        mse_loss = nn.MSELoss()(y_hat, labels)
+        
+        # Compute cosine similarity loss
+        similarity_loss = 1 - nn.functional.cosine_similarity(y, y_hat).mean()
+        
+        # Compute margin ranking loss
+        margin_ranking_loss = 0
+        N = y.size(0)
+        for i in range(N):
+            for j in range(i+1, N):
+                r_ij = 1 if labels[i] > labels[j] else -1 if labels[i] < labels[j] else torch.sign(y[i] - y[j])
+                margin_ranking_loss += torch.max(0, -r_ij * (y[i] - y[j]) + 0)
+        margin_ranking_loss /= (N * (N - 1)) / 2  # Normalize by the number of pairs
+        
+        total_loss = self.alpha * mse_loss + self.beta * margin_ranking_loss + self.gamma * similarity_loss
+        return total_loss
 
 id2emb = get_id2emb(dataset["essay_id"])
 prompts_dict = {
@@ -434,7 +460,7 @@ for n, (train, test) in enumerate(kf.split(dataset)):
     clsfr = MLP(input_size, embedding_size, window_size).to(device)
     #model = Ngram_Clsfr().to(device)
     # loss and optimizer
-    cost_function = torch.nn.MSELoss()
+    cost_function = CombinedLoss(alpha, beta, gamma)
     optimizerLo = torch.optim.Adam(trans.parameters(), lr=lrlo)
     optimizerCls = torch.optim.Adam(clsfr.parameters(), lr=lrcls)
     # training
