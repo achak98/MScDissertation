@@ -300,12 +300,13 @@ def training_step(trans, clsfr, cost_function, optimizerLo, optimizerCls, train_
   trans.train() 
   clsfr.train()
   train_loader_tqdm = tqdm(train_loader, total=len(train_loader), desc='Batches')
-  for step, (inputs, targets) in enumerate(train_loader_tqdm):
+  for step, (inputs, mask, targets) in enumerate(train_loader_tqdm):
 
     inputs = inputs.squeeze(dim=1).to(device)
+    mask = mask.squeeze(dim=1).to(device)
     targets = targets.reshape(targets.shape[0],1).to(device)
 
-    trans_op = trans(inputs)
+    trans_op = trans(inputs,mask)
     clsfr_op = clsfr(trans_op[0].squeeze())
     loss = cost_function(clsfr_op, targets)
 
@@ -337,7 +338,7 @@ def test_step(trans, clsfr, cost_function, optimizerLo, optimizerCls, test_loade
     for step, (inputs, mask, targets) in enumerate(test_loader_tqdm):
 
       inputs = inputs.squeeze(dim=1).to(device)
-      inputs = mask.squeeze(dim=1).to(device)
+      mask = mask.squeeze(dim=1).to(device)
       targets = targets.reshape(targets.shape[0],1).to(device)
 
       trans_op = trans(inputs,mask)
