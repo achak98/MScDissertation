@@ -19,8 +19,8 @@ length = 1792
 input_size = length
 embedding_size = 768
 epochs = 25
-lrlo = 1e-6
-lrcls = 3.5e-6
+lrlo = 1e-5
+lrcls = 3.5e-5
 window_size = 5
 # set device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
