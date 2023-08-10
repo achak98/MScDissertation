@@ -436,7 +436,7 @@ for n, (train, test) in enumerate(kf.split(dataset)):
     print('------------------------------------------------------------------')
     print(f"\t\t\tTraining model: {n+1}")
     print('------------------------------------------------------------------')
-    model = MLP(input_size, embedding_size, window_size).to(device)
+    model = nn.DataParallel(MLP(input_size, embedding_size, window_size)).to(device)
     #model = Ngram_Clsfr().to(device)
     # loss and optimizer
     cost_function = CombinedLoss(alpha, beta, gamma)
