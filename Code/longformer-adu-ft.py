@@ -160,7 +160,7 @@ def get_loader(df, id2emb, ip_ids, attn_masks, shuffle=True):
   attn = np.array([attn_masks[id2emb[id]] for id in df['essay_id']])
   # dataset and dataloader
   data = TensorDataset(torch.from_numpy(ip).long(), torch.from_numpy(attn).float(), torch.from_numpy(np.array(df['scaled_score'])).float())
-  loader = DataLoader(data, batch_size=128, shuffle=shuffle, num_workers=2)
+  loader = DataLoader(data, batch_size=32, shuffle=shuffle, num_workers=0)
 
   return loader
 
