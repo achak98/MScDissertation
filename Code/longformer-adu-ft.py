@@ -488,10 +488,11 @@ for n, (train, test) in enumerate(kf.split(dataset)):
     cost_function = CombinedLoss(alpha, beta, gamma)
     optimizerLo = torch.optim.Adam(trans.parameters(), lr=lrlo)
     optimizerCls = torch.optim.Adam(clsfr.parameters(), lr=lrcls)
+    torch.cuda.empty_cache()
     # training
-    train_loss, train_preds = test_step(trans, clsfr, cost_function, optimizerLo, optimizerCls, train_loader)
-    test_loss, test_preds = test_step(trans, clsfr, cost_function, optimizerLo, optimizerCls, test_loader)
-    print('Before training:\tLoss/train: {:.5f}\tLoss/test: {:.5f}'.format(train_loss, test_loss))
+    #train_loss, train_preds = test_step(trans, clsfr, cost_function, optimizerLo, optimizerCls, train_loader)
+    #test_loss, test_preds = test_step(trans, clsfr, cost_function, optimizerLo, optimizerCls, test_loader)
+    #print('Before training:\tLoss/train: {:.5f}\tLoss/test: {:.5f}'.format(train_loss, test_loss))
     best_loss = 1.0
     epoch_tqdm = tqdm(range(epochs), total=epochs, desc='Epochs')
     for epoch in epoch_tqdm:
