@@ -184,7 +184,7 @@ class CombinedLoss(nn.Module):
         for i in range(N):
             for j in range(i+1, N):
                 r_ij = 1 if labels[i] > labels[j] else -1 if labels[i] < labels[j] else torch.sign(y[i] - y[j])
-                margin_ranking_loss += torch.max(0, -r_ij * (y[i] - y[j]) + 0)
+                margin_ranking_loss += torch.max(torch.tensor(0), -r_ij * (y[i] - y[j]) + torch.tensor(0))
         margin_ranking_loss /= (N * (N - 1)) / 2  # Normalize by the number of pairs
         
         total_loss = self.alpha * mse_loss + self.beta * margin_ranking_loss + self.gamma * similarity_loss
