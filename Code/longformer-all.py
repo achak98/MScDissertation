@@ -15,7 +15,7 @@ import gc
 import warnings
 warnings.filterwarnings("ignore")
 
-length = 1920
+length = 1792
 alpha = 0.45
 beta = 0.5
 gamma = 0.05
