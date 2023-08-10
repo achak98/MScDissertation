@@ -97,9 +97,9 @@ prompts_dict = {
     7:"Write about patience. Being patient means that you are understanding and tolerant. A patient person experience difficulties without complaining. Do only one of the following: write a story about a time when you were patient OR write a story about a time when someone you know was patient OR write a story in your own way about patience.",
     8:"We all understand the benefits of laughter. For example, someone once said, “Laughter is the shortest distance between two people.” Many other people believe that laughter is an important part of any relationship. Tell a true story in which laughter was one element or part."
 }
-roberta = nn.DataParallel(LongformerModel.from_pretrained("allenai/longformer-base-4096")).to(device)
+roberta = LongformerModel.from_pretrained("allenai/longformer-base-4096")
 roberta.resize_token_embeddings(len(tokenizer))
-
+roberta = nn.DataParallel(roberta).to(device)
 edu_dir = os.path.join(data_dir,"seg-adu")
 def mean_encoding(essay_list, essay_id_list, model, tokenizer):
 
