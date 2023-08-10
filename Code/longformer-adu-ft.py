@@ -159,7 +159,7 @@ def get_loader(df, id2emb, ip_ids, attn_masks, shuffle=True):
   ip = np.array([ip_ids[id2emb[id]] for id in df['essay_id']])
   attn = np.array([attn_masks[id2emb[id]] for id in df['essay_id']])
   # dataset and dataloader
-  data = TensorDataset(torch.from_numpy(ip).float(), torch.from_numpy(attn).float(), torch.from_numpy(np.array(df['scaled_score'])).float())
+  data = TensorDataset(torch.from_numpy(ip).long(), torch.from_numpy(attn).float(), torch.from_numpy(np.array(df['scaled_score'])).float())
   loader = DataLoader(data, batch_size=128, shuffle=shuffle, num_workers=2)
 
   return loader
@@ -169,9 +169,9 @@ class LongFo(torch.nn.Module):
     super(LongFo, self).__init__()
     self.model = LongformerModel.from_pretrained("allenai/longformer-base-4096").to(device)
     self.model.resize_token_embeddings(len(tokenizer))     
-  def forward(self,x):
-    print(x.size())
-    model_output = self.model(**x)
+  def forward(self,ip,mask):
+    model_output = self.model(input_ids=ip,attention_mask=mask)
+    print(model_output.size())
     return model_output
 class MLP(torch.nn.Module):
   def __init__(self, input_size,embedding_size, window_size):
@@ -332,12 +332,13 @@ def test_step(trans, clsfr, cost_function, optimizerLo, optimizerCls, test_loade
   clsfr.eval()
   with torch.no_grad():
     test_loader_tqdm = tqdm(test_loader, total=len(test_loader), desc='Test Batches')
-    for step, (inputs, targets) in enumerate(test_loader_tqdm):
+    for step, (inputs, mask, targets) in enumerate(test_loader_tqdm):
 
       inputs = inputs.squeeze(dim=1).to(device)
+      inputs = mask.squeeze(dim=1).to(device)
       targets = targets.reshape(targets.shape[0],1).to(device)
 
-      trans_op = trans(inputs)
+      trans_op = trans(inputs,mask)
       clsfr_op = clsfr(trans_op[0].squeeze())
       loss = cost_function(clsfr_op, targets)
 
