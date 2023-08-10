@@ -154,9 +154,10 @@ def get_loader(df, id2emb, essay_embeddings, shuffle=True):
 
   # get embeddings from essay_id using id2emb dict
   embeddings = np.array([essay_embeddings[id2emb[id]] for id in df['essay_id']])
-
+  print(embeddings)
+  print(type(embeddings))
   # dataset and dataloader
-  data = TensorDataset(torch.from_numpy(embeddings).float(), torch.from_numpy(np.array(df['scaled_score'])).float())
+  data = TensorDataset(torch.from_numpy(embeddings["input_ids"]).float(), torch.from_numpy(embeddings["attention_mask"]).float(), torch.from_numpy(np.array(df['scaled_score'])).float())
   loader = DataLoader(data, batch_size=128, shuffle=shuffle, num_workers=2)
 
   return loader
@@ -167,6 +168,7 @@ class LongFo(torch.nn.Module):
     self.model = LongformerModel.from_pretrained("allenai/longformer-base-4096").to(device)
     self.model.resize_token_embeddings(len(tokenizer))     
   def forward(self,x):
+    print(x.size())
     model_output = self.model(**x)
     return model_output
 class MLP(torch.nn.Module):
