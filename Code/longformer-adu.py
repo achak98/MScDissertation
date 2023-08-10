@@ -25,7 +25,7 @@ epochs = 25
 lr = 3e-4
 window_size = 5
 # set device
-device = torch.device("cuda:5" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 data_dir = "./../Data/ASAP-AES/"
 # Original kaggle training set
