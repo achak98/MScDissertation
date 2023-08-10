@@ -160,7 +160,7 @@ def get_loader(df, id2emb, ip_ids, attn_masks, shuffle=True):
   attn = np.array([attn_masks[id2emb[id]] for id in df['essay_id']])
   # dataset and dataloader
   data = TensorDataset(torch.from_numpy(ip).long(), torch.from_numpy(attn).float(), torch.from_numpy(np.array(df['scaled_score'])).float())
-  loader = DataLoader(data, batch_size=32, shuffle=shuffle, num_workers=0)
+  loader = DataLoader(data, batch_size=8, shuffle=shuffle, num_workers=0)
 
   return loader
 
@@ -299,15 +299,15 @@ def training_step(trans, clsfr, cost_function, optimizerLo, optimizerCls, train_
   train_loader_tqdm = tqdm(train_loader, total=len(train_loader), desc='Batches')
   for step, (inputs, mask, targets) in enumerate(train_loader_tqdm):
  
-    print("before sq ip size:",inputs.size())
+    #print("before sq ip size:",inputs.size())
     inputs = inputs.squeeze(dim=1).to(device)
-    print("after sq ip size:",inputs.size())
+    #print("after sq ip size:",inputs.size())
     mask = mask.squeeze(dim=1).to(device)
     targets = targets.reshape(targets.shape[0],1).to(device)
 
     trans_op = trans(inputs,mask)
-    print("before sq trans op size:",trans_op[0].size())
-    print("after sq trans op size:",trans_op[0].squeeze().size())
+    #print("before sq trans op size:",trans_op[0].size())
+    #print("after sq trans op size:",trans_op[0].squeeze().size())
     clsfr_op = clsfr(trans_op[0].squeeze())
     loss = cost_function(clsfr_op, targets)
 
