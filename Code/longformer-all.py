@@ -21,9 +21,10 @@ beta = 0.1
 gamma = 0.0
 input_size = length
 embedding_size = 768
-epochs = 60
+epochs = 25
 lr = 3e-4
 window_size = 5
+p=0.5
 # set device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -255,25 +256,25 @@ class Ngram_Clsfr(nn.Module):
     def __init__(self):
         super(Ngram_Clsfr, self).__init__()
         #print("in: {} out: {} ks: {}".format(args.embedding_dim, args.cnnfilters, args.cnn_window_size_small))
-        super(Ngram_Clsfr, self).__init__()
+        self.p = p
         #print("in: {} out: {} ks: {}".format(args.embedding_dim, args.cnnfilters, args.cnn_window_size_small))
         self.conv1 = nn.Conv1d(in_channels=768, out_channels=100, kernel_size=2, stride = 2)
         self.pool1 = nn.MaxPool1d(kernel_size=2, stride=2)
         self.gru1 = nn.LSTM(100, 128, batch_first=True, bidirectional=True)
-        self.dropout1 = nn.Dropout(p=0.4)
+        self.dropout1 = nn.Dropout(p=self.p)
 
         self.conv2 = nn.Conv1d(in_channels=768, out_channels=100, kernel_size=3, stride = 3)
         self.pool2 = nn.MaxPool1d(kernel_size=3, stride=3)
         self.gru2 = nn.LSTM(100, 128, batch_first=True, bidirectional=True)
-        self.dropout2 = nn.Dropout(p=0.4)
+        self.dropout2 = nn.Dropout(p=self.p)
 
         self.conv3 = nn.Conv1d(in_channels=768, out_channels=100, kernel_size=4, stride = 4)
         self.pool3 = nn.MaxPool1d(kernel_size=4, stride=4)
         self.gru3 = nn.LSTM(100, 128, batch_first=True, bidirectional=True)
-        self.dropout3 = nn.Dropout(p=0.4)
+        self.dropout3 = nn.Dropout(p=self.p)
 
         self.fc1 = nn.Linear(256,1)
-        self.dropout4 = nn.Dropout(p=0.4)
+        self.dropout4 = nn.Dropout(p=self.p)
         self.fc2 = nn.Linear(759,1)
 
     def forward(self, x):
