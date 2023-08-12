@@ -24,7 +24,7 @@ embedding_size = 768
 epochs = 25
 lr = 3e-4
 window_size = 5
-dor = 0.7
+dor = 0.5
 # set device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -307,7 +307,17 @@ class Ngram_Clsfr(nn.Module):
 
         return h
 
+def check_and_create_directory(directory_path):
+    if not os.path.exists(directory_path):
+        os.makedirs(directory_path)
+        print(f"Directory '{directory_path}' created.")
+    else:
+        print(f"Directory '{directory_path}' already exists.")
 
+
+# Example usage:
+save_directory = "./../Data/results/longformer-ap"
+check_and_create_directory(save_directory)
 
 
 def training_step(model, cost_function, optimizer, train_loader):
@@ -497,22 +507,15 @@ for n, (train, test) in enumerate(kf.split(dataset)):
         )
     data += "\nmean QWK:\t\t\t{:.4f}".format(np.mean(kappas_by_set))
     print("mean QWK:\t\t\t{:.4f}".format(np.mean(kappas_by_set)))
-
-
-
-
-def check_and_create_directory(directory_path):
-    if not os.path.exists(directory_path):
-        os.makedirs(directory_path)
-        print(f"Directory '{directory_path}' created.")
+    if n == 0:
+        file = open(os.path.join(save_directory, f"qwk.txt"), "w")
     else:
-        print(f"Directory '{directory_path}' already exists.")
+        file = open(os.path.join(save_directory, f"qwk.txt"), "a")
+    file.write(data)
+    file.close()
 
 
-# Example usage:
-save_directory = "./../Data/results/longformer-edu"
-check_and_create_directory(save_directory)
 
-file = open(os.path.join(save_directory, f"qwk.txt"), "w")
-file.write(data)
-file.close()
+
+
+
