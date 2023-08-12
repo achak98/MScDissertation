@@ -25,6 +25,7 @@ epochs = 25
 lr = 3e-4
 window_size = 5
 dor = 0.5
+
 # set device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
