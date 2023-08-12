@@ -16,9 +16,9 @@ import warnings
 warnings.filterwarnings("ignore")
 
 length = 1792
-alpha = 0.4
-beta = 0.5
-gamma = 0.1
+alpha = 0.7
+beta = 0.25
+gamma = 0.05
 input_size = length
 embedding_size = 768
 epochs = 25
@@ -160,7 +160,7 @@ def get_loader(df, id2emb, essay_embeddings, shuffle=True):
 
   # dataset and dataloader
   data = TensorDataset(torch.from_numpy(embeddings).float(), torch.from_numpy(np.array(df['scaled_score'])).float())
-  loader = DataLoader(data, batch_size=64, shuffle=shuffle, num_workers=0)
+  loader = DataLoader(data, batch_size=128, shuffle=shuffle, num_workers=0)
 
   return loader
 
