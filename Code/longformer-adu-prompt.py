@@ -22,7 +22,7 @@ gamma = 0.0
 input_size = length
 embedding_size = 768
 epochs = 40
-lr = 3e-3
+lr = 3e-5
 window_size = 5
 dor = 0.4
 
