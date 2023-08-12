@@ -358,7 +358,17 @@ def training_step(model, cost_function, optimizer, train_loader):
     cumulative_loss += loss.item()
 
   return cumulative_loss/samples
+def check_and_create_directory(directory_path):
+    if not os.path.exists(directory_path):
+        os.makedirs(directory_path)
+        print(f"Directory '{directory_path}' created.")
+    else:
+        print(f"Directory '{directory_path}' already exists.")
 
+
+# Example usage:
+save_directory = "./../Data/results/longformer-all"
+check_and_create_directory(save_directory)
 
 def test_step(model, cost_function, optimizer, test_loader):
 
@@ -519,22 +529,9 @@ for n, (train, test) in enumerate(kf.split(dataset)):
         )
     data += "\nmean QWK:\t\t\t{:.4f}".format(np.mean(kappas_by_set))
     print("mean QWK:\t\t\t{:.4f}".format(np.mean(kappas_by_set)))
-
-
-
-
-def check_and_create_directory(directory_path):
-    if not os.path.exists(directory_path):
-        os.makedirs(directory_path)
-        print(f"Directory '{directory_path}' created.")
+    if n == 0:
+        file = open(os.path.join(save_directory, f"qwk.txt"), "w")
     else:
-        print(f"Directory '{directory_path}' already exists.")
-
-
-# Example usage:
-save_directory = "./../Data/results/longformer-edu"
-check_and_create_directory(save_directory)
-
-file = open(os.path.join(save_directory, f"qwk.txt"), "w")
-file.write(data)
-file.close()
+        file = open(os.path.join(save_directory, f"qwk.txt"), "a")
+    file.write(data)
+    file.close()
