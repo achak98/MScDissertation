@@ -21,10 +21,10 @@ beta = 0.1
 gamma = 0.0
 input_size = length
 embedding_size = 768
-epochs = 40
-lr = 3e-3
+epochs = 20
+lr = 3e-4
 window_size = 5
-p=0.4
+p=0.6
 batch_size = 128
 
 # set device
