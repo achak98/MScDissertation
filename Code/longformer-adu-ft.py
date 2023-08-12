@@ -18,9 +18,9 @@ warnings.filterwarnings("ignore")
 length = 1792
 input_size = length
 embedding_size = 768
-epochs = 40
+epochs = 60
 lrlo = 1e-5
-lrcls = 3.5e-5
+lrcls = 1e-6
 window_size = 5
 # set device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -460,90 +460,90 @@ gc.collect()
 print("gc collected #1")
 data = ""
 for n, (train, test) in enumerate(kf.split(dataset)):
+    if(n==0):
+        print("train test split done")
+        gc.collect()
+        print("gc collected #2")
+        # train, test splits 
+        # scaled scores in train_df are computed only using training data
+        train_df = dataset.iloc[train]
+        print("train_df #1")
+        train_df = get_scaled_dataset(train_df)
+        print("train_df #2")
+        test_df = scaled_dataset.iloc[test]
+        print("train_df #1")
+        # dataloaders
+        train_loader = get_loader(train_df, id2emb, ip_ids, attn_masks, shuffle=True)
+        print("train_loader")
+        test_loader = get_loader(test_df, id2emb, ip_ids, attn_masks, shuffle=False)
+        print("test_loader")
+        # model
+        print('------------------------------------------------------------------')
+        print(f"\t\t\tTraining model: {n+1}")
+        print('------------------------------------------------------------------')
+        trans = nn.DataParallel(LongFo()).to(device)
+        clsfr = nn.DataParallel(MLP(input_size, embedding_size, window_size)).to(device)
+        #model = Ngram_Clsfr().to(device)
+        # loss and optimizer
+        cost_function = CombinedLoss(alpha, beta, gamma)
+        optimizerLo = torch.optim.Adam(trans.parameters(), lr=lrlo)
+        optimizerCls = torch.optim.Adam(clsfr.parameters(), lr=lrcls)
+        torch.cuda.empty_cache()
+        # training
+        #train_loss, train_preds = test_step(trans, clsfr, cost_function, optimizerLo, optimizerCls, train_loader)
+        #test_loss, test_preds = test_step(trans, clsfr, cost_function, optimizerLo, optimizerCls, test_loader)
+        #print('Before training:\tLoss/train: {:.5f}\tLoss/test: {:.5f}'.format(train_loss, test_loss))
+        best_loss = 1.0
+        epoch_tqdm = tqdm(range(epochs), total=epochs, desc='Epochs')
+        for epoch in epoch_tqdm:
+            train_loss = training_step(trans, clsfr, cost_function, optimizerLo, optimizerCls, train_loader)
+            test_loss, test_preds = test_step(trans, clsfr, cost_function, optimizerLo, optimizerCls, test_loader)
+            if test_loss < best_loss:
+                torch.save(clsfr.state_dict(), best_clsfr_path)
+                torch.save(trans.state_dict(), best_lo_path)
+                print("Saving model")
+                best_loss = test_loss
 
-    print("train test split done")
-    gc.collect()
-    print("gc collected #2")
-    # train, test splits 
-    # scaled scores in train_df are computed only using training data
-    train_df = dataset.iloc[train]
-    print("train_df #1")
-    train_df = get_scaled_dataset(train_df)
-    print("train_df #2")
-    test_df = scaled_dataset.iloc[test]
-    print("train_df #1")
-    # dataloaders
-    train_loader = get_loader(train_df, id2emb, ip_ids, attn_masks, shuffle=True)
-    print("train_loader")
-    test_loader = get_loader(test_df, id2emb, ip_ids, attn_masks, shuffle=False)
-    print("test_loader")
-    # model
-    print('------------------------------------------------------------------')
-    print(f"\t\t\tTraining model: {n+1}")
-    print('------------------------------------------------------------------')
-    trans = nn.DataParallel(LongFo()).to(device)
-    clsfr = nn.DataParallel(MLP(input_size, embedding_size, window_size)).to(device)
-    #model = Ngram_Clsfr().to(device)
-    # loss and optimizer
-    cost_function = CombinedLoss(alpha, beta, gamma)
-    optimizerLo = torch.optim.Adam(trans.parameters(), lr=lrlo)
-    optimizerCls = torch.optim.Adam(clsfr.parameters(), lr=lrcls)
-    torch.cuda.empty_cache()
-    # training
-    #train_loss, train_preds = test_step(trans, clsfr, cost_function, optimizerLo, optimizerCls, train_loader)
-    #test_loss, test_preds = test_step(trans, clsfr, cost_function, optimizerLo, optimizerCls, test_loader)
-    #print('Before training:\tLoss/train: {:.5f}\tLoss/test: {:.5f}'.format(train_loss, test_loss))
-    best_loss = 1.0
-    epoch_tqdm = tqdm(range(epochs), total=epochs, desc='Epochs')
-    for epoch in epoch_tqdm:
-        train_loss = training_step(trans, clsfr, cost_function, optimizerLo, optimizerCls, train_loader)
+            epoch_tqdm.set_postfix ({f"Epoch: {epoch+1} \t\t Train Loss: {train_loss:.5f} Test Loss: {test_loss:.5f} \n":  test_loss})
+
+        clsfr.load_state_dict(torch.load(best_clsfr_path))
+        trans.load_state_dict(torch.load(best_lo_path))
+        train_loss, train_preds = test_step(trans, clsfr, cost_function, optimizerLo, optimizerCls, train_loader)
         test_loss, test_preds = test_step(trans, clsfr, cost_function, optimizerLo, optimizerCls, test_loader)
-        if test_loss < best_loss:
-            torch.save(clsfr.state_dict(), best_clsfr_path)
-            torch.save(trans.state_dict(), best_lo_path)
-            print("Saving model")
-            best_loss = test_loss
+        print('After training:\t\tLoss/train: {:.5f}\tLoss/test: {:.5f}'.format(train_loss, test_loss))
 
-        epoch_tqdm.set_postfix ({f"Epoch: {epoch+1} \t\t Train Loss: {train_loss:.5f} Test Loss: {test_loss:.5f} \n":  test_loss})
-
-    clsfr.load_state_dict(torch.load(best_clsfr_path))
-    trans.load_state_dict(torch.load(best_lo_path))
-    train_loss, train_preds = test_step(trans, clsfr, cost_function, optimizerLo, optimizerCls, train_loader)
-    test_loss, test_preds = test_step(trans, clsfr, cost_function, optimizerLo, optimizerCls, test_loader)
-    print('After training:\t\tLoss/train: {:.5f}\tLoss/test: {:.5f}'.format(train_loss, test_loss))
-
-    print("getting results df")
-    results_df = get_results_df(train_df, test_df, test_preds)
-    print("got results df")
-    kappas_by_set = []
-    for essay_set in range(1, 9):
-        kappas_by_set.append(
-            kappa(
-                results_df.loc[results_df["essay_set"] == essay_set, "score"],
-                results_df.loc[results_df["essay_set"] == essay_set, "pred"],
-                weights="quadratic",
+        print("getting results df")
+        results_df = get_results_df(train_df, test_df, test_preds)
+        print("got results df")
+        kappas_by_set = []
+        for essay_set in range(1, 9):
+            kappas_by_set.append(
+                kappa(
+                    results_df.loc[results_df["essay_set"] == essay_set, "score"],
+                    results_df.loc[results_df["essay_set"] == essay_set, "pred"],
+                    weights="quadratic",
+                )
             )
-        )
-        print(f"got kappa for essay set {essay_set}")
-    id = n + 1
+            print(f"got kappa for essay set {essay_set}")
+        id = n + 1
     
-    print("--------------------------------------")
-    print(f"\tResults for model: {id}")
-    print("--------------------------------------")
-    data += "\n--------------------------------------"
-    data += f"\n\tResults for model: {id}"
-    data += "\n--------------------------------------"
-    for essay_set in range(8):
-        data += "\nKappa for essay set {:}:\t\t{:.4f}".format(
-            essay_set + 1, kappas_by_set[essay_set]
-        )
-        print(
-            "Kappa for essay set {:}:\t\t{:.4f}".format(
+        print("--------------------------------------")
+        print(f"\tResults for model: {id}")
+        print("--------------------------------------")
+        data += "\n--------------------------------------"
+        data += f"\n\tResults for model: {id}"
+        data += "\n--------------------------------------"
+        for essay_set in range(8):
+            data += "\nKappa for essay set {:}:\t\t{:.4f}".format(
                 essay_set + 1, kappas_by_set[essay_set]
             )
-        )
-    data += "\nmean QWK:\t\t\t{:.4f}".format(np.mean(kappas_by_set))
-    print("mean QWK:\t\t\t{:.4f}".format(np.mean(kappas_by_set)))
+            print(
+                "Kappa for essay set {:}:\t\t{:.4f}".format(
+                    essay_set + 1, kappas_by_set[essay_set]
+                )
+            )
+        data += "\nmean QWK:\t\t\t{:.4f}".format(np.mean(kappas_by_set))
+        print("mean QWK:\t\t\t{:.4f}".format(np.mean(kappas_by_set)))
 
 
 

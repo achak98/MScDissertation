@@ -15,15 +15,16 @@ import gc
 import warnings
 warnings.filterwarnings("ignore")
 
-length = 1920
-alpha = 0.45
-beta = 0.5
-gamma = 0.05
+length = 1792
+alpha = 0.9
+beta = 0.1
+gamma = 0.0
 input_size = length
 embedding_size = 768
 epochs = 25
 lr = 3e-4
 window_size = 5
+dor = 0.7
 # set device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -196,7 +197,7 @@ class MLP(torch.nn.Module):
   def __init__(self, input_size,embedding_size, window_size):
     super(MLP, self).__init__()
     self.window_size = window_size
-    self.p = 0.4
+    self.p = dor
     self.lstm1 = nn.LSTM(768, 512, batch_first=True, bidirectional=True)
     self.dropout1 = nn.Dropout(p=self.p)
     self.layers1 = torch.nn.Sequential(
@@ -237,7 +238,7 @@ class MLP(torch.nn.Module):
         l1out = self.dropout1(l1out)
         layer_1_out = self.layers1(l1out)
         #print("layer_1_out: ",layer_1_out.size())
-        layer_1_out = layer_1_out.squeeze()
+        layer_1_out = layer_1_out.squeeze(dim=-1)
         #print("layer_1_out squeezed: ",layer_1_out.size())
         l2out, _ = self.lstm2(layer_1_out) 
         l2out = self.dropout2(l2out)
