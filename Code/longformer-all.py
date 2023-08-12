@@ -190,137 +190,137 @@ class CombinedLoss(nn.Module):
         
         total_loss = self.alpha * mse_loss + self.beta * margin_ranking_loss + self.gamma * similarity_loss
         return total_loss
-
-class MLP(torch.nn.Module):
   
-  def __init__(self, input_size,embedding_size, window_size):
-    super(MLP, self).__init__()
-    self.window_size = window_size
-    self.p = 0.4
-    self.lstm1 = nn.LSTM(768, 512, batch_first=True, bidirectional=True)
-    self.dropout1 = nn.Dropout(p=self.p)
-    self.layers1 = torch.nn.Sequential(
-      torch.nn.Linear(512*2, 256),
-      torch.nn.ReLU(),
-      torch.nn.Dropout(p=self.p),
-      torch.nn.Linear(256, 96),
-      torch.nn.ReLU(),
-      torch.nn.Dropout(p=self.p),
-      torch.nn.Linear(96, 1)
-    )
-    self.lstm2 = nn.LSTM(input_size, 512, batch_first=True, bidirectional=True)
-    self.dropout2 = nn.Dropout(p=self.p)
-    self.layers2 = torch.nn.Sequential(
-      torch.nn.Linear(512*2, 256),
-      torch.nn.ReLU(),
-      torch.nn.Dropout(p=self.p),
-      torch.nn.Linear(256, 96),
-      torch.nn.ReLU(),
-      torch.nn.Dropout(p=self.p),
-      torch.nn.Linear(96, 1)
-    ) 
-
-  def similarity(self, hi, hj):
-        # Concatenate the hidden representations
-        """print("hi: ",hi.size())
-        print("hj: ",hj.size())
-        print("hi * hj: ",(hi * hj).size())"""
-        h_concat = torch.cat([hi, hj, hi * hj], dim=-1)
-        #print("h_concat: ",h_concat.size())
-        attn_weights = self.attention_weights(h_concat)
-        #print("attn_weights: ",attn_weights.size())
-        return attn_weights
-    
-  def forward(self, x):
-        #print("x: ",x.size())
-        l1out, _ = self.lstm1(x) 
-        l1out = self.dropout1(l1out)
-        layer_1_out = self.layers1(l1out)
-        #print("layer_1_out: ",layer_1_out.size())
-        layer_1_out = layer_1_out.squeeze()
-        #print("layer_1_out squeezed: ",layer_1_out.size())
-        l2out, _ = self.lstm2(layer_1_out) 
-        l2out = self.dropout2(l2out)
-        layer_2_out = self.layers2(l2out)
-        #print("layer_2_out: ",layer_2_out.size())
-        return layer_2_out
-  
-class Ngram_Clsfr(nn.Module):
+"""class Ngram_Clsfr(nn.Module):
     def __init__(self):
         super(Ngram_Clsfr, self).__init__()
         #print("in: {} out: {} ks: {}".format(args.embedding_dim, args.cnnfilters, args.cnn_window_size_small))
-        self.conv1 = nn.Conv1d(in_channels=input_size, out_channels=512, kernel_size=2, stride = 2)
+        self.conv1 = nn.Conv1d(in_channels=768, out_channels=100, kernel_size=2, stride = 2)
         self.pool1 = nn.MaxPool1d(kernel_size=2, stride=2)
-        self.gru1 = nn.LSTM(512, 128, batch_first=True, bidirectional=True)
-        self.dropout1 = nn.Dropout(p=0.6)
+        self.gru1 = nn.LSTM(100, 128, batch_first=True, bidirectional=True)
+        self.dropout1 = nn.Dropout(p=0.4)
 
-        self.conv2 = nn.Conv1d(in_channels=input_size, out_channels=512, kernel_size=3, stride = 3)
+        self.conv2 = nn.Conv1d(in_channels=768, out_channels=100, kernel_size=3, stride = 3)
         self.pool2 = nn.MaxPool1d(kernel_size=3, stride=3)
-        self.gru2 = nn.LSTM(512, 128, batch_first=True, bidirectional=True)
-        self.dropout2 = nn.Dropout(p=0.6)
+        self.gru2 = nn.LSTM(100, 128, batch_first=True, bidirectional=True)
+        self.dropout2 = nn.Dropout(p=0.4)
 
-        self.conv3 = nn.Conv1d(in_channels=input_size, out_channels=512, kernel_size=4, stride = 4)
+        self.conv3 = nn.Conv1d(in_channels=768, out_channels=100, kernel_size=4, stride = 4)
         self.pool3 = nn.MaxPool1d(kernel_size=4, stride=4)
-        self.gru3 = nn.LSTM(512, 128, batch_first=True, bidirectional=True)
-        self.dropout3 = nn.Dropout(p=0.6)
+        self.gru3 = nn.LSTM(100, 128, batch_first=True, bidirectional=True)
+        self.dropout3 = nn.Dropout(p=0.4)
 
         self.fc = nn.Linear(128*2*3,1)
 
     def forward(self, x):
-        #print(f"x: {x.size()}")
-        #x=x.permute(0,2,1)
-        #print(f"x: {x.size()}")
+        print(f"x: {x.size()}")
+        x=x.permute(0,2,1)
+        print(f"x: {x.size()}")
         x1 = self.conv1(x)
-        #print(f"x1: {x1.size()}")
+        print(f"x1: {x1.size()}")
         x1 = self.pool1(x1)
-        #print(f"before permu x1: {x1.size()}")
+        print(f"x1: {x1.size()}")
         x1=x1.permute(0,2,1)
-        #print(f"after permu x1: {x1.size()}")
+        print(f"x1: {x1.size()}")
         h1, _ = self.gru1(x1) #x1 should be batch size, sequence length, input length
-        #print(f"after lstm h1: {h1.size()}")
-        #h1=h1.permute(0,2,1)
-        #print(f"after lstm permuted h1: {h1.size()}")
+        print(f"h1: {h1.size()}")
+        h1 = torch.cat((h1[0, :, :], h1[1, :, :]), dim=1)
+        print(f"h1: {h1.size()}")
+        h1 = self.dropout1(h1)
+        print(f"h1: {h1.size()}")
+
+        x2 = self.conv2(x)
+        x2 = self.pool2(x2)
+        x2=x2.permute(0,2,1)
+        h2, _ = self.gru2(x2)
+        h2 = torch.cat((h2[0, :, :], h2[1, :, :]), dim=1)
+        h2 = self.dropout1(h2)
+
+        x3 = self.conv3(x)
+        x3 = self.pool3(x3)
+        x3=x3.permute(0,2,1)
+        h3, _ = self.gru3(x3)
+        h3 = torch.cat((h3[0, :, :], h3[1, :, :]), dim=1)
+        h3 = self.dropout1(h3)
+
+        h = torch.cat((h1, h2, h3), dim=1)
+        print(f"h: {h.size()}")
+        h = self.fc(h)
+        print(f"h: {h.size()}")
+        h = h.squeeze()
+        print(f"h: {h.size()}")
+
+        return h"""
+class Ngram_Clsfr(nn.Module):
+    def __init__(self):
+        super(Ngram_Clsfr, self).__init__()
+        #print("in: {} out: {} ks: {}".format(args.embedding_dim, args.cnnfilters, args.cnn_window_size_small))
+        super(Ngram_Clsfr, self).__init__()
+        #print("in: {} out: {} ks: {}".format(args.embedding_dim, args.cnnfilters, args.cnn_window_size_small))
+        self.conv1 = nn.Conv1d(in_channels=768, out_channels=100, kernel_size=2, stride = 2)
+        self.pool1 = nn.MaxPool1d(kernel_size=2, stride=2)
+        self.gru1 = nn.LSTM(100, 128, batch_first=True, bidirectional=True)
+        self.dropout1 = nn.Dropout(p=0.4)
+
+        self.conv2 = nn.Conv1d(in_channels=768, out_channels=100, kernel_size=3, stride = 3)
+        self.pool2 = nn.MaxPool1d(kernel_size=3, stride=3)
+        self.gru2 = nn.LSTM(100, 128, batch_first=True, bidirectional=True)
+        self.dropout2 = nn.Dropout(p=0.4)
+
+        self.conv3 = nn.Conv1d(in_channels=768, out_channels=100, kernel_size=4, stride = 4)
+        self.pool3 = nn.MaxPool1d(kernel_size=4, stride=4)
+        self.gru3 = nn.LSTM(100, 128, batch_first=True, bidirectional=True)
+        self.dropout3 = nn.Dropout(p=0.4)
+
+        self.fc = nn.Linear(128*2*3,1)
+
+    def forward(self, x):
+        print(f"x: {x.size()}")
+        x=x.permute(0,2,1)
+        print(f"x after permute: {x.size()}")
+        x1 = self.conv1(x)
+        print(f"x1 conv: {x1.size()}")
+        x1 = self.pool1(x1)
+        print(f"x1 pool: {x1.size()}")
+        x1=x1.permute(0,2,1)
+        print(f"x1 after permute: {x1.size()}")
+        h1, _ = self.gru1(x1) #x1 should be batch size, sequence length, input length
+        print(f"h1 lstm: {h1.size()}")
         #h1 = torch.cat((h1[0, :, :], h1[1, :, :]), dim=1)
         #print(f"h1: {h1.size()}")
         h1 = self.dropout1(h1)
-        #print(f"h1: {h1.size()}")
+        print(f"h1 do: {h1.size()}")
 
         x2 = self.conv2(x)
-        #print(f"x2: {x2.size()}")
+        print(f"x2 conv: {x2.size()}")
         x2 = self.pool2(x2)
-        #print(f"before permu x2: {x2.size()}")
+        print(f"x2 pool: {x2.size()}")
         x2=x2.permute(0,2,1)
-        #print(f"after permu x2: {x2.size()}")
+        print(f"x2 after permute: {x2.size()}")
         h2, _ = self.gru2(x2)
-        #print(f"after lstm h2: {h2.size()}")
-        #h2=h2.permute(0,2,1)
-        #print(f"after lstm permuted h2: {h2.size()}")
+        print(f"h2 lstm: {h2.size()}")
         #h2 = torch.cat((h2[0, :, :], h2[1, :, :]), dim=1)
-        #print(f"h2: {h2.size()}")
         h2 = self.dropout1(h2)
-        #print(f"h2: {h2.size()}")
+        print(f"h2 do: {h2.size()}")
 
         x3 = self.conv3(x)
-        #print(f"x3: {x3.size()}")
+        print(f"x3 conv: {x3.size()}")
         x3 = self.pool3(x3)
-        #print(f"before permu x3: {x3.size()}")
+        print(f"x3 pool: {x3.size()}")
         x3=x3.permute(0,2,1)
-        #print(f"after permu x3: {x3.size()}")
+        print(f"x3 after permute: {x3.size()}")
         h3, _ = self.gru3(x3)
-        #print(f"after lstm h3: {h3.size()}")
-        #h3=h3.permute(0,2,1)
-        #print(f"after lstm permuted h3: {h3.size()}")
+        print(f"h3 lstm: {h3.size()}")
         #h3 = torch.cat((h3[0, :, :], h3[1, :, :]), dim=1)
-        #print(f"h3: {h3.size()}")
         h3 = self.dropout1(h3)
-        #print(f"h3: {h3.size()}")
+        print(f"h3 do: {h3.size()}")
 
         h = torch.cat((h1, h2, h3), dim=1)
-        #print(f"h: {h.size()}")
+        print(f"h after cat: {h.size()}")
         h = self.fc(h)
-        #print(f"h: {h.size()}")
+        print(f"h after fc: {h.size()}")
         h = h.squeeze()
-        #print(f"h: {h.size()}")
+        print(f"h after squeeze: {h.size()}")
 
         return h
 
