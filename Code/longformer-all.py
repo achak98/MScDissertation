@@ -272,7 +272,9 @@ class Ngram_Clsfr(nn.Module):
         self.gru3 = nn.LSTM(100, 128, batch_first=True, bidirectional=True)
         self.dropout3 = nn.Dropout(p=0.4)
 
-        self.fc = nn.Linear(128*2*3,1)
+        self.fc1 = nn.Linear(256,1)
+        self.dropout4 = nn.Dropout(p=0.4)
+        self.fc2 = nn.Linear(759,1)
 
     def forward(self, x):
         print(f"x: {x.size()}")
@@ -317,11 +319,14 @@ class Ngram_Clsfr(nn.Module):
 
         h = torch.cat((h1, h2, h3), dim=1)
         print(f"h after cat: {h.size()}")
-        h = self.fc(h)
-        print(f"h after fc: {h.size()}")
+        h = self.fc1(h)
+        print(f"h after first fc: {h.size()}")
         h = h.squeeze()
         print(f"h after squeeze: {h.size()}")
-
+        h = self.dropout4(h)
+        print(f"h after do: {h.size()}")
+        h = self.fc2(h)
+        print(f"h after second fc: {h.size()}")
         return h
 
 
