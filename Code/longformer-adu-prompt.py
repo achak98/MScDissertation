@@ -21,10 +21,10 @@ beta = 0.1
 gamma = 0.0
 input_size = length
 embedding_size = 768
-epochs = 25
-lr = 3e-4
+epochs = 40
+lr = 3e-3
 window_size = 5
-dor = 0.5
+dor = 0.4
 
 # set device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -163,7 +163,7 @@ def get_loader(df, id2emb, essay_embeddings, shuffle=True):
 
   # dataset and dataloader
   data = TensorDataset(torch.from_numpy(embeddings).float(), torch.from_numpy(np.array(df['scaled_score'])).float())
-  loader = DataLoader(data, batch_size=64, shuffle=shuffle, num_workers=0)
+  loader = DataLoader(data, batch_size=128, shuffle=shuffle, num_workers=0)
 
   return loader
 
@@ -452,8 +452,8 @@ for n, (train, test) in enumerate(kf.split(dataset)):
     model = nn.DataParallel(MLP(input_size, embedding_size, window_size)).to(device)
     #model = Ngram_Clsfr().to(device)
     # loss and optimizer
-    cost_function = CombinedLoss(alpha, beta, gamma)
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+    cost_function = nn.MSELoss()#CombinedLoss(alpha, beta, gamma)
+    optimizer = torch.optim.RMSprop(model.parameters(), lr=lr)
 
     # training
     train_loss, train_preds = test_step(model, cost_function, optimizer, train_loader)
