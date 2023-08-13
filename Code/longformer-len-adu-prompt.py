@@ -404,17 +404,30 @@ for n, (train, test) in enumerate(kf.split(dataset)):
     train_loss, train_preds = test_step(model, cost_function, optimizer, train_loader)
     test_loss, test_preds = test_step(model, cost_function, optimizer, test_loader)
     print('Before training:\tLoss/train: {:.5f}\tLoss/test: {:.5f}'.format(train_loss, test_loss))
-    best_loss = 1.0
+    best_kappa = 0.0
     epoch_tqdm = tqdm(range(epochs), total=epochs, desc='Epochs')
     for epoch in epoch_tqdm:
         train_loss = training_step(model, cost_function, optimizer, train_loader)
         test_loss, test_preds = test_step(model, cost_function, optimizer, test_loader)
-        if test_loss < best_loss:
+        print("getting results df")
+        results_df = get_results_df(train_df, test_df, test_preds)
+        print("got results df")
+        kappas_by_set = []
+        for essay_set in range(1, 9):
+            kappas_by_set.append(
+                kappa(
+                    results_df.loc[results_df["essay_set"] == essay_set, "score"],
+                    results_df.loc[results_df["essay_set"] == essay_set, "pred"],
+                    weights="quadratic",
+                )
+            )
+        mean_kappa = np.mean(kappas_by_set)
+        if mean_kappa > best_kappa:
             torch.save(model.state_dict(), best_model_path)
             print("Saving model")
-            best_loss = test_loss
+            best_kappa = mean_kappa
 
-        epoch_tqdm.set_postfix ({f"Test Loss: {test_loss:.5f} Train Loss: {train_loss:.5f} for Epoch: ":  {epoch+1}})
+        epoch_tqdm.set_postfix ({f"Mean Kappa: {mean_kappa:.5f} Test Loss: {test_loss:.5f} Train Loss: {train_loss:.5f} for Epoch: ":  {epoch+1}})
 
     model.load_state_dict(torch.load(best_model_path))
     train_loss, train_preds = test_step(model, cost_function, optimizer, train_loader)
