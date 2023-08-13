@@ -24,7 +24,7 @@ embedding_size = 768
 epochs = 100
 lr = 3e-5
 window_size = 5
-dor = 0.4
+dor = 0.5
 
 # set device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -199,7 +199,7 @@ class MLP(torch.nn.Module):
     super(MLP, self).__init__()
     self.window_size = window_size
     self.p = dor
-    self.lstm1 = nn.LSTM(768, 512, batch_first=True, num_layers=2, bidirectional=True)
+    self.lstm1 = nn.LSTM(768, 512, batch_first=True, num_layers=1, bidirectional=True)
     self.dropout1 = nn.Dropout(p=self.p)
     self.layers1 = torch.nn.Sequential(
       torch.nn.Linear(512*2, 256),
@@ -210,7 +210,7 @@ class MLP(torch.nn.Module):
       torch.nn.Dropout(p=self.p),
       torch.nn.Linear(96, 1)
     )
-    self.lstm2 = nn.LSTM(input_size, 512, batch_first=True, num_layers=2, bidirectional=True)
+    self.lstm2 = nn.LSTM(input_size, 512, batch_first=True, num_layers=1, bidirectional=True)
     self.dropout2 = nn.Dropout(p=self.p)
     self.layers2 = torch.nn.Sequential(
       torch.nn.Linear(512*2, 256),
