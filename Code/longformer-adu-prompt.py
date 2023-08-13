@@ -421,7 +421,7 @@ for n, (train, test) in enumerate(kf.split(dataset)):
             torch.save(model.state_dict(), best_model_path)
             print("Saving model")
             best_kappa = mean_kappa
-
+        epoch_tqdm.set_postfix ({f"Mean Kappa: {mean_kappa:.5f} Test Loss: {test_loss:.5f} Train Loss: {train_loss:.5f} for Epoch: ":  {epoch+1}})
     model.load_state_dict(torch.load(best_model_path))
     train_loss, train_preds = test_step(model, cost_function, optimizer, train_loader)
     test_loss, test_preds = test_step(model, cost_function, optimizer, test_loader)
