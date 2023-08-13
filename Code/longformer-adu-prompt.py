@@ -425,7 +425,7 @@ for n, (train, test) in enumerate(kf.split(dataset)):
     model.load_state_dict(torch.load(best_model_path))
     train_loss, train_preds = test_step(model, cost_function, optimizer, train_loader)
     test_loss, test_preds = test_step(model, cost_function, optimizer, test_loader)
-    print('After training:\t\tLoss/train: {:.5f}\tLoss/test: {:.5f}'.format(train_loss, test_loss))
+    print('After training:\tBest/Kappa: {:.5f}\tLoss/train: {:.5f}\tLoss/test: {:.5f}'.format(best_kappa, train_loss, test_loss))
 
     print("getting results df")
     results_df = get_results_df(train_df, test_df, test_preds)
