@@ -199,7 +199,7 @@ class MLP(torch.nn.Module):
     super(MLP, self).__init__()
     self.window_size = window_size
     self.p = dor
-    self.lstm1 = nn.LSTM(768, 512, batch_first=True, bidirectional=True)
+    self.lstm1 = nn.LSTM(768, 512, batch_first=True, num_layers=2, bidirectional=True)
     self.dropout1 = nn.Dropout(p=self.p)
     self.layers1 = torch.nn.Sequential(
       torch.nn.Linear(512*2, 256),
@@ -210,7 +210,7 @@ class MLP(torch.nn.Module):
       torch.nn.Dropout(p=self.p),
       torch.nn.Linear(96, 1)
     )
-    self.lstm2 = nn.LSTM(input_size, 512, batch_first=True, bidirectional=True)
+    self.lstm2 = nn.LSTM(input_size, 512, batch_first=True, num_layers=2, bidirectional=True)
     self.dropout2 = nn.Dropout(p=self.p)
     self.layers2 = torch.nn.Sequential(
       torch.nn.Linear(512*2, 256),
@@ -247,66 +247,6 @@ class MLP(torch.nn.Module):
         #print("layer_2_out: ",layer_2_out.size())
         return layer_2_out
   
-class Ngram_Clsfr(nn.Module):
-    def __init__(self):
-        super(Ngram_Clsfr, self).__init__()
-        #print("in: {} out: {} ks: {}".format(args.embedding_dim, args.cnnfilters, args.cnn_window_size_small))
-        self.conv1 = nn.Conv1d(in_channels=768, out_channels=100, kernel_size=2, stride = 2)
-        self.pool1 = nn.MaxPool1d(kernel_size=2, stride=2)
-        self.gru1 = nn.LSTM(100, 128, batch_first=True, bidirectional=True)
-        self.dropout1 = nn.Dropout(p=0.4)
-
-        self.conv2 = nn.Conv1d(in_channels=768, out_channels=100, kernel_size=3, stride = 3)
-        self.pool2 = nn.MaxPool1d(kernel_size=3, stride=3)
-        self.gru2 = nn.LSTM(100, 128, batch_first=True, bidirectional=True)
-        self.dropout2 = nn.Dropout(p=0.4)
-
-        self.conv3 = nn.Conv1d(in_channels=768, out_channels=100, kernel_size=4, stride = 4)
-        self.pool3 = nn.MaxPool1d(kernel_size=4, stride=4)
-        self.gru3 = nn.LSTM(100, 128, batch_first=True, bidirectional=True)
-        self.dropout3 = nn.Dropout(p=0.4)
-
-        self.fc = nn.Linear(128*2*3,1)
-
-    def forward(self, x):
-        print(f"x: {x.size()}")
-        x=x.permute(0,2,1)
-        print(f"x: {x.size()}")
-        x1 = self.conv1(x)
-        print(f"x1: {x1.size()}")
-        x1 = self.pool1(x1)
-        print(f"x1: {x1.size()}")
-        x1=x1.permute(0,2,1)
-        print(f"x1: {x1.size()}")
-        h1, _ = self.gru1(x1) #x1 should be batch size, sequence length, input length
-        print(f"h1: {h1.size()}")
-        h1 = torch.cat((h1[0, :, :], h1[1, :, :]), dim=1)
-        print(f"h1: {h1.size()}")
-        h1 = self.dropout1(h1)
-        print(f"h1: {h1.size()}")
-
-        x2 = self.conv2(x)
-        x2 = self.pool2(x2)
-        x2=x2.permute(0,2,1)
-        h2, _ = self.gru2(x2)
-        h2 = torch.cat((h2[0, :, :], h2[1, :, :]), dim=1)
-        h2 = self.dropout1(h2)
-
-        x3 = self.conv3(x)
-        x3 = self.pool3(x3)
-        x3=x3.permute(0,2,1)
-        h3, _ = self.gru3(x3)
-        h3 = torch.cat((h3[0, :, :], h3[1, :, :]), dim=1)
-        h3 = self.dropout1(h3)
-
-        h = torch.cat((h1, h2, h3), dim=1)
-        print(f"h: {h.size()}")
-        h = self.fc(h)
-        print(f"h: {h.size()}")
-        h = h.squeeze()
-        print(f"h: {h.size()}")
-
-        return h
 
 def check_and_create_directory(directory_path):
     if not os.path.exists(directory_path):
@@ -459,17 +399,28 @@ for n, (train, test) in enumerate(kf.split(dataset)):
     train_loss, train_preds = test_step(model, cost_function, optimizer, train_loader)
     test_loss, test_preds = test_step(model, cost_function, optimizer, test_loader)
     print('Before training:\tLoss/train: {:.5f}\tLoss/test: {:.5f}'.format(train_loss, test_loss))
-    best_loss = 1.0
+    best_kappa = 0.0
     epoch_tqdm = tqdm(range(epochs), total=epochs, desc='Epochs')
     for epoch in epoch_tqdm:
         train_loss = training_step(model, cost_function, optimizer, train_loader)
         test_loss, test_preds = test_step(model, cost_function, optimizer, test_loader)
-        if test_loss < best_loss:
+        print("getting results df")
+        results_df = get_results_df(train_df, test_df, test_preds)
+        print("got results df")
+        kappas_by_set = []
+        for essay_set in range(1, 9):
+            kappas_by_set.append(
+                kappa(
+                    results_df.loc[results_df["essay_set"] == essay_set, "score"],
+                    results_df.loc[results_df["essay_set"] == essay_set, "pred"],
+                    weights="quadratic",
+                )
+            )
+        mean_kappa = np.mean(kappas_by_set)
+        if mean_kappa > best_kappa:
             torch.save(model.state_dict(), best_model_path)
             print("Saving model")
-            best_loss = test_loss
-
-        epoch_tqdm.set_postfix ({f"Test Loss: {test_loss:.5f} Train Loss: {train_loss:.5f} for Epoch: ":  {epoch+1}})
+            best_kappa = mean_kappa
 
     model.load_state_dict(torch.load(best_model_path))
     train_loss, train_preds = test_step(model, cost_function, optimizer, train_loader)
