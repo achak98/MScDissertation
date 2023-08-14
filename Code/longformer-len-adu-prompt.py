@@ -138,7 +138,6 @@ def mean_encoding(essay_list, essay_id_list, essay_set_list, model, tokenizer):
             if(show_once):
 
                print(essay)
-               show_once = False
     else:
        print(f"couldn't find edus for essay id: {essay_id} \n Looked at path: {os.path.join(edu_dir, str(essay_id) + '.out')}")
        essay = default_essay
@@ -152,9 +151,14 @@ def mean_encoding(essay_list, essay_id_list, essay_set_list, model, tokenizer):
     wc = torch.tensor(count_words(default_essay)).unsqueeze(0)
     aduc = torch.tensor(no_of_adus).unsqueeze(0)
     spacer1 = torch.tensor(-1).unsqueeze(0)
-    spacer2 =torch.full((1,786), -1)
+    spacer2 =torch.full((1,768), -1)
     combined_embed = torch.cat((prompt_embed,spacer2,embeddings), dim=0)
     comb_len_context = torch.cat((wc,spacer1,aduc,spacer1), dim=0)
+    if show_once:
+        print("combined_embed :",combined_embed.size())
+        print("comb_len_context: ",comb_len_context.size())
+        show_once = False
+
     tokens_embeddings = np.matrix(combined_embed)
     len_context = np.matrix(comb_len_context)
     mat_embeddings.append(np.squeeze(np.asarray(tokens_embeddings)))
@@ -242,7 +246,9 @@ class MLP(torch.nn.Module):
     )
     self.fcs = torch.nn.Sequential(
        torch.nn.Linear(len_tot, len_tot),
-       torch.nn.Linear(len_tot, len_tot)
+       torch.nn.Dropout(p=self.p),
+       torch.nn.Linear(len_tot, len_tot),
+       torch.nn.Dropout(p=self.p)
     )
     self.lstm2 = nn.LSTM(len_tot, 512, batch_first=True, num_layers=1, bidirectional=True)
     self.dropout2 = nn.Dropout(p=self.p)
@@ -262,8 +268,10 @@ class MLP(torch.nn.Module):
         l1out = self.dropout1(l1out)
         layer_1_out = self.layers1(l1out)
         layer_1_out = layer_1_out.squeeze()
-        added_context = torch.cat((len_context, layer_1_out), dim=0)
-        l2out, _ = self.lstm2(added_context) 
+        added_context = torch.cat((len_context, layer_1_out), dim=1)
+        #print(f"layer1_out squeezed: {layer_1_out.size()} || added_context: {added_context.size()}") 
+        interim = self.fcs(added_context)
+        l2out, _ = self.lstm2(interim) 
         l2out = self.dropout2(l2out)
         layer_2_out = self.layers2(l2out)
         #print("layer_2_out: ",layer_2_out.size())
@@ -322,7 +330,7 @@ def test_step(model, cost_function, optimizer, test_loader):
 
   with torch.no_grad():
     test_loader_tqdm = tqdm(test_loader, total=len(test_loader), desc='Test Batches')
-    for step, (inputs, targets) in enumerate(test_loader_tqdm):
+    for step, (inputs, context, targets) in enumerate(test_loader_tqdm):
 
       inputs = inputs.squeeze(dim=1).to(device)
       targets = targets.reshape(targets.shape[0],1).to(device)
@@ -405,9 +413,9 @@ for n, (train, test) in enumerate(kf.split(dataset)):
     test_df = scaled_dataset.iloc[test]
     print("train_df #1")
     # dataloaders
-    train_loader = get_loader(train_df, id2emb, essay_embeddings, shuffle=True)
+    train_loader = get_loader(train_df, id2emb, essay_embeddings, context_embeddings, shuffle=True)
     print("train_loader")
-    test_loader = get_loader(test_df, id2emb, essay_embeddings, shuffle=False)
+    test_loader = get_loader(test_df, id2emb, essay_embeddings, context_embeddings, shuffle=False)
     print("test_loader")
     # model
     print('------------------------------------------------------------------')
