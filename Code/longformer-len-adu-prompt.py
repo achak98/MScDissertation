@@ -24,7 +24,7 @@ beta = 0.1
 gamma = 0.0
 input_size = length
 embedding_size = 768
-epochs = 100
+epochs = 150
 lr = 3e-5
 window_size = 5
 dor = 0.4
@@ -114,18 +114,18 @@ def count_words(text):
 def mean_encoding(essay_list, essay_id_list, essay_set_list, model, tokenizer):
 
   print('Encoding essay embeddings:')
-  embeddings = []
+  mat_embeddings = []
   max_len = 0
   show_once = True
   for (default_essay,essay_id,essay_set) in tqdm(zip(essay_list, essay_id_list, essay_set_list), total=len(essay_list)):
     #essay = essay[:512]
     #print(len(essay))
     prompt = prompts_dict[int(essay_set)]
-    encoded_input = tokenizer(essay, padding="max_length", truncation=True, max_length=length2, return_tensors='pt', return_attention_mask=True, add_special_tokens=True).to(device)
+    encoded_p = tokenizer(prompt, padding="max_length", truncation=True, max_length=length2, return_tensors='pt', return_attention_mask=True, add_special_tokens=True).to(device)
     #print(encoded_input["input_ids"].size())
     with torch.no_grad():
-      model_output = model(**encoded_input)
-      prompt_embed = model_output[0].squeeze().cpu().mean(0).squeeze()
+      model_output = model(**encoded_p)
+      prompt_embed = model_output[0].squeeze().cpu().mean(-1).squeeze()
     essay = ""
     no_of_adus = 0
     if  os.path.exists(os.path.join(edu_dir, str(essay_id) + ".out")):
@@ -134,26 +134,25 @@ def mean_encoding(essay_list, essay_id_list, essay_set_list, model, tokenizer):
                 essay += f"</s> {line.strip()} "
                 no_of_adus+=1
             if(show_once):
-               
+
                print(essay)
                show_once = False
     else:
        print(f"couldn't find edus for essay id: {essay_id} \n Looked at path: {os.path.join(edu_dir, str(essay_id) + '.out')}")
        essay = default_essay
-       
+
     if max_len < len(tokenizer.tokenize(essay)):
        max_len = len(tokenizer.tokenize(essay))
     encoded_input = tokenizer(essay, padding="max_length", truncation=True, max_length=length1, return_tensors='pt', return_attention_mask=True, add_special_tokens=True).to(device)
-    #print(encoded_input["input_ids"].size())
     with torch.no_grad():
       model_output = model(**encoded_input)
-      embeddings = model_output[0].squeeze().cpu().mean(0).squeeze()
-    wc = torch.tensor(count_words(default_essay))
-    aduc = torch.tensor(no_of_adus)
-    spacer = torch.tensor(-1)
+      embeddings = model_output[0].squeeze().cpu().mean(-1).squeeze()
+    wc = torch.tensor(count_words(default_essay)).unsqueeze(0)
+    aduc = torch.tensor(no_of_adus).unsqueeze(0)
+    spacer = torch.tensor(-1).unsqueeze(0)
     combined_embed = torch.cat((wc,spacer,aduc,spacer,prompt_embed,spacer,embeddings), dim=0)
     tokens_embeddings = np.matrix(combined_embed)
-    embeddings.append(np.squeeze(np.asarray(tokens_embeddings)))
+    mat_embeddings.append(np.squeeze(np.asarray(tokens_embeddings)))
   print(max_len)
   return np.array(embeddings)
 
