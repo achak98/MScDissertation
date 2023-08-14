@@ -15,10 +15,10 @@ import gc
 import warnings
 warnings.filterwarnings("ignore")
 
-length1 = 128
-length2 = 1536
+#length1 = 128
+#length2 = 1536
 length3 = 2 + 2
-length_emb = length1 + length2
+length_emb = 1792 #length1 + length2
 len_tot = length_emb + length3
 alpha = 0.9
 beta = 0.1
@@ -144,7 +144,7 @@ def mean_encoding(essay_list, essay_id_list, essay_set_list, model, tokenizer):
 
     if max_len < len(tokenizer.tokenize(essay)):
        max_len = len(tokenizer.tokenize(essay))
-    encoded_input = tokenizer(essay, padding="max_length", truncation=True, max_length=length1, return_tensors='pt', return_attention_mask=True, add_special_tokens=True).to(device)
+    encoded_input = tokenizer(essay, padding="max_length", truncation=True, max_length=length_emb, return_tensors='pt', return_attention_mask=True, add_special_tokens=True).to(device)
     with torch.no_grad():
       model_output = model(**encoded_input)
       embeddings = model_output[0].squeeze().cpu()
@@ -271,6 +271,7 @@ class MLP(torch.nn.Module):
         added_context = torch.cat((len_context, layer_1_out), dim=1)
         #print(f"layer1_out squeezed: {layer_1_out.size()} || added_context: {added_context.size()}") 
         interim = self.fcs(added_context)
+        #print(f"interim: {interim.size()}")
         l2out, _ = self.lstm2(interim) 
         l2out = self.dropout2(l2out)
         layer_2_out = self.layers2(l2out)
