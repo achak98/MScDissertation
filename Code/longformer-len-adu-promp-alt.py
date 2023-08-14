@@ -15,8 +15,8 @@ import gc
 import warnings
 warnings.filterwarnings("ignore")
 
-length1 = 1536
-length2 = 128
+length1 = 768
+length2 = 768
 length3 = 2 + 3
 length = length1 + length2 + length3
 alpha = 0.9
@@ -125,7 +125,7 @@ def mean_encoding(essay_list, essay_id_list, essay_set_list, model, tokenizer):
     #print(encoded_input["input_ids"].size())
     with torch.no_grad():
       model_output = model(**encoded_p)
-      prompt_embed = model_output[0].squeeze().cpu().mean(-1).squeeze()
+      prompt_embed = model_output[0].squeeze().cpu().mean(0).squeeze()
     essay = ""
     no_of_adus = 0
     if  os.path.exists(os.path.join(edu_dir, str(essay_id) + ".out")):
@@ -146,7 +146,7 @@ def mean_encoding(essay_list, essay_id_list, essay_set_list, model, tokenizer):
     encoded_input = tokenizer(essay, padding="max_length", truncation=True, max_length=length1, return_tensors='pt', return_attention_mask=True, add_special_tokens=True).to(device)
     with torch.no_grad():
       model_output = model(**encoded_input)
-      embeddings = model_output[0].squeeze().cpu().mean(-1).squeeze()
+      embeddings = model_output[0].squeeze().cpu().mean(0).squeeze()
     wc = torch.tensor(count_words(default_essay)).unsqueeze(0)
     aduc = torch.tensor(no_of_adus).unsqueeze(0)
     spacer = torch.tensor(-1).unsqueeze(0)
