@@ -18,7 +18,7 @@ warnings.filterwarnings("ignore")
 length1 = 128
 length2 = 1536
 length3 = 2 + 2
-length_emb = length1 + length2 + 1
+length_emb = length1 + length2
 len_tot = length_emb + length3
 alpha = 0.9
 beta = 0.1
@@ -123,17 +123,17 @@ def mean_encoding(essay_list, essay_id_list, essay_set_list, model, tokenizer):
     #essay = essay[:512]
     #print(len(essay))
     prompt = prompts_dict[int(essay_set)]
-    encoded_p = tokenizer(prompt, padding="max_length", truncation=True, max_length=length2, return_tensors='pt', return_attention_mask=True, add_special_tokens=True).to(device)
+    #encoded_p = tokenizer(prompt, padding="max_length", truncation=True, max_length=length2, return_tensors='pt', return_attention_mask=True, add_special_tokens=True).to(device)
     #print(encoded_input["input_ids"].size())
-    with torch.no_grad():
-      model_output = model(**encoded_p)
-      prompt_embed = model_output[0].squeeze().cpu()
-    essay = ""
+    #with torch.no_grad():
+    #  model_output = model(**encoded_p)
+    #  prompt_embed = model_output[0].squeeze().cpu()
+    essay = f"{special_token_prompt} {prompt}"
     no_of_adus = 0
     if  os.path.exists(os.path.join(edu_dir, str(essay_id) + ".out")):
         with open(os.path.join(edu_dir, str(essay_id) + ".out"), "r") as file:
             for line in file:
-                essay += f"</s> {line.strip()} "
+                essay += f"{special_token_adu} {line.strip()} "
                 no_of_adus+=1
             if(show_once):
 
@@ -151,15 +151,16 @@ def mean_encoding(essay_list, essay_id_list, essay_set_list, model, tokenizer):
     wc = torch.tensor(count_words(default_essay)).unsqueeze(0)
     aduc = torch.tensor(no_of_adus).unsqueeze(0)
     spacer1 = torch.tensor(-1).unsqueeze(0)
-    spacer2 =torch.full((1,768), -1)
-    combined_embed = torch.cat((prompt_embed,spacer2,embeddings), dim=0)
+    #spacer2 =torch.full((1,768), -1)
+    #combined_embed = torch.cat((prompt_embed,spacer2,embeddings), dim=0)
     comb_len_context = torch.cat((wc,spacer1,aduc,spacer1), dim=0)
     if show_once:
-        print("combined_embed :",combined_embed.size())
+        print("len context: ",comb_len_context)
+        print("combined_embed: ",embeddings.size())
         print("comb_len_context: ",comb_len_context.size())
         show_once = False
 
-    tokens_embeddings = np.matrix(combined_embed)
+    tokens_embeddings = np.matrix(embeddings)
     len_context = np.matrix(comb_len_context)
     mat_embeddings.append(np.squeeze(np.asarray(tokens_embeddings)))
     mat_len_context.append(np.squeeze(np.asarray(len_context)))
@@ -246,11 +247,10 @@ class MLP(torch.nn.Module):
     )
     self.fcs = torch.nn.Sequential(
        torch.nn.Linear(len_tot, len_tot),
-       torch.nn.Dropout(p=self.p),
-       torch.nn.Linear(len_tot, len_tot),
+       torch.nn.ReLU(),
        torch.nn.Dropout(p=self.p)
     )
-    self.lstm2 = nn.LSTM(len_tot, 512, batch_first=True, num_layers=1, bidirectional=True)
+    self.lstm2 = nn.LSTM(len_tot, 512, batch_first=True, num_layers=2, bidirectional=True)
     self.dropout2 = nn.Dropout(p=self.p)
     self.layers2 = torch.nn.Sequential(
       torch.nn.Linear(512*2, 256),
@@ -287,7 +287,7 @@ def check_and_create_directory(directory_path):
 
 
 # Example usage:
-save_directory = "./../Data/results/longformer-ap"
+save_directory = "./../Data/results/longformer-len"
 check_and_create_directory(save_directory)
 
 

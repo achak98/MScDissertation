@@ -24,7 +24,7 @@ embedding_size = 768
 epochs = 150
 lr = 3e-5
 window_size = 5
-dor = 0.5
+dor = 0.4
 
 # set device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
