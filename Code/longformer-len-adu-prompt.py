@@ -17,8 +17,8 @@ warnings.filterwarnings("ignore")
 
 #length1 = 128
 #length2 = 1536
-length3 = 2 + 2
-length_emb = 1792 #length1 + length2
+length3 = 3
+length_emb = 1780 #length1 + length2
 len_tot = length_emb + length3
 alpha = 0.9
 beta = 0.1
@@ -106,8 +106,8 @@ prompts_dict = {
 roberta = LongformerModel.from_pretrained("allenai/longformer-base-4096")
 roberta.resize_token_embeddings(len(tokenizer))
 roberta = nn.DataParallel(roberta).to(device)
-edu_dir = os.path.join(data_dir,"seg-adu")
-
+edu_dir = os.path.join(data_dir,"seg-edu")
+adu_dir = os.path.join(data_dir,"seg-adu")
 def count_words(text):
     words = text.split()
     return len(words)
@@ -130,18 +130,24 @@ def mean_encoding(essay_list, essay_id_list, essay_set_list, model, tokenizer):
     #  prompt_embed = model_output[0].squeeze().cpu()
     essay = f"{special_token_prompt} {prompt}"
     no_of_adus = 0
-    if  os.path.exists(os.path.join(edu_dir, str(essay_id) + ".out")):
-        with open(os.path.join(edu_dir, str(essay_id) + ".out"), "r") as file:
+    no_of_edus = 0
+    if  os.path.exists(os.path.join(adu_dir, str(essay_id) + ".out")):
+        with open(os.path.join(adu_dir, str(essay_id) + ".out"), "r") as file:
             for line in file:
                 essay += f"{special_token_adu} {line.strip()} "
                 no_of_adus+=1
             if(show_once):
-
+               print(f"adus read from dir: {os.path.join(adu_dir, str(essay_id) + '.out')}")
                print(essay)
     else:
        print(f"couldn't find edus for essay id: {essay_id} \n Looked at path: {os.path.join(edu_dir, str(essay_id) + '.out')}")
        essay = default_essay
-
+    if  os.path.exists(os.path.join(edu_dir, str(essay_id) + ".out")):
+        with open(os.path.join(edu_dir, str(essay_id) + ".out"), "r") as file:
+            for line in file:
+                no_of_edus+=1
+            if show_once:
+                print(f"edus read from dir: {os.path.join(edu_dir, str(essay_id) + '.out')}")
     if max_len < len(tokenizer.tokenize(essay)):
        max_len = len(tokenizer.tokenize(essay))
     encoded_input = tokenizer(essay, padding="max_length", truncation=True, max_length=length_emb, return_tensors='pt', return_attention_mask=True, add_special_tokens=True).to(device)
@@ -149,11 +155,13 @@ def mean_encoding(essay_list, essay_id_list, essay_set_list, model, tokenizer):
       model_output = model(**encoded_input)
       embeddings = model_output[0].squeeze().cpu()
     wc = torch.tensor(count_words(default_essay)).unsqueeze(0)
+    educ = torch.tensor(no_of_edus).unsqueeze(0)
     aduc = torch.tensor(no_of_adus).unsqueeze(0)
-    spacer1 = torch.tensor(-1).unsqueeze(0)
+    #spacer1 = torch.tensor(-1).unsqueeze(0)
     #spacer2 =torch.full((1,768), -1)
     #combined_embed = torch.cat((prompt_embed,spacer2,embeddings), dim=0)
-    comb_len_context = torch.cat((wc,spacer1,aduc,spacer1), dim=0)
+    comb_len_context = torch.cat((wc,educ,aduc), dim=0)
+    #print(comb_len_context)
     if show_once:
         print("len context: ",comb_len_context)
         print("combined_embed: ",embeddings.size())
@@ -250,7 +258,7 @@ class MLP(torch.nn.Module):
        torch.nn.ReLU(),
        torch.nn.Dropout(p=self.p)
     )
-    self.lstm2 = nn.LSTM(len_tot, 512, batch_first=True, num_layers=2, bidirectional=True)
+    self.lstm2 = nn.LSTM(len_tot, 512, batch_first=True, num_layers=1, bidirectional=True)
     self.dropout2 = nn.Dropout(p=self.p)
     self.layers2 = torch.nn.Sequential(
       torch.nn.Linear(512*2, 256),
@@ -455,7 +463,7 @@ for n, (train, test) in enumerate(kf.split(dataset)):
             print("Saving model")
             best_kappa = mean_kappa
 
-        epoch_tqdm.set_postfix ({f"Mean Kappa: {mean_kappa:.5f} Test Loss: {test_loss:.5f} Train Loss: {train_loss:.5f} for Epoch: ":  {epoch+1}})
+        epoch_tqdm.set_postfix ({f"Mean Kappa: {mean_kappa:.5f} Best Kappa: {best_kappa:.5f} Test Loss: {test_loss:.5f} Train Loss: {train_loss:.5f} for Epoch: ":  {epoch+1}})
 
     model.load_state_dict(torch.load(best_model_path))
     train_loss, train_preds = test_step(model, cost_function, optimizer, train_loader)
