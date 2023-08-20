@@ -243,7 +243,7 @@ class MLP(torch.nn.Module):
     super(MLP, self).__init__()
     self.window_size = window_size
     self.p = dor
-    self.lstm1 = nn.LSTM(embedding_size, 512, batch_first=True, bidirectional=True)
+    self.lstm1 = nn.GRU(embedding_size, 512, batch_first=True, bidirectional=True)
     self.dropout1 = nn.Dropout(p=self.p)
     self.layers1 = torch.nn.Sequential(
       torch.nn.Linear(512*2, 256),
@@ -259,7 +259,7 @@ class MLP(torch.nn.Module):
        torch.nn.ReLU(),
        torch.nn.Dropout(p=self.p)
     )
-    self.lstm2 = nn.LSTM(len_tot, 512, batch_first=True, num_layers=1, bidirectional=True)
+    self.lstm2 = nn.GRU(len_tot, 512, batch_first=True, bidirectional=True)
     self.dropout2 = nn.Dropout(p=self.p)
     self.layers2 = torch.nn.Sequential(
       torch.nn.Linear(512*2, 256),
