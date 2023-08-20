@@ -247,26 +247,26 @@ class MLP(torch.nn.Module):
     self.dropout1 = nn.Dropout(p=self.p)
     self.layers1 = torch.nn.Sequential(
       torch.nn.Linear(512*2, 256),
-      torch.nn.ReLU(),
+      nn.ELU(alpha=0.1),
       torch.nn.Dropout(p=self.p),
       torch.nn.Linear(256, 96),
-      torch.nn.ReLU(),
+      nn.ELU(alpha=0.1),
       torch.nn.Dropout(p=self.p),
       torch.nn.Linear(96, 1)
     )
     self.fcs = torch.nn.Sequential(
        torch.nn.Linear(len_tot, len_tot),
-       torch.nn.ReLU(),
+       nn.ELU(alpha=0.1),
        torch.nn.Dropout(p=self.p)
     )
     self.lstm2 = nn.GRU(len_tot, 512, batch_first=True, bidirectional=True)
     self.dropout2 = nn.Dropout(p=self.p)
     self.layers2 = torch.nn.Sequential(
       torch.nn.Linear(512*2, 256),
-      torch.nn.ReLU(),
+      nn.ELU(alpha=0.1),
       torch.nn.Dropout(p=self.p),
       torch.nn.Linear(256, 96),
-      torch.nn.ReLU(),
+      nn.ELU(alpha=0.1),
       torch.nn.Dropout(p=self.p),
       torch.nn.Linear(96, 1)
     ) 
