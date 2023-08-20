@@ -253,7 +253,7 @@ class MLP(torch.nn.Module):
     # Fully Connected Layer
     self.fc = nn.Linear(hidden_size * len(filter_sizes) * 2, 1)
     
-def forward(self, x):
+def forward(self, x, count_context):
     
     # CNN Layer
     conv_outputs = [nn.functional.relu(conv(x.permute(0, 2, 1))) for conv in self.convs]  # Apply ReLU activation
@@ -264,6 +264,9 @@ def forward(self, x):
     # Bidirectional GRU Layer
     gru_outputs = []
     for cnn_output_per_filter, gru in zip(pooled_outputs, self.bigrus):
+        print("cnn_output_per_filter: ",cnn_output_per_filter.size())
+        print("cnn_output_per_filter.unsqueeze(0): ",cnn_output_per_filter.unsqueeze(0).size())
+        #added_context = torch.cat((count_context, cnn_output_per_filter), dim=1)
         gru_output, _ = gru(cnn_output_per_filter.unsqueeze(0))
         gru_outputs.append(gru_output)
     print("gru_outputs: ",gru_outputs.size())
