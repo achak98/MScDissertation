@@ -15,15 +15,17 @@ import gc
 import warnings
 warnings.filterwarnings("ignore")
 
-length1 = 768
-length2 = 768
-length3 = 2 + 3
-length = length1 + length2 + length3
+#length1 = 128
+#length2 = 1536
+length_context = 3
+embedding_size = 768
+length_emb = 1780 
+len_tot = length_emb + length_context
 alpha = 0.9
 beta = 0.1
 gamma = 0.0
-input_size = length
-embedding_size = 768
+input_size = length_emb
+
 epochs = 150
 lr = 3e-5
 window_size = 5
@@ -105,8 +107,8 @@ prompts_dict = {
 roberta = LongformerModel.from_pretrained("allenai/longformer-base-4096")
 roberta.resize_token_embeddings(len(tokenizer))
 roberta = nn.DataParallel(roberta).to(device)
-edu_dir = os.path.join(data_dir,"seg-adu")
-
+edu_dir = os.path.join(data_dir,"seg-edu")
+adu_dir = os.path.join(data_dir,"seg-adu")
 def count_words(text):
     words = text.split()
     return len(words)
@@ -115,60 +117,81 @@ def mean_encoding(essay_list, essay_id_list, essay_set_list, model, tokenizer):
 
   print('Encoding essay embeddings:')
   mat_embeddings = []
+  mat_len_context = []
   max_len = 0
   show_once = True
   for (default_essay,essay_id,essay_set) in tqdm(zip(essay_list, essay_id_list, essay_set_list), total=len(essay_list)):
     #essay = essay[:512]
     #print(len(essay))
     prompt = prompts_dict[int(essay_set)]
-    encoded_p = tokenizer(prompt, padding="max_length", truncation=True, max_length=length2, return_tensors='pt', return_attention_mask=True, add_special_tokens=True).to(device)
+    #encoded_p = tokenizer(prompt, padding="max_length", truncation=True, max_length=length2, return_tensors='pt', return_attention_mask=True, add_special_tokens=True).to(device)
     #print(encoded_input["input_ids"].size())
-    with torch.no_grad():
-      model_output = model(**encoded_p)
-      prompt_embed = model_output[0].squeeze().cpu().mean(0).squeeze()
-    essay = ""
+    #with torch.no_grad():
+    #  model_output = model(**encoded_p)
+    #  prompt_embed = model_output[0].squeeze().cpu()
+    essay = f"{special_token_prompt} {prompt}"
     no_of_adus = 0
-    if  os.path.exists(os.path.join(edu_dir, str(essay_id) + ".out")):
-        with open(os.path.join(edu_dir, str(essay_id) + ".out"), "r") as file:
+    no_of_edus = 0
+    if  os.path.exists(os.path.join(adu_dir, str(essay_id) + ".out")):
+        with open(os.path.join(adu_dir, str(essay_id) + ".out"), "r") as file:
             for line in file:
-                essay += f"</s> {line.strip()} "
+                essay += f"{special_token_adu} {line.strip()} "
                 no_of_adus+=1
             if(show_once):
-
+               print(f"adus read from dir: {os.path.join(adu_dir, str(essay_id) + '.out')}")
                print(essay)
-               show_once = False
     else:
        print(f"couldn't find edus for essay id: {essay_id} \n Looked at path: {os.path.join(edu_dir, str(essay_id) + '.out')}")
        essay = default_essay
-
+    if  os.path.exists(os.path.join(edu_dir, str(essay_id) + ".out")):
+        with open(os.path.join(edu_dir, str(essay_id) + ".out"), "r") as file:
+            for line in file:
+                no_of_edus+=1
+            if show_once:
+                print(f"edus read from dir: {os.path.join(edu_dir, str(essay_id) + '.out')}")
     if max_len < len(tokenizer.tokenize(essay)):
        max_len = len(tokenizer.tokenize(essay))
-    encoded_input = tokenizer(essay, padding="max_length", truncation=True, max_length=length1, return_tensors='pt', return_attention_mask=True, add_special_tokens=True).to(device)
+    encoded_input = tokenizer(essay, padding="max_length", truncation=True, max_length=length_emb, return_tensors='pt', return_attention_mask=True, add_special_tokens=True).to(device)
     with torch.no_grad():
       model_output = model(**encoded_input)
-      embeddings = model_output[0].squeeze().cpu().mean(0).squeeze()
+      embeddings = model_output[0].squeeze().cpu()
     wc = torch.tensor(count_words(default_essay)).unsqueeze(0)
+    educ = torch.tensor(no_of_edus).unsqueeze(0)
     aduc = torch.tensor(no_of_adus).unsqueeze(0)
-    spacer = torch.tensor(-1).unsqueeze(0)
-    combined_embed = torch.cat((wc,spacer,aduc,spacer,prompt_embed,spacer,embeddings), dim=0)
-    tokens_embeddings = np.matrix(combined_embed)
+    #spacer1 = torch.tensor(-1).unsqueeze(0)
+    #spacer2 =torch.full((1,768), -1)
+    #combined_embed = torch.cat((prompt_embed,spacer2,embeddings), dim=0)
+    comb_len_context = torch.cat((wc,educ,aduc), dim=0)
+    #print(comb_len_context)
+    if show_once:
+        print("len context: ",comb_len_context)
+        print("combined_embed: ",embeddings.size())
+        print("comb_len_context: ",comb_len_context.size())
+        show_once = False
+
+    tokens_embeddings = np.matrix(embeddings)
+    len_context = np.matrix(comb_len_context)
     mat_embeddings.append(np.squeeze(np.asarray(tokens_embeddings)))
+    mat_len_context.append(np.squeeze(np.asarray(len_context)))
   print(max_len)
-  return np.array(mat_embeddings)
+  return np.array(mat_embeddings), np.array(mat_len_context)
 
 import h5py
-embeddings_file = os.path.join(data_dir,f'embeddings_l_len_adu_prompt_{length}.pt')
+embeddings_file = os.path.join(data_dir,f'embeddings_l_len_adu_prompt_{length_emb}.pt')
+context_file = os.path.join(data_dir,f'context_l_len_adu_prompt_{length_emb}.pt')
 if os.path.exists(embeddings_file):
     h5f = h5py.File(embeddings_file,'r')
-    essay_embeddings = h5f[f'embeddings_l_len_adu_prompt_{length}'][:]
+    essay_embeddings = h5f[f'embeddings_l_len_adu_prompt_{length_emb}'][:]
+    context_embeddings = h5f[f'context_l_len_adu_prompt_{length_emb}'][:]
     h5f.close()
     print(f"embeddings loaded from {embeddings_file}")
 else:
-    essay_embeddings = mean_encoding(dataset['essay'], dataset["essay_id"], dataset["essay_set"], roberta, tokenizer)
+    essay_embeddings, context_embeddings = mean_encoding(dataset['essay'], dataset["essay_id"], dataset["essay_set"], roberta, tokenizer)
     print("essay_embeddings got from function")
     h5f = h5py.File(embeddings_file, 'w')
     print("h5f variable init")
-    h5f.create_dataset(f'embeddings_l_len_adu_prompt_{length}', data=essay_embeddings)
+    h5f.create_dataset(f'embeddings_l_len_adu_prompt_{length_emb}', data=essay_embeddings)
+    h5f.create_dataset(f'context_l_len_adu_prompt_{length_emb}', data=context_embeddings)
     print("h5f dataset created")
     h5f.close()
     print("h5f closed")
@@ -176,13 +199,14 @@ else:
 print("embeddings done")
 
 
-def get_loader(df, id2emb, essay_embeddings, shuffle=True):
+def get_loader(df, id2emb, essay_embeddings, context_embeddings, shuffle=True):
 
   # get embeddings from essay_id using id2emb dict
   embeddings = np.array([essay_embeddings[id2emb[id]] for id in df['essay_id']])
-
+  context = np.array([context_embeddings[id2emb[id]] for id in df['essay_id']])
+  
   # dataset and dataloader
-  data = TensorDataset(torch.from_numpy(embeddings).float(), torch.from_numpy(np.array(df['scaled_score'])).float())
+  data = TensorDataset(torch.from_numpy(embeddings).float(), torch.from_numpy(context).float(), torch.from_numpy(np.array(df['scaled_score'])).float())
   loader = DataLoader(data, batch_size=128, shuffle=shuffle, num_workers=0)
 
   return loader
@@ -217,39 +241,39 @@ class MLP(torch.nn.Module):
   
   def __init__(self, input_size,embedding_size, window_size):
     super(MLP, self).__init__()
-    self.window_size = window_size
-    self.p = dor
-    """self.lstm1 = nn.LSTM(768, 512, batch_first=True, bidirectional=True)
-    self.dropout1 = nn.Dropout(p=self.p)
-    self.layers1 = torch.nn.Sequential(
-      torch.nn.Linear(512*2, 256),
-      torch.nn.ReLU(),
-      torch.nn.Dropout(p=self.p),
-      torch.nn.Linear(256, 96),
-      torch.nn.ReLU(),
-      torch.nn.Dropout(p=self.p),
-      torch.nn.Linear(96, 1)
-    )"""
-    self.lstm2 = nn.LSTM(input_size, 512, batch_first=True, num_layers=2, bidirectional=True)
-    self.dropout2 = nn.Dropout(p=self.p)
-    self.layers2 = torch.nn.Sequential(
-      torch.nn.Linear(512*2, 256),
-      torch.nn.ReLU(),
-      torch.nn.Dropout(p=self.p),
-      torch.nn.Linear(256, 96),
-      torch.nn.ReLU(),
-      torch.nn.Dropout(p=self.p),
-      torch.nn.Linear(96, 1)
-    ) 
+    num_filters = 100
+    filter_sizes = [2, 3, 4]
+    hidden_size = 128
+    # CNN Layer
+    self.convs = nn.ModuleList([nn.Conv1d(embedding_size, num_filters, filter_size) for filter_size in filter_sizes])
     
-  def forward(self, x):
-        #print("x: ",x.size())
-        
-        l2out, _ = self.lstm2(x) 
-        l2out = self.dropout2(l2out)
-        layer_2_out = self.layers2(l2out)
-        #print("layer_2_out: ",layer_2_out.size())
-        return layer_2_out
+    # Bidirectional GRU Layer
+    self.bigrus = nn.ModuleList([nn.GRU(num_filters, hidden_size, bidirectional=True) for _ in range(len(filter_sizes))])
+    
+    # Fully Connected Layer
+    self.fc = nn.Linear(hidden_size * len(filter_sizes) * 2, 1)
+    
+def forward(self, x):
+    
+    # CNN Layer
+    conv_outputs = [nn.functional.relu(conv(x.permute(0, 2, 1))) for conv in self.convs]  # Apply ReLU activation
+    print("conv_outputs: ",conv_outputs.size())
+    # Max-pooling Layer
+    pooled_outputs = [nn.functional.max_pool1d(conv_output, conv_output.size(2)).squeeze(2) for conv_output in conv_outputs]
+    print("pooled_outputs: ",pooled_outputs.size())
+    # Bidirectional GRU Layer
+    gru_outputs = []
+    for cnn_output_per_filter, gru in zip(pooled_outputs, self.bigrus):
+        gru_output, _ = gru(cnn_output_per_filter.unsqueeze(0))
+        gru_outputs.append(gru_output)
+    print("gru_outputs: ",gru_outputs.size())
+    # Concatenate GRU outputs
+    gru_output = torch.cat(gru_outputs, dim=2)
+    print("gru_output: ",gru_output.size())
+    # Fully Connected Layer
+    output = self.fc(gru_output.squeeze(0))
+    print("output: ",output.size())
+    return output
   
 
 def check_and_create_directory(directory_path):
@@ -261,7 +285,7 @@ def check_and_create_directory(directory_path):
 
 
 # Example usage:
-save_directory = "./../Data/results/longformer-ap"
+save_directory = "./../Data/results/longformer-len"
 check_and_create_directory(save_directory)
 
 
@@ -272,12 +296,13 @@ def training_step(model, cost_function, optimizer, train_loader):
 
   model.train() 
   train_loader_tqdm = tqdm(train_loader, total=len(train_loader), desc='Batches')
-  for step, (inputs, targets) in enumerate(train_loader_tqdm):
+  for step, (inputs, context, targets) in enumerate(train_loader_tqdm):
 
     inputs = inputs.squeeze(dim=1).to(device)
     targets = targets.reshape(targets.shape[0],1).to(device)
+    context = context.squeeze(dim=1).to(device)
 
-    outputs = model(inputs)
+    outputs = model(inputs, context)
 
     loss = cost_function(outputs, targets)
 
@@ -303,12 +328,13 @@ def test_step(model, cost_function, optimizer, test_loader):
 
   with torch.no_grad():
     test_loader_tqdm = tqdm(test_loader, total=len(test_loader), desc='Test Batches')
-    for step, (inputs, targets) in enumerate(test_loader_tqdm):
+    for step, (inputs, context, targets) in enumerate(test_loader_tqdm):
 
       inputs = inputs.squeeze(dim=1).to(device)
       targets = targets.reshape(targets.shape[0],1).to(device)
+      context = context.squeeze(dim=1).to(device)
 
-      outputs = model(inputs)
+      outputs = model(inputs, context)
 
       loss = cost_function(outputs, targets)
 
@@ -385,9 +411,9 @@ for n, (train, test) in enumerate(kf.split(dataset)):
     test_df = scaled_dataset.iloc[test]
     print("train_df #1")
     # dataloaders
-    train_loader = get_loader(train_df, id2emb, essay_embeddings, shuffle=True)
+    train_loader = get_loader(train_df, id2emb, essay_embeddings, context_embeddings, shuffle=True)
     print("train_loader")
-    test_loader = get_loader(test_df, id2emb, essay_embeddings, shuffle=False)
+    test_loader = get_loader(test_df, id2emb, essay_embeddings, context_embeddings, shuffle=False)
     print("test_loader")
     # model
     print('------------------------------------------------------------------')
@@ -426,7 +452,7 @@ for n, (train, test) in enumerate(kf.split(dataset)):
             print("Saving model")
             best_kappa = mean_kappa
 
-        epoch_tqdm.set_postfix ({f"Mean Kappa: {mean_kappa:.5f} Test Loss: {test_loss:.5f} Train Loss: {train_loss:.5f} for Epoch: ":  {epoch+1}})
+        epoch_tqdm.set_postfix ({f"Mean Kappa: {mean_kappa:.5f} Best Kappa: {best_kappa:.5f} Test Loss: {test_loss:.5f} Train Loss: {train_loss:.5f} for Epoch: ":  {epoch+1}})
 
     model.load_state_dict(torch.load(best_model_path))
     train_loss, train_preds = test_step(model, cost_function, optimizer, train_loader)
