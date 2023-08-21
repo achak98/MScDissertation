@@ -14,7 +14,7 @@ import gc
 
 import warnings
 warnings.filterwarnings("ignore")
-
+essay_set = 1
 #length1 = 128
 #length2 = 1536
 length_context = 3
@@ -50,7 +50,7 @@ dataset = pd.DataFrame(
         "score": kaggle_dataset["domain1_score"],
     }
 )
-
+dataset = dataset[dataset["essay_set"] == essay_set]
 #transformer_architecture = 'roberta-base' 
 #config = AutoConfig.from_pretrained(transformer_architecture, output_hidden_states=True)
 #config.max_position_embeddings = 512
