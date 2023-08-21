@@ -72,13 +72,14 @@ length_dict[essay_set] = [
 print(max(length_dict[essay_set]))
 
 def get_scaled_dataset(dataset):
-    scaler = StandardScaler()
-    #scaler = MinMaxScaler(feature_range=(-1, 1))
+    scaler1 = StandardScaler()
+    scaler2 = MinMaxScaler(feature_range=(-1, 1))
     scaled = []
 
     score = dataset[dataset["essay_set"] == essay_set]["score"].to_frame()
-    s = scaler.fit_transform(score).reshape(-1)
-    scaled = np.append(scaled, s)
+    s1 = scaler1.fit_transform(score)
+    s2 = scaler2.fit_transform(s1).reshape(-1)
+    scaled = np.append(scaled, s2)
 
     scaled_dataset = dataset.copy()
     scaled_dataset["scaled_score"] = scaled
@@ -376,14 +377,15 @@ def get_results_df(train_df, test_df, model_preds):
     # scale back to original range by essay set
     preds = pd.Series(dtype="float64")
 
-    scaler = StandardScaler()
-    #scaler = MinMaxScaler(feature_range=(-1, 1))
+    scaler1 = StandardScaler()
+    scaler2 = MinMaxScaler(feature_range=(-1, 1))
     score_df = train_df[train_df["essay_set"] == essay_set]["score"].to_frame()
-    scaler.fit(score_df)
+    s1 = scaler1.fit(score_df)
+    scaler2.fit(s1)
     scaled_preds = results_df.loc[
         results_df["essay_set"] == essay_set, "scaled_pred"
     ].to_frame()
-    preds_rescaled = scaler.inverse_transform(scaled_preds).round(0).astype("int")
+    preds_rescaled = scaler1.inverse_transform(scaler2.inverse_transform(scaled_preds)).round(0).astype("int")
     preds = preds.append(
         pd.Series(np.squeeze(np.asarray(preds_rescaled))), ignore_index=True
     )
