@@ -277,7 +277,7 @@ class MLP(torch.nn.Module):
         #print("x: ",x.size())
         l1out, _ = self.lstm1(x)
         #l1out = torch.relu(l1out)
-        l1out = self.dropout1(l1out)
+        #l1out = self.dropout1(l1out)
         layer_1_out = self.layers1(l1out)
         
         layer_1_out = layer_1_out.squeeze()
