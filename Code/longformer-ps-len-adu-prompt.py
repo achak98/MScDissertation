@@ -27,7 +27,7 @@ gamma = 0.0
 input_size = length_emb
 
 epochs = 150
-lr = 3e-5
+lr = 3e-4
 window_size = 5
 dor = 0.4
 
