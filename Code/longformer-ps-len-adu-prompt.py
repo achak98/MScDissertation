@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.model_selection import KFold
 from sklearn.metrics import cohen_kappa_score as kappa
 import torch
@@ -27,7 +27,7 @@ gamma = 0.0
 input_size = length_emb
 
 epochs = 150
-lr = 3e-4
+lr = 3e-5
 window_size = 5
 dor = 0.4
 
@@ -73,6 +73,7 @@ print(max(length_dict[essay_set]))
 
 def get_scaled_dataset(dataset):
     scaler = StandardScaler()
+    scaler = MinMaxScaler(feature_range=(0, 1))
     scaled = []
 
     score = dataset[dataset["essay_set"] == essay_set]["score"].to_frame()
@@ -244,33 +245,33 @@ class MLP(torch.nn.Module):
     super(MLP, self).__init__()
     self.window_size = window_size
     self.p = dor
-    elu_alpha = 1
     self.lstm1 = nn.LSTM(embedding_size, 512, batch_first=True, bidirectional=True)
     self.dropout1 = nn.Dropout(p=self.p)
     self.layers1 = torch.nn.Sequential(
       torch.nn.Linear(512*2, 256),
-      nn.ELU(alpha=elu_alpha),
+      torch.nn.ReLU(),
       torch.nn.Dropout(p=self.p),
       torch.nn.Linear(256, 96),
-      nn.ELU(alpha=elu_alpha),
+      torch.nn.ReLU(),
       torch.nn.Dropout(p=self.p),
       torch.nn.Linear(96, 1)
     )
     self.fcs = torch.nn.Sequential(
        torch.nn.Linear(len_tot, len_tot),
-       nn.ELU(alpha=elu_alpha),
+       nn.ReLU(),
        torch.nn.Dropout(p=self.p)
     )
     self.lstm2 = nn.LSTM(len_tot, 512, batch_first=True, num_layers=1, bidirectional=True)
     self.dropout2 = nn.Dropout(p=self.p)
     self.layers2 = torch.nn.Sequential(
       torch.nn.Linear(512*2, 256),
-      nn.ELU(alpha=elu_alpha),
+      torch.nn.ReLU(),
       torch.nn.Dropout(p=self.p),
       torch.nn.Linear(256, 96),
-      nn.ELU(alpha=elu_alpha),
+      torch.nn.ReLU(),
       torch.nn.Dropout(p=self.p),
-      torch.nn.Linear(96, 1)
+      torch.nn.Linear(96, 1),
+      torch.nn.Sigmoid()
     ) 
     
   def forward(self, x, count_context):
@@ -380,6 +381,7 @@ def get_results_df(train_df, test_df, model_preds):
     preds = pd.Series(dtype="float64")
 
     scaler = StandardScaler()
+    scaler = MinMaxScaler(feature_range=(0, 1))
     score_df = train_df[train_df["essay_set"] == essay_set]["score"].to_frame()
     scaler.fit(score_df)
     scaled_preds = results_df.loc[
