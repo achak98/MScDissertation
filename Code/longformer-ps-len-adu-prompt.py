@@ -72,20 +72,20 @@ length_dict[essay_set] = [
 ]
 print(max(length_dict[essay_set]))
 
-def get_scaled_dataset(dataset):
+def get_scaled_dataset(dataset, scaler = None):
     #scaler1 = StandardScaler()
-    scaler = MinMaxScaler(feature_range=(-1, 1))
+    if(scaler == None):
+        scaler = MinMaxScaler(feature_range=(-1, 1))
     scaled = []
 
     score = dataset[dataset["essay_set"] == essay_set]["score"].to_frame()
-    score, lambda_ = yeojohnson(score) 
     s = scaler.fit_transform(score).reshape(-1)
     scaled = np.append(scaled, s)
 
     scaled_dataset = dataset.copy()
     scaled_dataset["scaled_score"] = scaled
 
-    return scaled_dataset
+    return scaled_dataset, scaler
 
 
 def get_id2emb(ids):
@@ -360,7 +360,7 @@ def test_step(model, cost_function, optimizer, test_loader):
 
   return cumulative_loss/samples, preds
 
-def get_results_df(train_df, test_df, model_preds):
+def get_results_df(train_df, test_df, model_preds, scaler):
     # create new results df with model scaled preds
     preds_df = pd.DataFrame(model_preds)
     results_df = (
@@ -379,15 +379,14 @@ def get_results_df(train_df, test_df, model_preds):
     preds = pd.Series(dtype="float64")
 
     #scaler1 = StandardScaler()
-    scaler = MinMaxScaler(feature_range=(-1, 1))
+    #scaler = MinMaxScaler(feature_range=(-1, 1))
     score_df = train_df[train_df["essay_set"] == essay_set]["score"].to_frame()
-    score, lambda_ = yeojohnson(score_df) 
-    scaler.fit_transform(score)
+    #scaler.fit_transform(score_df)
     #scaler2.fit(s1)
     scaled_preds = results_df.loc[
         results_df["essay_set"] == essay_set, "scaled_pred"
     ].to_frame()
-    preds_rescaled = yeojohnson(scaler.inverse_transform(scaled_preds), lmbda=lambda_).round(0).astype("int")
+    preds_rescaled = scaler.inverse_transform(scaled_preds).round(0).astype("int")
     preds = preds.append(
         pd.Series(np.squeeze(np.asarray(preds_rescaled))), ignore_index=True
     )
@@ -410,7 +409,7 @@ preds_dict = {}
 best_model_path = os.path.join(data_dir,'long_best.pth')
 # copy of dataset with scaled scores computed using the whole dataset
 print("copy of scaled_dataset begin")
-scaled_dataset = get_scaled_dataset(dataset)
+scaled_dataset, scaler = get_scaled_dataset(dataset)
 print("copy of scaled_dataset end")
 gc.collect()
 print("gc collected #1")
@@ -424,7 +423,7 @@ for n, (train, test) in enumerate(kf.split(dataset)):
     # scaled scores in train_df are computed only using training data
     train_df = dataset.iloc[train]
     print("train_df #1")
-    train_df = get_scaled_dataset(train_df)
+    train_df, _ = get_scaled_dataset(train_df, scaler)
     print("train_df #2")
     test_df = scaled_dataset.iloc[test]
     print("train_df #1")
@@ -453,7 +452,7 @@ for n, (train, test) in enumerate(kf.split(dataset)):
         train_loss = training_step(model, cost_function, optimizer, train_loader)
         test_loss, test_preds = test_step(model, cost_function, optimizer, test_loader)
         print("getting results df")
-        results_df = get_results_df(train_df, test_df, test_preds)
+        results_df = get_results_df(train_df, test_df, test_preds, scaler)
         print("got results df")
         kappas_by_set = []
 
@@ -478,7 +477,7 @@ for n, (train, test) in enumerate(kf.split(dataset)):
     print('After training:\t\tLoss/train: {:.5f}\tLoss/test: {:.5f}'.format(train_loss, test_loss))
 
     print("getting results df")
-    results_df = get_results_df(train_df, test_df, test_preds)
+    results_df = get_results_df(train_df, test_df, test_preds, scaler)
     print("got results df")
     kappas_by_set = []
 
