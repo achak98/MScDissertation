@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
+from scipy.stats import yeojohnson
 from sklearn.model_selection import KFold
 from sklearn.metrics import cohen_kappa_score as kappa
 import torch
@@ -72,14 +73,14 @@ length_dict[essay_set] = [
 print(max(length_dict[essay_set]))
 
 def get_scaled_dataset(dataset):
-    scaler1 = StandardScaler()
-    scaler2 = MinMaxScaler(feature_range=(-1, 1))
+    #scaler1 = StandardScaler()
+    scaler = MinMaxScaler(feature_range=(-1, 1))
     scaled = []
 
     score = dataset[dataset["essay_set"] == essay_set]["score"].to_frame()
-    s1 = scaler1.fit_transform(score)
-    s2 = scaler2.fit_transform(s1).reshape(-1)
-    scaled = np.append(scaled, s2)
+    score, lambda_ = yeojohnson(score) 
+    s = scaler.fit_transform(score).reshape(-1)
+    scaled = np.append(scaled, s)
 
     scaled_dataset = dataset.copy()
     scaled_dataset["scaled_score"] = scaled
@@ -377,15 +378,16 @@ def get_results_df(train_df, test_df, model_preds):
     # scale back to original range by essay set
     preds = pd.Series(dtype="float64")
 
-    scaler1 = StandardScaler()
-    scaler2 = MinMaxScaler(feature_range=(-1, 1))
+    #scaler1 = StandardScaler()
+    scaler = MinMaxScaler(feature_range=(-1, 1))
     score_df = train_df[train_df["essay_set"] == essay_set]["score"].to_frame()
-    s1 = scaler1.fit_transform(score_df)
-    scaler2.fit(s1)
+    score, lambda_ = yeojohnson(score_df) 
+    scaler.fit_transform(score)
+    #scaler2.fit(s1)
     scaled_preds = results_df.loc[
         results_df["essay_set"] == essay_set, "scaled_pred"
     ].to_frame()
-    preds_rescaled = scaler1.inverse_transform(scaler2.inverse_transform(scaled_preds)).round(0).astype("int")
+    preds_rescaled = yeojohnson(scaler.inverse_transform(scaled_preds), lmbda=lambda_).round(0).astype("int")
     preds = preds.append(
         pd.Series(np.squeeze(np.asarray(preds_rescaled))), ignore_index=True
     )
@@ -497,11 +499,11 @@ for n, (train, test) in enumerate(kf.split(dataset)):
     data += f"\n\tResults for model: {id}"
     data += "\n--------------------------------------"
     data += "\nKappa for essay set {:}:\t\t{:.4f}".format(
-        essay_set + 1, kappas_by_set[essay_set]
+        essay_set, kappas_by_set[essay_set-1]
         )
     print(
         "Kappa for essay set {:}:\t\t{:.4f}".format(
-            essay_set + 1, kappas_by_set[essay_set]
+            essay_set, kappas_by_set[essay_set-1]
         )
     )
     data += "\nmean QWK:\t\t\t{:.4f}".format(np.mean(kappas_by_set))
