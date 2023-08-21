@@ -277,7 +277,7 @@ class MLP(torch.nn.Module):
   def forward(self, x, count_context):
         #print("x: ",x.size())
         l1out, _ = self.lstm1(x)
-        l1out = torch.relu(l1out)
+        #l1out = torch.relu(l1out)
         l1out = self.dropout1(l1out)
         layer_1_out = self.layers1(l1out)
         
@@ -287,7 +287,7 @@ class MLP(torch.nn.Module):
         #interim = self.fcs(added_context)
         #print(f"interim: {interim.size()}")
         l2out, _ = self.lstm2(added_context)
-        l2out = torch.relu(l2out)
+        #l2out = torch.relu(l2out)
         l2out = self.dropout2(l2out)
         layer_2_out = self.layers2(l2out)
         
