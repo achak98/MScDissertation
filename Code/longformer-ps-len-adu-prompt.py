@@ -73,7 +73,7 @@ print(max(length_dict[essay_set]))
 
 def get_scaled_dataset(dataset):
     scaler = StandardScaler()
-    scaler = MinMaxScaler(feature_range=(0, 1))
+    #scaler = MinMaxScaler(feature_range=(-1, 1))
     scaled = []
 
     score = dataset[dataset["essay_set"] == essay_set]["score"].to_frame()
@@ -270,8 +270,7 @@ class MLP(torch.nn.Module):
       torch.nn.Linear(256, 96),
       torch.nn.Tanh(),
       torch.nn.Dropout(p=self.p),
-      torch.nn.Linear(96, 1),
-      torch.nn.Sigmoid()
+      torch.nn.Linear(96, 1)
     ) 
     
   def forward(self, x, count_context):
@@ -383,7 +382,7 @@ def get_results_df(train_df, test_df, model_preds):
     preds = pd.Series(dtype="float64")
 
     scaler = StandardScaler()
-    scaler = MinMaxScaler(feature_range=(0, 1))
+    #scaler = MinMaxScaler(feature_range=(-1, 1))
     score_df = train_df[train_df["essay_set"] == essay_set]["score"].to_frame()
     scaler.fit(score_df)
     scaled_preds = results_df.loc[
