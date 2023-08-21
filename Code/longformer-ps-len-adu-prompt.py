@@ -262,7 +262,7 @@ class MLP(torch.nn.Module):
        torch.nn.Dropout(p=self.p)
     )
     self.lstm2 = nn.LSTM(len_tot, 512, batch_first=True, num_layers=1, bidirectional=True)
-    self.dropout2 = nn.Dropout(p=self.p)
+    #self.dropout2 = nn.Dropout(p=self.p)
     self.layers2 = torch.nn.Sequential(
       torch.nn.Linear(512*2, 256),
       torch.nn.Tanh(),
