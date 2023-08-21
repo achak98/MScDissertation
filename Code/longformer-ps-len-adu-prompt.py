@@ -255,6 +255,11 @@ class MLP(torch.nn.Module):
       torch.nn.Dropout(p=self.p),
       torch.nn.Linear(96, 1)
     )
+    self.fcs = torch.nn.Sequential(
+       torch.nn.Linear(len_tot, len_tot),
+       nn.ReLU(),
+       torch.nn.Dropout(p=self.p)
+    )
     self.lstm2 = nn.LSTM(len_tot, 512, batch_first=True, num_layers=1, bidirectional=True)
     self.dropout2 = nn.Dropout(p=self.p)
     self.layers2 = torch.nn.Sequential(
@@ -274,9 +279,11 @@ class MLP(torch.nn.Module):
         layer_1_out = self.layers1(l1out)
         
         layer_1_out = layer_1_out.squeeze()
+        added_context = torch.cat((count_context, layer_1_out), dim=1)
         #print(f"layer1_out squeezed: {layer_1_out.size()} || added_context: {added_context.size()}") 
+        interim = self.fcs(added_context)
         #print(f"interim: {interim.size()}")
-        l2out, _ = self.lstm2(layer_1_out) 
+        l2out, _ = self.lstm2(interim) 
         l2out = self.dropout2(l2out)
         layer_2_out = self.layers2(l2out)
         
