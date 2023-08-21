@@ -70,6 +70,7 @@ length_dict[essay_set] = [
     for essay in dataset[dataset["essay_set"] == essay_set]["essay"]
 ]
 print(max(length_dict[essay_set]))
+
 def get_scaled_dataset(dataset):
     scaler = StandardScaler()
     scaled = []
@@ -177,21 +178,21 @@ def mean_encoding(essay_list, essay_id_list, essay_set_list, model, tokenizer):
   return np.array(mat_embeddings), np.array(mat_len_context)
 
 import h5py
-embeddings_file = os.path.join(data_dir,f'embeddings_l_len_adu_prompt_{length_emb}.pt')
-context_file = os.path.join(data_dir,f'context_l_len_adu_prompt_{length_emb}.pt')
+embeddings_file = os.path.join(data_dir,f'embeddings_l_len_adu_prompt_{length_emb}{essay_set}.pt')
+context_file = os.path.join(data_dir,f'context_l_len_adu_prompt_{length_emb}{essay_set}.pt')
 if os.path.exists(embeddings_file):
     h5f = h5py.File(embeddings_file,'r')
-    essay_embeddings = h5f[f'embeddings_l_len_adu_prompt_{length_emb}'][:]
+    essay_embeddings = h5f[f'embeddings_l_len_adu_prompt_{length_emb}{essay_set}'][:]
     context_embeddings = h5f[f'context_l_len_adu_prompt_{length_emb}'][:]
     h5f.close()
-    print(f"embeddings loaded from {embeddings_file}")
+    print(f"embeddings loaded from {embeddings_file}{essay_set}")
 else:
     essay_embeddings, context_embeddings = mean_encoding(dataset['essay'], dataset["essay_id"], dataset["essay_set"], roberta, tokenizer)
     print("essay_embeddings got from function")
     h5f = h5py.File(embeddings_file, 'w')
     print("h5f variable init")
-    h5f.create_dataset(f'embeddings_l_len_adu_prompt_{length_emb}', data=essay_embeddings)
-    h5f.create_dataset(f'context_l_len_adu_prompt_{length_emb}', data=context_embeddings)
+    h5f.create_dataset(f'embeddings_l_len_adu_prompt_{length_emb}{essay_set}', data=essay_embeddings)
+    h5f.create_dataset(f'context_l_len_adu_prompt_{length_emb}{essay_set}', data=context_embeddings)
     print("h5f dataset created")
     h5f.close()
     print("h5f closed")
