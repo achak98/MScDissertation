@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler,MinMaxScaler
 from sklearn.model_selection import KFold
 from sklearn.metrics import cohen_kappa_score as kappa
 import torch
@@ -71,7 +71,8 @@ for essay_set in range(1, 9):
     ]
     print(max(length_dict[essay_set]))
 def get_scaled_dataset(dataset):
-    scaler = StandardScaler()
+    #scaler = StandardScaler()
+    scaler = MinMaxScaler(feature_range=(-1, 1))
     scaled = []
     for essay_set in range(1, 9):
         score = dataset[dataset["essay_set"] == essay_set]["score"].to_frame()
@@ -247,26 +248,26 @@ class MLP(torch.nn.Module):
     self.dropout1 = nn.Dropout(p=self.p)
     self.layers1 = torch.nn.Sequential(
       torch.nn.Linear(512*2, 256),
-      nn.ELU(alpha=0.1),
+      nn.ELU(alpha=0.4),
       torch.nn.Dropout(p=self.p),
       torch.nn.Linear(256, 96),
-      nn.ELU(alpha=0.1),
+      nn.ELU(alpha=0.4),
       torch.nn.Dropout(p=self.p),
       torch.nn.Linear(96, 1)
     )
     self.fcs = torch.nn.Sequential(
        torch.nn.Linear(len_tot, len_tot),
-       nn.ELU(alpha=0.1),
+       nn.ELU(alpha=0.4),
        torch.nn.Dropout(p=self.p)
     )
     self.lstm2 = nn.GRU(len_tot, 512, batch_first=True, bidirectional=True)
     self.dropout2 = nn.Dropout(p=self.p)
     self.layers2 = torch.nn.Sequential(
       torch.nn.Linear(512*2, 256),
-      nn.ELU(alpha=0.1),
+      nn.ELU(alpha=0.4),
       torch.nn.Dropout(p=self.p),
       torch.nn.Linear(256, 96),
-      nn.ELU(alpha=0.1),
+      nn.ELU(alpha=0.4),
       torch.nn.Dropout(p=self.p),
       torch.nn.Linear(96, 1)
     ) 
@@ -377,7 +378,8 @@ def get_results_df(train_df, test_df, model_preds):
     # scale back to original range by essay set
     preds = pd.Series(dtype="float64")
     for essay_set in range(1, 9):
-        scaler = StandardScaler()
+        #scaler = StandardScaler()
+        scaler = MinMaxScaler(feature_range=(-1, 1))
         score_df = train_df[train_df["essay_set"] == essay_set]["score"].to_frame()
         scaler.fit(score_df)
         scaled_preds = results_df.loc[

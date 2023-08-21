@@ -19,7 +19,7 @@ essay_set = 1
 #length2 = 1536
 length_context = 3
 embedding_size = 768
-length_emb = 1780 
+length_emb = 1201 #1201 
 len_tot = length_emb + length_context
 alpha = 0.9
 beta = 0.1
@@ -183,7 +183,7 @@ context_file = os.path.join(data_dir,f'context_l_len_adu_prompt_{length_emb}{ess
 if os.path.exists(embeddings_file):
     h5f = h5py.File(embeddings_file,'r')
     essay_embeddings = h5f[f'embeddings_l_len_adu_prompt_{length_emb}{essay_set}'][:]
-    context_embeddings = h5f[f'context_l_len_adu_prompt_{length_emb}'][:]
+    context_embeddings = h5f[f'context_l_len_adu_prompt_{length_emb}{essay_set}'][:]
     h5f.close()
     print(f"embeddings loaded from {embeddings_file}{essay_set}")
 else:
