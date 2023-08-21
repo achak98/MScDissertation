@@ -64,19 +64,19 @@ tokenizer.add_special_tokens({"additional_special_tokens": [special_token_adu, s
 
 length_dict = {}
 
-for essay_set in range(1, 9):
-    length_dict[essay_set] = [
-        len(tokenizer.tokenize(essay))
-        for essay in dataset[dataset["essay_set"] == essay_set]["essay"]
-    ]
-    print(max(length_dict[essay_set]))
+
+length_dict[essay_set] = [
+    len(tokenizer.tokenize(essay))
+    for essay in dataset[dataset["essay_set"] == essay_set]["essay"]
+]
+print(max(length_dict[essay_set]))
 def get_scaled_dataset(dataset):
     scaler = StandardScaler()
     scaled = []
-    for essay_set in range(1, 9):
-        score = dataset[dataset["essay_set"] == essay_set]["score"].to_frame()
-        s = scaler.fit_transform(score).reshape(-1)
-        scaled = np.append(scaled, s)
+
+    score = dataset[dataset["essay_set"] == essay_set]["score"].to_frame()
+    s = scaler.fit_transform(score).reshape(-1)
+    scaled = np.append(scaled, s)
 
     scaled_dataset = dataset.copy()
     scaled_dataset["scaled_score"] = scaled
@@ -369,17 +369,17 @@ def get_results_df(train_df, test_df, model_preds):
 
     # scale back to original range by essay set
     preds = pd.Series(dtype="float64")
-    for essay_set in range(1, 9):
-        scaler = StandardScaler()
-        score_df = train_df[train_df["essay_set"] == essay_set]["score"].to_frame()
-        scaler.fit(score_df)
-        scaled_preds = results_df.loc[
-            results_df["essay_set"] == essay_set, "scaled_pred"
-        ].to_frame()
-        preds_rescaled = scaler.inverse_transform(scaled_preds).round(0).astype("int")
-        preds = preds.append(
-            pd.Series(np.squeeze(np.asarray(preds_rescaled))), ignore_index=True
-        )
+
+    scaler = StandardScaler()
+    score_df = train_df[train_df["essay_set"] == essay_set]["score"].to_frame()
+    scaler.fit(score_df)
+    scaled_preds = results_df.loc[
+        results_df["essay_set"] == essay_set, "scaled_pred"
+    ].to_frame()
+    preds_rescaled = scaler.inverse_transform(scaled_preds).round(0).astype("int")
+    preds = preds.append(
+        pd.Series(np.squeeze(np.asarray(preds_rescaled))), ignore_index=True
+    )
 
     # append to results df
     results_df["pred"] = preds
@@ -445,14 +445,14 @@ for n, (train, test) in enumerate(kf.split(dataset)):
         results_df = get_results_df(train_df, test_df, test_preds)
         print("got results df")
         kappas_by_set = []
-        for essay_set in range(1, 9):
-            kappas_by_set.append(
-                kappa(
-                    results_df.loc[results_df["essay_set"] == essay_set, "score"],
-                    results_df.loc[results_df["essay_set"] == essay_set, "pred"],
-                    weights="quadratic",
-                )
+
+        kappas_by_set.append(
+            kappa(
+                results_df.loc[results_df["essay_set"] == essay_set, "score"],
+                results_df.loc[results_df["essay_set"] == essay_set, "pred"],
+                weights="quadratic",
             )
+        )
         mean_kappa = np.mean(kappas_by_set)
         if mean_kappa > best_kappa:
             torch.save(model.state_dict(), best_model_path)
@@ -470,15 +470,15 @@ for n, (train, test) in enumerate(kf.split(dataset)):
     results_df = get_results_df(train_df, test_df, test_preds)
     print("got results df")
     kappas_by_set = []
-    for essay_set in range(1, 9):
-        kappas_by_set.append(
-            kappa(
-                results_df.loc[results_df["essay_set"] == essay_set, "score"],
-                results_df.loc[results_df["essay_set"] == essay_set, "pred"],
-                weights="quadratic",
-            )
+
+    kappas_by_set.append(
+        kappa(
+            results_df.loc[results_df["essay_set"] == essay_set, "score"],
+            results_df.loc[results_df["essay_set"] == essay_set, "pred"],
+            weights="quadratic",
         )
-        print(f"got kappa for essay set {essay_set}")
+    )
+    print(f"got kappa for essay set {essay_set}")
     id = n + 1
     
     print("--------------------------------------")
