@@ -246,29 +246,24 @@ class MLP(torch.nn.Module):
     self.window_size = window_size
     self.p = dor
     self.lstm1 = nn.LSTM(embedding_size, 512, batch_first=True, bidirectional=True)
-    #self.dropout1 = nn.Dropout(p=self.p)
+    self.dropout1 = nn.Dropout(p=self.p)
     self.layers1 = torch.nn.Sequential(
       torch.nn.Linear(512*2, 256),
-      torch.nn.ReLU(),
+      torch.nn.Tanh(),
       torch.nn.Dropout(p=self.p),
       torch.nn.Linear(256, 96),
-      nn.ReLU(),
+      nn.Tanh(),
       torch.nn.Dropout(p=self.p),
       torch.nn.Linear(96, 1)
     )
-    self.fcs = torch.nn.Sequential(
-       torch.nn.Linear(len_tot, len_tot),
-       nn.ReLU(),
-       torch.nn.Dropout(p=self.p)
-    )
     self.lstm2 = nn.LSTM(len_tot, 512, batch_first=True, num_layers=1, bidirectional=True)
-    #self.dropout2 = nn.Dropout(p=self.p)
+    self.dropout2 = nn.Dropout(p=self.p)
     self.layers2 = torch.nn.Sequential(
       torch.nn.Linear(512*2, 256),
-      torch.nn.ReLU(),
+      torch.nn.Tanh(),
       torch.nn.Dropout(p=self.p),
       torch.nn.Linear(256, 96),
-      torch.nn.ReLU(),
+      torch.nn.Tanh(),
       torch.nn.Dropout(p=self.p),
       torch.nn.Linear(96, 1)
     ) 
@@ -276,8 +271,8 @@ class MLP(torch.nn.Module):
   def forward(self, x, count_context):
         #print("x: ",x.size())
         l1out, _ = self.lstm1(x)
-        #l1out = torch.relu(l1out)
-        #l1out = self.dropout1(l1out)
+        l1out = torch.relu(l1out)
+        l1out = self.dropout1(l1out)
         layer_1_out = self.layers1(l1out)
         
         layer_1_out = layer_1_out.squeeze()
@@ -286,8 +281,8 @@ class MLP(torch.nn.Module):
         #interim = self.fcs(added_context)
         #print(f"interim: {interim.size()}")
         l2out, _ = self.lstm2(added_context)
-        #l2out = torch.relu(l2out)
-       # l2out = self.dropout2(l2out)
+        l2out = torch.relu(l2out)
+        l2out = self.dropout2(l2out)
         layer_2_out = self.layers2(l2out)
         
         #print("layer_2_out: ",layer_2_out.size())
