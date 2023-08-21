@@ -494,15 +494,14 @@ for n, (train, test) in enumerate(kf.split(dataset)):
     data += "\n--------------------------------------"
     data += f"\n\tResults for model: {id}"
     data += "\n--------------------------------------"
-    for essay_set in range(8):
-        data += "\nKappa for essay set {:}:\t\t{:.4f}".format(
+    data += "\nKappa for essay set {:}:\t\t{:.4f}".format(
+        essay_set + 1, kappas_by_set[essay_set]
+        )
+    print(
+        "Kappa for essay set {:}:\t\t{:.4f}".format(
             essay_set + 1, kappas_by_set[essay_set]
         )
-        print(
-            "Kappa for essay set {:}:\t\t{:.4f}".format(
-                essay_set + 1, kappas_by_set[essay_set]
-            )
-        )
+    )
     data += "\nmean QWK:\t\t\t{:.4f}".format(np.mean(kappas_by_set))
     print("mean QWK:\t\t\t{:.4f}".format(np.mean(kappas_by_set)))
     if n == 0:
