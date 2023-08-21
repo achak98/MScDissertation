@@ -380,7 +380,7 @@ def get_results_df(train_df, test_df, model_preds):
     scaler1 = StandardScaler()
     scaler2 = MinMaxScaler(feature_range=(-1, 1))
     score_df = train_df[train_df["essay_set"] == essay_set]["score"].to_frame()
-    s1 = scaler1.fit(score_df)
+    s1 = scaler1.fit_transform(score_df)
     scaler2.fit(s1)
     scaled_preds = results_df.loc[
         results_df["essay_set"] == essay_set, "scaled_pred"
