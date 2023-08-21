@@ -27,7 +27,7 @@ gamma = 0.0
 input_size = length_emb
 
 epochs = 150
-lr = 3e-4
+lr = 3e-5
 window_size = 5
 dor = 0.4
 
@@ -265,10 +265,10 @@ class MLP(torch.nn.Module):
     #self.dropout2 = nn.Dropout(p=self.p)
     self.layers2 = torch.nn.Sequential(
       torch.nn.Linear(512*2, 256),
-      torch.nn.Tanh(),
+      #torch.nn.Tanh(),
       torch.nn.Dropout(p=self.p),
       torch.nn.Linear(256, 96),
-      torch.nn.Tanh(),
+      #torch.nn.Tanh(),
       torch.nn.Dropout(p=self.p),
       torch.nn.Linear(96, 1)
     ) 
@@ -287,7 +287,7 @@ class MLP(torch.nn.Module):
         #print(f"interim: {interim.size()}")
         l2out, _ = self.lstm2(added_context)
         #l2out = torch.relu(l2out)
-        l2out = self.dropout2(l2out)
+       # l2out = self.dropout2(l2out)
         layer_2_out = self.layers2(l2out)
         
         #print("layer_2_out: ",layer_2_out.size())
