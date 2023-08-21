@@ -124,13 +124,13 @@ def mean_encoding(essay_list, essay_id_list, essay_set_list, model, tokenizer):
   for (default_essay,essay_id,essay_set) in tqdm(zip(essay_list, essay_id_list, essay_set_list), total=len(essay_list)):
     #essay = essay[:512]
     #print(len(essay))
-    prompt = prompts_dict[int(essay_set)]
+    #prompt = prompts_dict[int(essay_set)]
     #encoded_p = tokenizer(prompt, padding="max_length", truncation=True, max_length=length2, return_tensors='pt', return_attention_mask=True, add_special_tokens=True).to(device)
     #print(encoded_input["input_ids"].size())
     #with torch.no_grad():
     #  model_output = model(**encoded_p)
     #  prompt_embed = model_output[0].squeeze().cpu()
-    essay = f"{special_token_prompt} {prompt}"
+    essay = f"" #{special_token_prompt} {prompt}"
     no_of_adus = 0
     no_of_edus = 0
     if  os.path.exists(os.path.join(adu_dir, str(essay_id) + ".out")):
@@ -281,9 +281,9 @@ class MLP(torch.nn.Module):
         layer_1_out = layer_1_out.squeeze()
         added_context = torch.cat((count_context, layer_1_out), dim=1)
         #print(f"layer1_out squeezed: {layer_1_out.size()} || added_context: {added_context.size()}") 
-        interim = self.fcs(added_context)
+        #interim = self.fcs(added_context)
         #print(f"interim: {interim.size()}")
-        l2out, _ = self.lstm2(interim) 
+        l2out, _ = self.lstm2(added_context) 
         l2out = self.dropout2(l2out)
         layer_2_out = self.layers2(l2out)
         
