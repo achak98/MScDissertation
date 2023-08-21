@@ -443,7 +443,7 @@ for n, (train, test) in enumerate(kf.split(dataset)):
     #model = Ngram_Clsfr().to(device)
     # loss and optimizer
     cost_function = nn.MSELoss()#CombinedLoss(alpha, beta, gamma)
-    optimizer = torch.optim.RMSprop(model.parameters(), lr=lr)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
     # training
     train_loss, train_preds = test_step(model, cost_function, optimizer, train_loader)
