@@ -29,7 +29,7 @@ adu_dir = os.path.join(data_dir,"seg-adu")
 
 data = []
 
-for (default_essay,essay_id,essay_set, score) in tqdm(zip(dataset['essay'], dataset["essay_id"], dataset["essay_set"], dataset["domain1_score"]), total=len(dataset['essay'])):
+for (default_essay,essay_id,essay_set, score) in tqdm(zip(dataset['essay'], dataset["essay_id"], dataset["essay_set"], dataset["score"]), total=len(dataset['essay'])):
     no_of_adus = 0
     no_of_edus = 0
     if  os.path.exists(os.path.join(adu_dir, str(essay_id) + ".out")):
