@@ -46,5 +46,5 @@ for (default_essay,essay_id,essay_set, score) in tqdm(zip(dataset['essay'], data
     else:
         no_of_edus = 1
     data.append([score, no_of_edus, no_of_adus])
-    df = pd.DataFrame(data, columns=['Score', 'EDU Count', 'ADU Count'])
-    print(df.head)
+df = pd.DataFrame(data, columns=['Score', 'EDU Count', 'ADU Count'])
+print(df.head)
