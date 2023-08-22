@@ -3,6 +3,7 @@ import numpy as np
 import os
 from transformers import  AutoTokenizer
 from tqdm.auto import tqdm
+from sklearn.preprocessing import StandardScaler
 
 data_dir = "./../Data/ASAP-AES/"
 # Original kaggle training set
@@ -45,6 +46,19 @@ for (default_essay,essay_id,essay_set, score) in tqdm(zip(dataset['essay'], data
                 no_of_edus+=1
     else:
         no_of_edus = 1
-    data.append([score, no_of_edus, no_of_adus])
-df = pd.DataFrame(data, columns=['Score', 'EDU Count', 'ADU Count'])
+    data.append([essay_set, score, no_of_edus, no_of_adus])
+df = pd.DataFrame(data, columns=['essay_set', 'score', 'edu_count', 'ac_count'])
 print(df.head)
+
+for essay_set in range (1,9):
+    scaler = StandardScaler()
+    scaled = []
+    for essay_set in range(1, 9):
+        score = df[df["essay_set"] == essay_set]["score"].to_frame()
+        s = scaler.fit_transform(score).reshape(-1)
+        scaled = np.append(scaled, s)
+
+    scaled_df = df.copy()
+    scaled_df["scaled_score"] = scaled
+
+print(scaled_df.head)
