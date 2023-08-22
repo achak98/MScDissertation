@@ -4,6 +4,7 @@ import os
 from transformers import  AutoTokenizer
 from tqdm.auto import tqdm
 from sklearn.preprocessing import StandardScaler
+from scipy.stats import pearsonr
 
 data_dir = "./../Data/ASAP-AES/"
 # Original kaggle training set
@@ -62,3 +63,16 @@ for essay_set in range (1,9):
     scaled_df["scaled_score"] = scaled
 
 print(scaled_df.head)
+
+col1 = scaled_df['scaled_score']
+col2 = scaled_df['ac_count']
+col3 = scaled_df['edu_count']
+
+corr_coefficient, p_value = pearsonr(col1, col2)
+print(f"Correlation Coefficient between scaled_score and ac_count: {corr_coefficient}")
+print(f"P-value: {p_value}")
+
+corr_coefficient, p_value = pearsonr(col1, col3)
+print(f"Correlation Coefficient between scaled_score and edu_count: {corr_coefficient}")
+print(f"P-value: {p_value}")
+
