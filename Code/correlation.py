@@ -6,6 +6,18 @@ from tqdm.auto import tqdm
 from sklearn.preprocessing import StandardScaler
 from scipy.stats import pearsonr
 
+def check_and_create_directory(directory_path):
+    if not os.path.exists(directory_path):
+        os.makedirs(directory_path)
+        print(f"Directory '{directory_path}' created.")
+    else:
+        print(f"Directory '{directory_path}' already exists.")
+
+
+# Example usage:
+save_directory = "./../Data/results/corr"
+check_and_create_directory(save_directory)
+
 data_dir = "./../Data/ASAP-AES/"
 # Original kaggle training set
 kaggle_dataset = pd.read_csv(
@@ -73,7 +85,7 @@ print(scaled_df.head)
 
 correlation_matrix = {}
 
-columns=['essay_set', 'score', 'edu_count', 'ac_count', 'word_count', "len_str"]
+columns=['essay_set', 'score', 'edu_count', 'ac_count', 'word_count', "len_str", "scaled_score"]
 
 # Calculate Pearson correlation coefficients and p-values for all possible pairs
 for i in range(len(columns)):
@@ -85,9 +97,16 @@ for i in range(len(columns)):
         correlation_matrix[f"{columns[i]} vs {columns[j]}"] = {"Correlation": corr_coeff, "P-value": p_value}
 
 # Print the correlation matrix
+data = ""
 for pair, values in correlation_matrix.items():
     print(pair)
     print("Correlation Coefficient:", values["Correlation"])
     print("P-value:", values["P-value"])
     print()
+    data += f"""{pair}
+                "Correlation Coefficient:", {values["Correlation"]}
+                "P-value:", {values["P-value"]}\n"""
 
+    file = open(os.path.join(save_directory, f"corr.txt"), "w")
+    file.write(data)
+    file.close()
