@@ -40,7 +40,7 @@ for (default_essay,essay_id,essay_set, score) in tqdm(zip(dataset['essay'], data
     no_of_edus = 0
    
     wc = count_words(default_essay)
-   
+    len_str = len(default_essay)
     if  os.path.exists(os.path.join(adu_dir, str(essay_id) + ".out")):
         with open(os.path.join(adu_dir, str(essay_id) + ".out"), "r") as file:
             for line in file:
@@ -54,8 +54,8 @@ for (default_essay,essay_id,essay_set, score) in tqdm(zip(dataset['essay'], data
                 no_of_edus+=1
     else:
         no_of_edus = 1
-    data.append([essay_set, score, no_of_edus, no_of_adus, wc])
-df = pd.DataFrame(data, columns=['essay_set', 'score', 'edu_count', 'ac_count', 'word_count'])
+    data.append([essay_set, score, no_of_edus, no_of_adus, wc, len_str])
+df = pd.DataFrame(data, columns=['essay_set', 'score', 'edu_count', 'ac_count', 'word_count', "len_str"])
 print(df.head)
 
 for essay_set in range (1,9):
@@ -71,32 +71,23 @@ for essay_set in range (1,9):
 
 print(scaled_df.head)
 
-col1 = scaled_df['scaled_score']
-col2 = scaled_df['ac_count']
-col3 = scaled_df['edu_count']
-col4 = scaled_df['word_count']
+correlation_matrix = {}
 
-corr_coefficient, p_value = pearsonr(col1, col2)
-print(f"Correlation Coefficient between scaled_score and ac_count: {corr_coefficient}")
-print(f"P-value: {p_value}")
+columns=['essay_set', 'score', 'edu_count', 'ac_count', 'word_count', "len_str"]
 
-corr_coefficient, p_value = pearsonr(col1, col3)
-print(f"Correlation Coefficient between scaled_score and edu_count: {corr_coefficient}")
-print(f"P-value: {p_value}")
+# Calculate Pearson correlation coefficients and p-values for all possible pairs
+for i in range(len(columns)):
+    for j in range(i+1, len(columns)):
+        col1 = scaled_df[columns[i]]
+        col2 = scaled_df[columns[j]]
+        
+        corr_coeff, p_value = pearsonr(col1, col2)
+        correlation_matrix[f"{columns[i]} vs {columns[j]}"] = {"Correlation": corr_coeff, "P-value": p_value}
 
-corr_coefficient, p_value = pearsonr(col1, col4)
-print(f"Correlation Coefficient between scaled_score and word_count: {corr_coefficient}")
-print(f"P-value: {p_value}")
-
-corr_coefficient, p_value = pearsonr(col2, col3)
-print(f"Correlation Coefficient between ac_count and edu_count: {corr_coefficient}")
-print(f"P-value: {p_value}")
-
-corr_coefficient, p_value = pearsonr(col2, col4)
-print(f"Correlation Coefficient between ac_count and word_count: {corr_coefficient}")
-print(f"P-value: {p_value}")
-
-corr_coefficient, p_value = pearsonr(col3, col4)
-print(f"Correlation Coefficient between edu_count and word_count: {corr_coefficient}")
-print(f"P-value: {p_value}")
+# Print the correlation matrix
+for pair, values in correlation_matrix.items():
+    print(pair)
+    print("Correlation Coefficient:", values["Correlation"])
+    print("P-value:", values["P-value"])
+    print()
 
