@@ -76,3 +76,7 @@ corr_coefficient, p_value = pearsonr(col1, col3)
 print(f"Correlation Coefficient between scaled_score and edu_count: {corr_coefficient}")
 print(f"P-value: {p_value}")
 
+corr_coefficient, p_value = pearsonr(col2, col3)
+print(f"Correlation Coefficient between ac_count and edu_count: {corr_coefficient}")
+print(f"P-value: {p_value}")
+
