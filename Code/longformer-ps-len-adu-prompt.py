@@ -15,12 +15,12 @@ import gc
 
 import warnings
 warnings.filterwarnings("ignore")
-essay_set = 1
+essay_set = 8
 #length1 = 128
 #length2 = 1536
 length_context = 3
 embedding_size = 768
-length_emb = 1201 #1201 
+length_emb = 1780 #1201 1464 544 534 577 647 1108 1780
 len_tot = length_emb + length_context
 alpha = 0.9
 beta = 0.1
@@ -498,11 +498,11 @@ for n, (train, test) in enumerate(kf.split(dataset)):
     data += f"\n\tResults for model: {id}"
     data += "\n--------------------------------------"
     data += "\nKappa for essay set {:}:\t\t{:.4f}".format(
-        essay_set, kappas_by_set[essay_set-1]
+        essay_set, kappas_by_set[0]
         )
     print(
         "Kappa for essay set {:}:\t\t{:.4f}".format(
-            essay_set, kappas_by_set[essay_set-1]
+            essay_set, kappas_by_set[0]
         )
     )
     data += "\nmean QWK:\t\t\t{:.4f}".format(np.mean(kappas_by_set))
